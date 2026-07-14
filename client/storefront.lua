@@ -38,47 +38,55 @@ local function detailOf(model)
     }
 end
 
+-- Spawn/retarget the preview horse. Never let a spawn failure abort the UI.
+local function showPreview(model)
+    local stable = Config.Stables[currentStable]; if not stable then return end
+    local ok, err = pcall(function()
+        Preview.show(model, stable.preview.horsePos)
+        Camera.retarget(centreOf(stable.preview.horsePos))
+    end)
+    if not ok then Util.err('preview swap failed: ' .. tostring(err)) end
+end
+
 -- Swap the previewed horse and refresh the detail panel.
 local function selectModel(model)
-    local stable = Config.Stables[currentStable]; if not stable then return end
     currentModel = model
-    Preview.show(model, stable.preview.horsePos)
-    Camera.retarget(centreOf(stable.preview.horsePos))
+    showPreview(model)
     SendNUIMessage({ action = 'detail', detail = detailOf(model) })
 end
 
--- Show everything once the server has returned the header (name/job/wallet).
-local function show(header)
-    local stable = Config.Stables[currentStable]; if not stable then return end
-    local rows = catalogRows(currentStable)
+function Storefront.open(stableId)
+    if isOpen then Util.log('storefront open ignored — already open'); return end
+    local stable = Config.Stables[stableId]
+    if not stable then Util.warn('storefront open: unknown stable ' .. tostring(stableId)); return end
+
+    local rows = catalogRows(stableId)
     if #rows == 0 then Bridge.notify('This stable has nothing for sale.'); return end
 
-    isOpen = true
-    currentModel = rows[1].model
-    Preview.show(currentModel, stable.preview.horsePos)
-    Camera.start(centreOf(stable.preview.horsePos), 42.0)
+    currentStable = stableId
+    currentModel  = rows[1].model
+    isOpen        = true
 
+    -- Open the NUI FIRST — browsing must not depend on the server round-trip.
     SetNuiFocus(true, true)
     SendNUIMessage({
         action  = 'open',
-        header  = {
-            stableLabel = stable.label,
-            collection  = stable.label,
-            charName    = header.charName or 'Rider',
-            job         = header.job or '',
-            permTier    = header.permTier or '',
-            cash        = header.cash or 0,
-            gold        = header.gold or 0,
-        },
+        header  = { stableLabel = stable.label, collection = stable.label,
+                    charName = 'Rider', job = '', permTier = '', cash = 0, gold = 0 },
         catalog = { rows = rows },
         detail  = detailOf(currentModel),
     })
-end
+    Util.log(('storefront opened at %s (%d horse[s])'):format(stableId, #rows))
 
-function Storefront.open(stableId)
-    if isOpen or not Config.Stables[stableId] then return end
-    currentStable = stableId
-    TriggerServerEvent(Events.RequestHeader, stableId)   -- server replies with HeaderData
+    -- Preview horse + orbital camera (isolated so a failure can't block the UI).
+    local ok, err = pcall(function()
+        Preview.show(currentModel, stable.preview.horsePos)
+        Camera.start(centreOf(stable.preview.horsePos), 42.0)
+    end)
+    if not ok then Util.err('preview/camera start failed: ' .. tostring(err)) end
+
+    -- Ask the server for the real identity + wallet; header fills in when it arrives.
+    TriggerServerEvent(Events.RequestHeader, stableId)
 end
 
 function Storefront.close()
@@ -86,16 +94,28 @@ function Storefront.close()
     isOpen = false
     SetNuiFocus(false, false)
     SendNUIMessage({ action = 'close' })
-    Camera.stop()
-    Preview.hide()
+    pcall(function() Camera.stop(); Preview.hide() end)
     currentStable, currentModel = nil, nil
 end
 
 function Storefront.isOpen() return isOpen end
 
--- Server → client: header data arrived, open the storefront.
+-- Server → client: real identity + wallet arrived; update the header in place.
 RegisterNetEvent(Events.HeaderData, function(header)
-    if currentStable then show(header) end
+    if not isOpen then return end
+    local stable = Config.Stables[currentStable]
+    SendNUIMessage({
+        action = 'header',
+        header = {
+            stableLabel = stable and stable.label or '',
+            collection  = stable and stable.label or '',
+            charName    = header.charName or 'Rider',
+            job         = header.job or '',
+            permTier    = header.permTier or '',
+            cash        = header.cash or 0,
+            gold        = header.gold or 0,
+        },
+    })
 end)
 
 -- NUI → client callbacks -------------------------------------------------------

@@ -80,7 +80,27 @@ end
 
 function Stables.interact()
     local id = nearestInRange()
-    if id and not Storefront.isOpen() then Storefront.open(id) end
+    Util.log(('interact: nearest=%s open=%s'):format(tostring(id), tostring(Storefront.isOpen())))
+    if not id then
+        Bridge.notify('Step up to the stablehand first.')
+        return
+    end
+    if not Storefront.isOpen() then Storefront.open(id) end
+end
+
+-- Open the nearest stable regardless of range — a reliable test/debug entry.
+function Stables.forceNearest()
+    local px, py, pz = table.unpack(GetEntityCoords(PlayerPedId()))
+    local bestId, bestDist
+    for id, stable in pairs(Config.Stables or {}) do
+        local pr = stable.prompt
+        if pr and Util.isVec3(pr.coords) then
+            local d = #(vector3(px, py, pz) - vector3(pr.coords[1], pr.coords[2], pr.coords[3]))
+            if not bestDist or d < bestDist then bestId, bestDist = id, d end
+        end
+    end
+    Util.log(('forceNearest: %s at %.1fm'):format(tostring(bestId), bestDist or -1))
+    if bestId and not Storefront.isOpen() then Storefront.open(bestId) end
 end
 
 -- Proximity hint (debounced): a quiet tick when you step into range.
@@ -91,7 +111,7 @@ local function proximityLoop()
             if id ~= nearId then
                 nearId = id
                 if id then
-                    Bridge.notifyTick(('Press ~o~G~q~ to speak with the stablehand at %s'):format(Config.Stables[id].label))
+                    Bridge.notifyTick(('Press G to speak with the stablehand at %s'):format(Config.Stables[id].label))
                 end
             end
             Wait(400)
@@ -112,6 +132,8 @@ Registry.register({
 RegisterCommand('sov_stable_interact', function() Stables.interact() end, false)
 RegisterKeyMapping('sov_stable_interact', 'Sovereign Stables: speak with stablehand', 'keyboard', 'G')
 RegisterCommand('stable', function() Stables.interact() end, false)
+-- Debug: force-open the nearest stable from anywhere (ignores range).
+RegisterCommand('sovstable', function() Stables.forceNearest() end, false)
 
 AddEventHandler('onResourceStop', function(res)
     if res ~= GetCurrentResourceName() then return end

@@ -125,6 +125,7 @@
     window.addEventListener('message', function (ev) {
         var d = ev.data || {};
         if (d.action === 'open') open(d);
+        else if (d.action === 'header') renderHeader(d.header || {});
         else if (d.action === 'detail') renderDetail(d.detail);
         else if (d.action === 'close') close();
     });

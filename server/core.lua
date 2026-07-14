@@ -80,6 +80,7 @@ end, false)
 -- Server-authoritative — the client never decides what money it has.
 RegisterNetEvent(Events.RequestHeader, function(_stableId)
     local src = source
+    Util.log(('header requested by src %s'):format(tostring(src)))
     local ch = Bridge.getCharacter(src)
     local cash, gold = Bridge.getBalance(src)
     local job, grade = Bridge.getJob(src)
