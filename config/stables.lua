@@ -33,8 +33,8 @@ Config.Stables = {
             scenario = 'WORLD_HUMAN_WAITING_IMPATIENT',        -- fallback only when grooming.enabled = false
             grooming = {
                 enabled  = true,
-                -- Where the groomed horse stands (exact Z, no ground-snap). Placeholder
-                -- in front of the ped — tune once you see the stablehand brushing. nil = no horse.
+                -- Where the groomed horse stands (X/Y matter; Z ground-snaps to the floor).
+                -- Placeholder in front of the ped — tune once you see the brushing. nil = no horse.
                 horsePos = { -369.60, 787.13, 116.16, 182.0 },
                 breeds   = nil,   -- nil = random from this stable's catalog; or a list like { 'A_C_Horse_Morgan_Bay' }
             },
