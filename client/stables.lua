@@ -102,33 +102,80 @@ function Stables.rerollGroom(stableId)
     local model = rollBreed(stableId, stall.cfg)
     if not model then return end
     if stall.groomHorse and DoesEntityExist(stall.groomHorse) then DeleteEntity(stall.groomHorse) end
-    stall.groomHorse = spawnHorseAt(model, pos, true)   -- exact Z from config (indoor snap is unreliable)
+    stall.groomHorse = spawnHorseAt(model, pos)   -- ground-snaps (player is near → collision loaded)
     Util.log(('groom horse at %s -> %s'):format(stableId, model))
 end
 
-local function makePed(id, stable)
+-- Distances at which a stable's ambient ped/horse stream in and out. Spawning
+-- only when the player is close means collision is loaded, so ground-snap works
+-- (spawning at world-load, far away, is what floated the peds).
+local STREAM_IN, STREAM_OUT = 35.0, 55.0
+
+local function stallCenter(id)
+    local p = Config.Stables[id].ped
+    if p and p.coords and #p.coords >= 3 then return vector3(p.coords[1], p.coords[2], p.coords[3]) end
+    local pr = Config.Stables[id].prompt
+    if pr and Util.isVec3(pr.coords) then return vector3(pr.coords[1], pr.coords[2], pr.coords[3]) end
+    return nil
+end
+
+local function spawnStall(id)
+    local stable = Config.Stables[id]
     local p = stable.ped
     if not (p and p.enabled and p.coords and #p.coords >= 4) then return end
+    local stall = stalls[id]
     local groom = p.grooming
     local grooming = groom and groom.enabled or false
-    -- Always frozen: the stablehand stands still and brushes in place.
+
     local ped = spawnPed(p.model, p.coords[1], p.coords[2], p.coords[3], p.coords[4], true)
     if not ped then return end
-    stalls[id] = { ped = ped, cfg = groom, pedCoords = { p.coords[1], p.coords[2], p.coords[3], p.coords[4] } }
+    stall.ped, stall.cfg, stall.spawned = ped, groom, true
+
     if grooming then
-        startGrooming(stalls[id])   -- stablehand brushes in place (scenario)
+        startGrooming(stall)        -- stablehand brushes in place (scenario)
         Stables.rerollGroom(id)     -- + a grounded horse to brush (if a coord is set)
     elseif p.scenario then
         TaskStartScenarioInPlace(ped, GetHashKey(p.scenario), -1, true, false, false, false)
     end
 end
 
+local function despawnStall(id)
+    local stall = stalls[id]
+    if not stall then return end
+    if stall.ped and DoesEntityExist(stall.ped) then DeleteEntity(stall.ped) end
+    if stall.groomHorse and DoesEntityExist(stall.groomHorse) then DeleteEntity(stall.groomHorse) end
+    stall.ped, stall.groomHorse, stall.spawned = nil, nil, false
+end
+
+-- Stream stalls in/out by player proximity.
+local function streamLoop()
+    CreateThread(function()
+        while true do
+            local pc = GetEntityCoords(PlayerPedId())
+            for id in pairs(Config.Stables or {}) do
+                local c = stallCenter(id)
+                if c then
+                    local d = #(pc - c)
+                    local stall = stalls[id]
+                    if d < STREAM_IN and not stall.spawned then
+                        spawnStall(id)
+                    elseif d > STREAM_OUT and stall.spawned then
+                        despawnStall(id)
+                    end
+                end
+            end
+            Wait(1000)
+        end
+    end)
+end
+
 function Stables.spawnAll()
     for id, stable in pairs(Config.Stables or {}) do
         makeBlip(stable)
-        makePed(id, stable)
+        stalls[id] = stalls[id] or { spawned = false }
     end
-    Util.log(('world presence up: %d blip(s), %d stall(s)'):format(#blips, Util.tableCount(stalls)))
+    streamLoop()
+    Util.log(('world presence up: %d blip(s), streaming %d stall(s)'):format(#blips, Util.tableCount(stalls)))
 end
 
 -- Nearest stable whose prompt point is within reach of the player, or nil.
