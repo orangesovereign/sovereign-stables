@@ -20,9 +20,14 @@ Events.RequestSell       = e('requestSell')
 Events.RequestDiag       = e('requestDiag')
 
 Events.RequestHeader     = e('requestHeader')
+Events.RequestPurchase   = e('requestPurchase')
+Events.RequestOwned      = e('requestOwned')
+Events.RequestSetDefault = e('requestSetDefault')
 
 -- client-bound
 Events.OpenStorefront    = e('openStorefront')
 Events.HeaderData        = e('headerData')
+Events.PurchaseResult    = e('purchaseResult')
+Events.OwnedData         = e('ownedData')
 Events.SyncOwnedRides    = e('syncOwnedRides')
 Events.DiagResult        = e('diagResult')

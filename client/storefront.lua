@@ -11,6 +11,7 @@ Storefront = Storefront or {}
 local isOpen        = false
 local currentStable = nil
 local currentModel  = nil
+local ownedList     = {}   -- horses this character owns (from the server)
 
 -- Build the aim point for the camera from a stable's horse preview position.
 local function centreOf(pos) return { pos[1], pos[2], pos[3] + 0.9 } end
@@ -88,8 +89,9 @@ function Storefront.open(stableId)
     end)
     if not ok then Util.err('preview/camera start failed: ' .. tostring(err)) end
 
-    -- Ask the server for the real identity + wallet; header fills in when it arrives.
+    -- Ask the server for the real identity + wallet, and this character's horses.
     TriggerServerEvent(Events.RequestHeader, stableId)
+    TriggerServerEvent(Events.RequestOwned)
 end
 
 function Storefront.close()
@@ -137,10 +139,49 @@ RegisterNUICallback('zoom', function(data, cb)
     cb({ ok = true })
 end)
 
+-- Ask the server to buy. It decides price, permission, caps and funds.
 RegisterNUICallback('purchase', function(data, cb)
-    -- Milestone 1.2 wires the real server-authoritative purchase.
-    Bridge.notifyCard('started', 'Stables', 'Purchasing opens in the next update.')
+    if data and data.model and currentStable then
+        TriggerServerEvent(Events.RequestPurchase, currentStable, data.model)
+    end
     cb({ ok = true })
+end)
+
+-- Preview + detail for a horse the player already owns.
+RegisterNUICallback('selectOwned', function(data, cb)
+    local row
+    for _, r in ipairs(ownedList) do
+        if tostring(r.id) == tostring(data.id) then row = r break end
+    end
+    if row then
+        currentModel = row.model
+        showPreview(row.model)
+        local d = detailOf(row.model) or {}
+        d.name      = row.name or d.name
+        d.ownedId   = row.id
+        d.isDefault = (tonumber(row.is_default) == 1)
+        SendNUIMessage({ action = 'detail', detail = d })
+    end
+    cb({ ok = true })
+end)
+
+RegisterNUICallback('setDefault', function(data, cb)
+    if data and data.id then TriggerServerEvent(Events.RequestSetDefault, data.id) end
+    cb({ ok = true })
+end)
+
+-- Server → client: purchase outcome (never trust the client's copy of money).
+RegisterNetEvent(Events.PurchaseResult, function(res)
+    res = res or {}
+    Bridge.notifyCard(res.ok and 'complete' or 'failed', 'Stables', res.message or '')
+    SendNUIMessage({ action = 'wallet', cash = res.cash or 0, gold = res.gold or 0 })
+end)
+
+-- Server → client: the player's owned horses (for My Horses + the count badge).
+RegisterNetEvent(Events.OwnedData, function(data)
+    data = data or {}
+    ownedList = data.owned or {}
+    SendNUIMessage({ action = 'owned', owned = ownedList, cap = data.cap or 0 })
 end)
 
 RegisterNUICallback('close', function(_, cb)

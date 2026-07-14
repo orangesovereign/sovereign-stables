@@ -24,6 +24,7 @@ shared_scripts {
     'shared/registry.lua',
     'shared/bridge.lua',
     'shared/catalog.lua',
+    'shared/perms.lua',
 }
 
 client_scripts {
@@ -37,6 +38,7 @@ client_scripts {
 server_scripts {
     'server/db.lua',
     'server/core.lua',
+    'server/horses.lua',
 }
 
 -- Custom branded NUI shell (storefront / customizer / codex / horse creator).

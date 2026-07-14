@@ -13,6 +13,9 @@
     var rows = [];          // full catalog
     var tab = 'specialty';  // active tab
     var selected = null;    // selected model id
+    var owned = [];         // horses this character owns
+    var ownedCap = 0;       // how many they may keep
+    var view = 'shop';      // 'shop' | 'owned'
 
     function post(name, body) {
         return fetch('https://' + RESOURCE + '/' + name, {
@@ -28,9 +31,49 @@
     /* ---------- catalog list ---------- */
     function visibleRows() { return rows.filter(function (r) { return (r.tier || 'stock') === tab; }); }
 
+    /* ---------- owned horses ---------- */
+    function renderOwnedList(list) {
+        if (!owned.length) {
+            list.innerHTML = '<div class="empty">You keep no horses yet. Buy one from the stablefront.</div>';
+            document.getElementById('catFoot').textContent = '0 of ' + ownedCap;
+            return;
+        }
+        owned.forEach(function (o) {
+            var row = el('button', 'row' + (String(o.id) === String(selected) ? ' is-active' : ''));
+            row.innerHTML =
+                '<span class="row__portrait">&#9816;</span>' +
+                '<span class="row__t"><span class="row__name">' + (o.name || o.model) + '</span>' +
+                '<span class="row__breed">' + (o.model || '') + '</span></span>' +
+                (Number(o.is_default) === 1 ? '<span class="row__price">&#9733; Default</span>' : '');
+            row.addEventListener('click', function () {
+                selected = o.id;
+                renderList();
+                post('selectOwned', { id: o.id });
+            });
+            list.appendChild(row);
+        });
+        document.getElementById('catFoot').textContent = owned.length + ' of ' + ownedCap;
+    }
+
+    // Swap the catalog column between the shop and the player's own horses.
+    function applyView() {
+        var isOwned = (view === 'owned');
+        document.querySelector('.tabs').style.display = isOwned ? 'none' : '';
+        document.querySelector('.cat__head').textContent = isOwned ? 'Your horses.' : 'Find your better half.';
+        document.querySelector('.cat__sub').textContent = isOwned
+            ? 'The ones that already answer to you.'
+            : 'Every horse has a history. Choose one worthy of yours.';
+        document.querySelectorAll('.nav__item[data-view]').forEach(function (b) {
+            b.classList.toggle('is-active', b.dataset.view === view);
+        });
+        selected = null;
+        renderList();
+    }
+
     function renderList() {
         var list = document.getElementById('list');
         list.innerHTML = '';
+        if (view === 'owned') { renderOwnedList(list); return; }
         var vis = visibleRows();
         vis.forEach(function (r) {
             var row = el('button', 'row' + (r.model === selected ? ' is-active' : '') + (r.locked ? ' is-locked' : ''));
@@ -57,6 +100,7 @@
     }
 
     function cycle(dir) {
+        if (view !== 'shop') return;
         var vis = visibleRows(); if (!vis.length) return;
         var i = vis.findIndex(function (r) { return r.model === selected; });
         i = (i + dir + vis.length) % vis.length;
@@ -67,7 +111,9 @@
     function renderDetail(d) {
         var wrap = document.getElementById('detail');
         if (!d) { wrap.innerHTML = ''; return; }
-        var ribbon = (d.tier === 'specialty') ? '<div class="ribbon">&#9733; Specialty &#9733;</div>' : '';
+        var isOwned = !!d.ownedId;
+        var ribbon = isOwned ? '<div class="ribbon">&#9733; Yours &#9733;</div>'
+            : ((d.tier === 'specialty') ? '<div class="ribbon">&#9733; Specialty &#9733;</div>' : '');
         var traits = (d.traits || []).map(function (t) {
             return '<div class="trait"><div class="trait__h">' + (t.level ? '<span class="trait__lv">' + t.level + '</span>' : '') +
                 '<b>' + t.name + '</b></div><p>' + (t.desc || '') + '</p></div>';
@@ -90,11 +136,19 @@
             '<p class="detail__lore">' + (d.lore || '') + '</p>' +
             (traits ? '<div class="traits">' + traits + '</div>' : '') +
             '<div class="stats">' + bar('Health', s.health) + bar('Stamina', s.stamina) + bar('Speed', s.speed) + bar('Acceleration', s.acceleration) + '</div>' +
-            '<div class="price"><b>' + money(d.cash) + '</b>' + (d.gold ? '<span> or ' + d.gold + ' <em>gold</em></span>' : '') + '</div>' +
-            '<button class="buy" id="buy">Request Purchase</button>' +
-            '<div class="detail__foot">Includes ownership papers &middot; Stable slot required</div>';
+            (isOwned ? '' : '<div class="price"><b>' + money(d.cash) + '</b>' + (d.gold ? '<span> or ' + d.gold + ' <em>gold</em></span>' : '') + '</div>') +
+            (isOwned
+                ? (d.isDefault
+                    ? '<button class="buy" disabled>&#9733; Your default ride</button>'
+                    : '<button class="buy" id="mkdef">Make Default Ride</button>')
+                : '<button class="buy" id="buy">Request Purchase</button>') +
+            '<div class="detail__foot">' +
+                (isOwned ? 'Owned &middot; papers on file' : 'Includes ownership papers &middot; Stable slot required') +
+            '</div>';
         var buy = document.getElementById('buy');
         if (buy) buy.addEventListener('click', function () { post('purchase', { model: d.model }); });
+        var mkdef = document.getElementById('mkdef');
+        if (mkdef) mkdef.addEventListener('click', function () { post('setDefault', { id: d.ownedId }); });
     }
 
     /* ---------- header ---------- */
@@ -110,6 +164,7 @@
 
     /* ---------- open / close ---------- */
     function open(msg) {
+        view = 'shop';
         renderHeader(msg.header || {});
         rows = (msg.catalog && msg.catalog.rows) || [];
         // default to whichever tab has stock; prefer specialty
@@ -127,6 +182,16 @@
         if (d.action === 'open') open(d);
         else if (d.action === 'header') renderHeader(d.header || {});
         else if (d.action === 'detail') renderDetail(d.detail);
+        else if (d.action === 'wallet') {
+            document.getElementById('cash').textContent = money(d.cash);
+            document.getElementById('gold').textContent = (d.gold || 0);
+        }
+        else if (d.action === 'owned') {
+            owned = d.owned || [];
+            ownedCap = d.cap || 0;
+            document.getElementById('ownBadge').textContent = owned.length;
+            if (view === 'owned') renderList();
+        }
         else if (d.action === 'close') close();
     });
 
@@ -146,6 +211,9 @@
     stage.addEventListener('wheel', function (e) { e.preventDefault(); post('zoom', { delta: e.deltaY }); }, { passive: false });
 
     /* ---------- controls ---------- */
+    document.querySelectorAll('.nav__item[data-view]').forEach(function (b) {
+        b.addEventListener('click', function () { view = b.dataset.view; applyView(); });
+    });
     document.getElementById('prev').addEventListener('click', function () { cycle(-1); });
     document.getElementById('next').addEventListener('click', function () { cycle(1); });
     document.getElementById('esc').addEventListener('click', requestClose);
