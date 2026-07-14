@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sovereign Stables</title>
+    <link rel="stylesheet" href="app.css" />
+</head>
+<body>
+    <!-- Root stays hidden until the client sends { action: 'open' }. -->
+    <div id="root" class="hidden">
+        <div class="stage">
+            <section class="ledger" role="dialog" aria-label="Sovereign Stables">
+                <header class="ledger__head">
+                    <div class="ledger__seal" aria-hidden="true">SC</div>
+                    <div class="ledger__titles">
+                        <h1>Sovereign County Stables</h1>
+                        <p class="ledger__sub">Livery &amp; Horse Registry</p>
+                    </div>
+                </header>
+
+                <div class="ledger__body">
+                    <p class="ledger__lead">Foundation shell.</p>
+                    <p class="ledger__note">
+                        The storefront, customizer, codex and Horse Creator will render here.
+                        This confirms the branded NUI opens, styles and closes with proper focus.
+                    </p>
+                </div>
+
+                <footer class="ledger__foot">
+                    <span class="ledger__hint">Press <kbd>Esc</kbd> to close</span>
+                    <button id="closeBtn" class="btn">Take your leave</button>
+                </footer>
+            </section>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
