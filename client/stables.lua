@@ -102,7 +102,7 @@ function Stables.rerollGroom(stableId)
     local model = rollBreed(stableId, stall.cfg)
     if not model then return end
     if stall.groomHorse and DoesEntityExist(stall.groomHorse) then DeleteEntity(stall.groomHorse) end
-    stall.groomHorse = spawnHorseAt(model, pos)   -- ground-snap to the floor
+    stall.groomHorse = spawnHorseAt(model, pos, true)   -- exact Z from config (indoor snap is unreliable)
     Util.log(('groom horse at %s -> %s'):format(stableId, model))
 end
 
