@@ -11,21 +11,14 @@ local blips  = {}
 local stalls = {}      -- [stableId] = { ped, groomHorse, cfg, groomThread }
 local nearId = nil
 
-local BRUSH_DICT = 'mech_animal_interaction@horse@right@brushing'
-local BRUSH_CLIP = 'brushing_horse'
+-- Base-game ambient scenario: a stablehand tending/brushing a horse, in place.
+local GROOM_SCENARIO = GetHashKey('WORLD_HUMAN_HORSE_TEND_BRUSH_LINK')
 
 local function loadModel(hash)
     RequestModel(hash)
     local t = GetGameTimer()
     while not HasModelLoaded(hash) and (GetGameTimer() - t) < 5000 do Wait(10) end
     return HasModelLoaded(hash)
-end
-
-local function loadAnim(dict)
-    RequestAnimDict(dict)
-    local t = GetGameTimer()
-    while not HasAnimDictLoaded(dict) and (GetGameTimer() - t) < 5000 do Wait(10) end
-    return HasAnimDictLoaded(dict)
 end
 
 local function makeBlip(stable)
@@ -57,13 +50,16 @@ local function spawnPed(model, x, y, z, h, freeze)
     return ped
 end
 
--- A frozen, invincible ambient horse (same spawn pattern as the preview).
-local function spawnHorseAt(model, pos)
+-- A frozen, invincible ambient horse. `noSnap` uses the exact config Z (for
+-- hand-placed spots where a ground-snap can grab the wrong surface).
+local function spawnHorseAt(model, pos, noSnap)
     local hash = GetHashKey(model)
     if not loadModel(hash) then return nil end
     local x, y, z, h = pos[1], pos[2], pos[3], pos[4] or 0.0
-    local found, gz = GetGroundZAndNormalFor_3dCoord(x, y, z + 1.0)
-    if found then z = gz end
+    if not noSnap then
+        local found, gz = GetGroundZAndNormalFor_3dCoord(x, y, z + 1.0)
+        if found then z = gz end
+    end
     local horse = CreatePed(hash, x, y, z, h, false, true, false, false)
     local t = GetGameTimer()
     while not DoesEntityExist(horse) and (GetGameTimer() - t) < 2000 do Wait(10) end
@@ -88,49 +84,26 @@ local function rollBreed(stableId, cfg)
     return pool[math.random(#pool)]
 end
 
--- Keep the (stationary) stablehand playing the looping brush animation in
--- place. Re-asserts the loop if it ever drops.
-local function groomLoop(stall)
-    if stall.groomThread then return end
-    stall.groomThread = true
-    CreateThread(function()
-        loadAnim(BRUSH_DICT)
-        while stall.cfg and stall.cfg.enabled and DoesEntityExist(stall.ped) do
-            if not IsEntityPlayingAnim(stall.ped, BRUSH_DICT, BRUSH_CLIP, 3) then
-                if HasAnimDictLoaded(BRUSH_DICT) then
-                    -- flag 1 = looping; -1 duration = until told otherwise
-                    TaskPlayAnim(stall.ped, BRUSH_DICT, BRUSH_CLIP, 2.0, 2.0, -1, 1, 0.0, false, false, false)
-                else
-                    loadAnim(BRUSH_DICT)
-                end
-            end
-            Wait(1500)
-        end
-        stall.groomThread = nil
-    end)
+-- Put the (stationary) stablehand into the base-game grooming scenario.
+local function startGrooming(stall)
+    if not DoesEntityExist(stall.ped) then return end
+    ClearPedTasksImmediately(stall.ped)
+    TaskStartScenarioInPlace(stall.ped, GROOM_SCENARIO, -1, true, false, false, false)
 end
 
 -- Swap the groomed horse for a fresh random breed. Called on world load and
--- again each time a player opens this stable.
+-- again each time a player opens this stable. Requires an explicit, grounded
+-- grooming.horsePos (auto-placement grabbed bad ground and floated the horse).
 function Stables.rerollGroom(stableId)
     local stall = stalls[stableId]
     if not (stall and stall.cfg and stall.cfg.enabled and DoesEntityExist(stall.ped)) then return end
+    local pos = stall.cfg.horsePos
+    if not (pos and #pos >= 3) then return end          -- no coord yet → no horse (never float one)
     local model = rollBreed(stableId, stall.cfg)
     if not model then return end
-
-    -- Where the groomed horse stands: explicit config, else auto — just in
-    -- front of the ped (facing it) so the brush lines up without a manual coord.
-    local pos = stall.cfg.horsePos
-    if not (pos and #pos >= 3) then
-        local pc  = stall.pedCoords
-        local rad = math.rad(pc[4] or 0.0)
-        pos = { pc[1] - math.sin(rad) * 2.2, pc[2] + math.cos(rad) * 2.2, pc[3], (pc[4] or 0.0) + 180.0 }
-    end
-
     if stall.groomHorse and DoesEntityExist(stall.groomHorse) then DeleteEntity(stall.groomHorse) end
-    stall.groomHorse = spawnHorseAt(model, pos)
+    stall.groomHorse = spawnHorseAt(model, pos, true)   -- exact Z, no snap
     Util.log(('groom horse at %s -> %s'):format(stableId, model))
-    groomLoop(stall)
 end
 
 local function makePed(id, stable)
@@ -143,7 +116,8 @@ local function makePed(id, stable)
     if not ped then return end
     stalls[id] = { ped = ped, cfg = groom, pedCoords = { p.coords[1], p.coords[2], p.coords[3], p.coords[4] } }
     if grooming then
-        Stables.rerollGroom(id)                 -- spawn a random horse + start brushing
+        startGrooming(stalls[id])   -- stablehand brushes in place (scenario)
+        Stables.rerollGroom(id)     -- + a grounded horse to brush (if a coord is set)
     elseif p.scenario then
         TaskStartScenarioInPlace(ped, GetHashKey(p.scenario), -1, true, false, false, false)
     end
