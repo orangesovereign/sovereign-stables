@@ -63,6 +63,7 @@
 | H7 | Add/remove & store horse furs | EXCEED | ⚠️ | native ped comp | 3 | ⬜ |
 | H8 | Rename horse via configurable item | EXCEED | ✅ | inventory | 2 | ⬜ |
 | H9 | Tether horse using configurable item | EXCEED | ⚠️ | native rope/anim | 3 | ⬜ |
+| H10 | **Stabled horses auto-clean after a configurable timer (minutes)** — a dirty horse left at a stable is groomed clean by the stablehand over time | EXCEED | ⚠️ | metabolism, db | 2 | ⬜ |
 
 ## D. Horse — Movement, Commands & Recovery
 
@@ -173,6 +174,7 @@ Every permission below is a per-job (and where noted per-grade) gate resolved se
 | L4 | Horse preview in stable catalog | MATCH | ✅ | native cam | 1 | ⬜ |
 | L5 | Orbital camera auto-centering on horse | EXCEED | ✅ (spike PASSED 2026-07-14) | native cam | 1 | ⬜ |
 | L6 | Horses get dirty (or not) while stored — configurable | EXCEED | ⚠️ | metabolism | 3 | ⬜ |
+| L9 | **Storefront preview horses always render clean** — the catalog/preview horse is forced to zero dirt, whatever the underlying horse's state | EXCEED | ⚠️ | native cleanliness | 2 | ⬜ |
 | L7 | Notifications via `sovereign_notify` (=K1) | NEW | ✅ | sovereign_notify | 1 | ⬜ |
 | L8 | Lightweight lists/prompts/confirmations via `sovereign_menus` | NEW | ✅ | sovereign_menus | 1 | ⬜ |
 
@@ -240,5 +242,6 @@ Every permission below is a per-job (and where noted per-grade) gate resolved se
 8. **Orbital camera** (L5) — native cam path for a smooth auto-centering orbit around a previewed horse.
 9. **Shiny coat FX** (M3) — native means to apply a gloss/shine overlay to a horse coat at runtime.
 10. **Horse Creator** (M2) — persisting player-authored breed definitions (component/coat/stat combos) to config or DB and spawning them reliably.
+11. **Horse dirt / cleanliness native** (H5, H10, L9, L6) — confirm the RDR3 native to read *and* force a horse's dirt level (baseline `vorp_stables` has a brush-to-clean interaction, so a write path exists). Needed to force the preview horse clean (L9) and to auto-clean stabled horses (H10). Small spike in Phase 2.
 
 Each ❓/🧪/⚠️ item gets a short spike in `docs/spikes/` before it enters a build phase.
