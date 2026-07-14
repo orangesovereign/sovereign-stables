@@ -22,4 +22,4 @@ Replacement for `vorp_stables` on the Sovereign County RP RedM server (VorpCore)
 2. **Greenfield** — no existing vorp_stables player data to migrate. DB schema designed freely; migration (K8) is **optional/deferred**, not a v1 gate.
 3. **Cadence = gate spikes + phases** — Claude checks in for approval before committing an approach on each risky tech-prep spike, and before starting each new phase.
 
-**Status:** Design/planning (kickoff 2026-07-14). Phase 0 not started — awaiting go-ahead.
+**Status:** ✅ **Phase 0 complete** (foundation scaffold committed & pushed 2026-07-14). Next: Phase 1 — gated behind two tech-prep spikes (orbital preview camera L5, horse-appearance natives S14/F1/F2/H7) awaiting sign-off.
