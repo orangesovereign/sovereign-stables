@@ -69,4 +69,14 @@ Milestone 1.2 passes when a purchase moves real money, writes exactly one horse 
 
 _(Owner convention: a ledger line ticked without notes = confirmed working.)_
 
-### Round 1 — (pending owner test)
+### Round 1 — 2026-07-14 (owner)
+
+- **16/16 PASS, first pass, no fixes required.** Boot + both new tables clean.
+- **Buy chain confirmed end-to-end:** purchase moves real money, writes exactly one `sovereign_horses` row and one `buy_horse` `sovereign_ledger` row; the unaffordable Turkoman was refused with no charge and no row.
+- **My Horses confirmed:** list, count badge, cap footer, per-horse preview, and the single-default rule (Make Default Ride moves the star).
+- **The guards — the lines that matter — all held:** cap enforced with no charge (C1), purchase-spam produced no double charge and no duplicate row (C2, anti-dupe lock working), and horses survived a resource restart with the correct default (C3, true DB persistence).
+- Clean close, no red Lua errors across the session.
+
+### GATE RULING — 2026-07-14
+
+**PASSED.** Money → ownership → persistence chain is sound and the economy guards (cap, anti-dupe, refund-on-failure, server-side pricing) are proven. Milestone **1.3 (summon & field)** begins — owned horses can now safely be spawned into the world.
