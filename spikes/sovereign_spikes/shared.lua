@@ -18,6 +18,8 @@ local function loadModel(hash)
 end
 
 -- Spawn a frozen, invincible preview horse ~3m in front of the player.
+-- rev 2: ground-snap (fixes airborne spawn) + variation init (fixes invisible
+-- horse), mirroring the proven vorp_utils + vorp_stables patterns.
 function Spike.spawnPreview(modelName)
     modelName = modelName or Spike.defaultModel
     local hash = GetHashKey(modelName)
@@ -30,22 +32,37 @@ function Spike.spawnPreview(modelName)
 
     local ped = PlayerPedId()
     local fwd = GetOffsetFromEntityInWorldCoords(ped, 0.0, 3.0, 0.0)
+    local x, y, z = fwd.x, fwd.y, fwd.z
+
+    -- Snap Z to the ground so the horse doesn't spawn airborne (vorp_utils pattern).
+    local found, groundZ = GetGroundZAndNormalFor_3dCoord(x, y, z + 1.0)
+    if found then z = groundZ end
+
     local heading = GetEntityHeading(ped) + 180.0
 
     -- CreatePed(model, x, y, z, heading, isNetwork, bScriptHostPed, p7, p8)
-    local horse = CreatePed(hash, fwd.x, fwd.y, fwd.z, heading, false, false, false, false)
-    Wait(150)
+    local horse = CreatePed(hash, x, y, z, heading, false, true, false, false)
+    local t = GetGameTimer()
+    while not DoesEntityExist(horse) and (GetGameTimer() - t) < 2000 do Wait(10) end
     if not DoesEntityExist(horse) then
         print('^1[spike]^7 CreatePed returned nothing')
         return nil
     end
+
+    -- Initialize the metaped variation so the model actually RENDERS. Without
+    -- this a freshly created RDR3 horse spawns invisible. (vorp_stables pattern.)
+    Citizen.InvokeNative(0x283978A15512B2FE, horse, true)   -- SetRandomOutfitVariation
+    SetEntityVisible(horse, true, false)
+    Wait(100)
+
     SetEntityInvincible(horse, true)
     FreezeEntityPosition(horse, true)
     SetModelAsNoLongerNeeded(hash)
 
     Spike.previewHorse = horse
     Spike.currentModel = modelName
-    print(('^2[spike]^7 preview horse spawned: %s (entity %s)'):format(modelName, horse))
+    print(('^2[spike]^7 preview horse spawned: %s (entity %s) — ground z=%.2f, found=%s'):format(
+        modelName, horse, z, tostring(found)))
     return horse
 end
 
@@ -76,4 +93,4 @@ AddEventHandler('onResourceStop', function(res)
     if res == GetCurrentResourceName() then Spike.clearPreview() end
 end)
 
-print('^5[spike]^7 loaded. Commands: /spike_horse [model], /spike_coat <model>, /spike_mane [1-5], /spike_tail [1-5], /spike_saddle, /spike_clear, /spike_cam [radius] [speed], /spike_camstop')
+print('^5[spike]^7 loaded (rev 2 — ground-snap + visibility fix). Commands: /spike_horse [model], /spike_coat <model>, /spike_mane [1-5], /spike_tail [1-5], /spike_saddle, /spike_clear, /spike_cam [radius] [speed], /spike_camstop')

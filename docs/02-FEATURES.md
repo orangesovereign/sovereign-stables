@@ -171,7 +171,7 @@ Every permission below is a per-job (and where noted per-grade) gate resolved se
 | L2 | Ambient ped per stable for buy / customize / retrieve / switch | MATCH+ | ✅ | core | 1 | ⬜ |
 | L3 | Blips individually toggleable | MATCH | ✅ | — | 1 | ⬜ |
 | L4 | Horse preview in stable catalog | MATCH | ✅ | native cam | 1 | ⬜ |
-| L5 | Orbital camera auto-centering on horse | EXCEED | ⚠️ | native cam | 1 | ⬜ |
+| L5 | Orbital camera auto-centering on horse | EXCEED | ✅ (spike PASSED 2026-07-14) | native cam | 1 | ⬜ |
 | L6 | Horses get dirty (or not) while stored — configurable | EXCEED | ⚠️ | metabolism | 3 | ⬜ |
 | L7 | Notifications via `sovereign_notify` (=K1) | NEW | ✅ | sovereign_notify | 1 | ⬜ |
 | L8 | Lightweight lists/prompts/confirmations via `sovereign_menus` | NEW | ✅ | sovereign_menus | 1 | ⬜ |
@@ -230,7 +230,7 @@ Every permission below is a per-job (and where noted per-grade) gate resolved se
 
 ## Open feasibility questions (drive tech-prep spikes)
 
-1. **Ped/horse appearance at runtime** (S14, F1, F2, H7) — confirm RDR3 natives for setting mane/tail/coat/body components on a spawned horse and persisting them. *(vorp_stables does manes/tails/tack via the `complements` hashes in `data.lua` — proven path; body-size & coat need a spike.)*
+1. **Ped/horse appearance at runtime** (S14, F1, F2, H7) — confirm RDR3 natives for setting mane/tail/coat/body components on a spawned horse and persisting them. *(vorp_stables does manes/tails/tack via the `complements` hashes in `data.lua` — proven path; body-size & coat need a spike.)* **Spike round 1 (2026-07-14): appearance couldn't be judged — horse spawned invisible+airborne. Cause: missing variation-init `0x283978A15512B2FE` + ground-snap `GetGroundZAndNormalFor_3dCoord`. Spike rev 2 patched; A1–A8 retest pending.**
 2. **Bonding/courage natives** (E3, E4) — is RDR3's built-in horse-bonding stat readable/writable, or do we simulate our own?
 3. **Golden vs normal status** (H3) — mapping to RDR3 horse core attributes vs. a custom overlay stat.
 4. **Wheel damage / dirt decals** (WG10, WG11) — native support on RDR3 wagons is uncertain; may need visual approximation.

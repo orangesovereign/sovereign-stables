@@ -78,4 +78,9 @@ Phase 1 spikes pass when: R1 boots clean, every A/C line has a recorded result (
 
 _(Rounds recorded here as they happen — date, who tested, what was confirmed or found. Owner convention: a ledger line ticked without notes = confirmed working.)_
 
-### Round 1 — (pending owner test)
+### Round 1 — 2026-07-14 (owner)
+
+- **Orbital camera (C1–C4): PASS.** Smooth orbit, auto-centre, stop/restore all confirmed. Approach locked as prototyped (`0x40C23491CE83708E` + per-frame `SetCamCoord`/`PointCamAtCoord`).
+- **Spawn (A1/A2): FAIL — horse invisible + airborne.** Console reported the horse spawned; entity existed (owner could mount it) but was not visible and sat above the ground. A3–A8 skipped (couldn't judge an invisible horse). Same class of bug as sovereign_storyworks Phase 0 "peds spawned airborne."
+- **Root cause:** the spike created the ped without (a) ground-snap and (b) metaped variation init. A raw RDR3 horse renders invisible until `0x283978A15512B2FE` (variation init) is called, and spawns airborne without `GetGroundZAndNormalFor_3dCoord`.
+- **Fix (spike rev 2):** ground-snap Z + variation init + `SetEntityVisible`, mirroring the proven vorp_utils / vorp_stables patterns. **Awaiting retest of A1–A8** (camera already passed — no need to re-run C).
