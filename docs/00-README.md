@@ -10,6 +10,8 @@ Replacement for `vorp_stables` on the Sovereign County RP RedM server (VorpCore)
 
 **Ground rules:** original code only (the owned `sirevlc_horses` pack is escrow-locked — its open config files are a *reference* only). Server-authoritative. Config-driven so a non-dev owner can tune everything.
 
+**Language:** all game logic is **Lua** (`lua54`) — `client/`, `server/`, `shared/`, `config/`. No TypeScript/React/C#. The only non-Lua is the NUI paint layer in `ui/`, which *must* be HTML/CSS/JS (RedM renders NUI as a web page); it is kept minimal vanilla — no framework, no build step. Lua drives it via NUI messages/callbacks.
+
 ## Assets & coats policy
 
 - **No asset extraction.** We never rip or ship RDR2's copyrighted files, nor crack another creator's protected/escrow pack. RedM streams stock assets from each player's own legal RDR2 install.
