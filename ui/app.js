@@ -138,9 +138,10 @@
             '<div class="stats">' + bar('Health', s.health) + bar('Stamina', s.stamina) + bar('Speed', s.speed) + bar('Acceleration', s.acceleration) + '</div>' +
             (isOwned ? '' : '<div class="price"><b>' + money(d.cash) + '</b>' + (d.gold ? '<span> or ' + d.gold + ' <em>gold</em></span>' : '') + '</div>') +
             (isOwned
-                ? (d.isDefault
-                    ? '<button class="buy" disabled>&#9733; Your default ride</button>'
-                    : '<button class="buy" id="mkdef">Make Default Ride</button>')
+                ? '<button class="buy" id="bringout">Bring Out</button>' +
+                  (d.isDefault
+                    ? '<div class="detail__default">&#9733; Your default ride</div>'
+                    : '<button class="buy ghost" id="mkdef">Make Default Ride</button>')
                 : '<button class="buy" id="buy">Request Purchase</button>') +
             '<div class="detail__foot">' +
                 (isOwned ? 'Owned &middot; papers on file' : 'Includes ownership papers &middot; Stable slot required') +
@@ -149,6 +150,8 @@
         if (buy) buy.addEventListener('click', function () { post('purchase', { model: d.model }); });
         var mkdef = document.getElementById('mkdef');
         if (mkdef) mkdef.addEventListener('click', function () { post('setDefault', { id: d.ownedId }); });
+        var bringout = document.getElementById('bringout');
+        if (bringout) bringout.addEventListener('click', function () { post('bringOut', { id: d.ownedId }); });
     }
 
     /* ---------- header ---------- */

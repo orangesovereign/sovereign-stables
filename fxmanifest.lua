@@ -30,6 +30,7 @@ shared_scripts {
 client_scripts {
     'client/preview.lua',
     'client/camera.lua',
+    'client/horse.lua',
     'client/storefront.lua',
     'client/stables.lua',
     'client/core.lua',
@@ -39,6 +40,7 @@ server_scripts {
     'server/db.lua',
     'server/core.lua',
     'server/horses.lua',
+    'server/summon.lua',
 }
 
 -- Custom branded NUI shell (storefront / customizer / codex / horse creator).

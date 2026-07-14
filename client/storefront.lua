@@ -170,6 +170,15 @@ RegisterNUICallback('setDefault', function(data, cb)
     cb({ ok = true })
 end)
 
+-- Collect a horse in person: close the shop, then the server brings it out.
+RegisterNUICallback('bringOut', function(data, cb)
+    if data and data.id then
+        Storefront.close()
+        TriggerServerEvent(Events.RequestBringOut, data.id)
+    end
+    cb({ ok = true })
+end)
+
 -- Server → client: purchase outcome (never trust the client's copy of money).
 RegisterNetEvent(Events.PurchaseResult, function(res)
     res = res or {}
