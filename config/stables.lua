@@ -24,12 +24,18 @@ Config.Stables = {
             coords  = { -366.69, 787.06, 116.16 },
         },
 
-        -- AMBIENT PED you interact with to buy / customize / retrieve / switch [L2]
+        -- AMBIENT STABLEHAND [L2]. Toward the back of the stable, grooming a
+        -- horse whose breed re-rolls each time a player opens this stable.
         ped = {
             enabled  = true,
             model    = 'u_m_m_bwmstablehand_01',
-            scenario = 'WORLD_HUMAN_WAITING_IMPATIENT',
-            coords   = { -365.15, 792.68, 115.18, 178.47 },   -- x,y,z,heading
+            coords   = { -365.15, 792.68, 115.18, 178.47 },   -- TODO: move toward the back (x,y,z,heading)
+            scenario = 'WORLD_HUMAN_WAITING_IMPATIENT',        -- fallback only when grooming.enabled = false
+            grooming = {
+                enabled  = true,
+                horsePos = { -363.00, 792.00, 115.20, 90.0 },  -- TODO: real back-of-stable spot, in front of the ped
+                breeds   = nil,   -- nil = random from this stable's catalog; or a list like { 'A_C_Horse_Morgan_Bay' }
+            },
         },
 
         -- INTERACTION prompt point + radius

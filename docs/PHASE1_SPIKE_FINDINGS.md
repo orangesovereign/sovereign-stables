@@ -51,6 +51,17 @@ SetCamActive(cam, true); RenderScriptCams(true, true, 800, true, true, 0)
 
 Smooth orbit + auto-centre confirmed at multiple radii/speeds. Locked for the storefront; zoom (N7) layers on the same cam via fov / radius.
 
+## Horse brushing / grooming (discovered 2026-07-14, from rdr3_discoveries)
+
+Used for the ambient stablehand vignette now, and feature **H5 (clean/brush your horse)** later.
+
+- **Directed brush:** `TaskAnimalInteraction(ped, horse, GetHashKey('Interaction_Brush'), GetHashKey('p_brushHorse02x'), false)` → fires anim event `GetHashKey('INTERACT')` when a stroke completes (`HasAnimEventFired(ped, INTERACT)`). Loop to keep brushing.
+- **Ambient scenario:** `WORLD_HUMAN_HORSE_TEND_BRUSH_LINK` (`_MALE_A`) — a paired/"link" scenario; needs a horse ped placed to pair with.
+- **Raw anim dict:** `mech_animal_interaction@horse@right@brushing` (clip `brushing_horse`).
+- **Brush props:** `p_brushHorse01x` / `p_brushHorse02x`. **Control:** `INPUT_INTERACT_HORSE_BRUSH` (`0x63A38F2C`).
+
+Ambient grooming ped is implemented via the directed-brush loop in `client/stables.lua` (per-stable `ped.grooming` config; breed re-rolls on entry).
+
 ## Deferred (not Phase 1 blockers)
 
 - **Body size** and **shiny/gloss coat (M3)** — not covered by this spike; separate follow-up investigations before their phases.

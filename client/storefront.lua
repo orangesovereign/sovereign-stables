@@ -67,6 +67,9 @@ function Storefront.open(stableId)
     currentModel  = rows[1].model
     isOpen        = true
 
+    -- Re-roll the stablehand's groomed horse on entry (cosmetic ambience).
+    if Stables and Stables.rerollGroom then pcall(Stables.rerollGroom, stableId) end
+
     -- Open the NUI FIRST — browsing must not depend on the server round-trip.
     SetNuiFocus(true, true)
     SendNUIMessage({
