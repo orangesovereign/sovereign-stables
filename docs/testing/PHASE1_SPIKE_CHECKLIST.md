@@ -6,17 +6,15 @@
 
 **Written for:** anyone — no developer knowledge needed.
 **What you need:** the dev server with `vorp_core` running, admin rights, and ~10 minutes. The throwaway `sovereign_spikes` resource (in `spikes/sovereign_spikes/`).
-**What to send back to Claude:** the F8 console lines each command prints, plus a PASS/FAIL/WEIRD note per item below. A "fail" is information, not a blocker.
+**What to send back to Claude:** in the interactive ledger, mark each line Pass/Fail/Skip, add notes, then press **Build the Report** and paste the block back (plus any F8 console lines). A "fail" is information, not a blocker.
 
 ## 1. Raise the resource
 
-1. Copy `spikes/sovereign_spikes/` into the server's `resources` directory.
-2. Add to `server.cfg` (anywhere — it has no dependencies): `ensure sovereign_spikes`
-3. Restart the resource (or `refresh` + `ensure sovereign_spikes`), join, and open the F8 console.
-
-| # | Check | Expect | Result |
+| # | Command / step | Expect | Result |
 |---|---|---|---|
-| R1 | F8 console after start | a `[spike] loaded.` line listing every command | |
+| SET1 | Copy `spikes/sovereign_spikes/` into the server's `resources` directory | files in place | |
+| SET2 | Add `ensure sovereign_spikes` to `server.cfg` (anywhere — no dependencies), restart, join | F8 shows a `[spike] loaded.` line listing every command | |
+| SET3 | Open the F8 console and keep it visible | results print there in plain words | |
 
 ## 2. Coat is the model (S14 · F1)
 
