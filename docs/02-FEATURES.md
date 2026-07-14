@@ -167,7 +167,7 @@ Every permission below is a per-job (and where noted per-grade) gate resolved se
 
 | ID | Feature | Bar | Feasibility | Deps | Phase | Status |
 |----|---------|-----|-------------|------|-------|--------|
-| L1 | **Custom branded NUI** — Sovereign County styling, visually distinct from other sovereign_scripts; drives storefront, customizer, codex | NEW | ✅ | — | 1 | ⬜ |
+| L1 | **Custom branded NUI** — dark cinematic leather/wood theme (see 04-UI-DESIGN.md); drives storefront, customizer, codex | NEW | ✅ | — | 1 | ⬜ |
 | L2 | Ambient ped per stable for buy / customize / retrieve / switch | MATCH+ | ✅ | core | 1 | ⬜ |
 | L3 | Blips individually toggleable | MATCH | ✅ | — | 1 | ⬜ |
 | L4 | Horse preview in stable catalog | MATCH | ✅ | native cam | 1 | ⬜ |
@@ -211,6 +211,20 @@ Every permission below is a per-job (and where noted per-grade) gate resolved se
 | K7 | Config validator + startup diagnostics (catch bad coords/models) | NEW | ✅ | — | 1 | ⬜ |
 | K8 | Data migration from `vorp_stables` (keep existing rides/inventories) | MATCH | ⚠️ | db | 6 | ⏸ (greenfield — deferred) |
 | K9 | Version checker / update notice | MATCH | ✅ | — | 6 | ⬜ |
+
+## N. Storefront / Concept-Art Features *(from approved UI concept 2026-07-14 — see 04-UI-DESIGN.md)*
+
+| ID | Feature | Bar | Feasibility | Deps | Phase | Status |
+|----|---------|-----|-------------|------|-------|--------|
+| N1 | Specialty vs Stock catalog split (stock = base breeds; specialty = named/lore/premium/curated) | NEW | ✅ | catalog | 1 | ⬜ |
+| N2 | Named lore horses (name + description + flavor per specialty entry) | NEW | ✅ | catalog | 1 | ⬜ |
+| N3 | Height / "hands" cosmetic stat (e.g. 16.2 HH) | NEW | ✅ | catalog | 1 | ⬜ |
+| N4 | Rich point-of-sale detail (sex, age, trait cards, stat bars, papers/slot notices) | NEW | ⚠️ | stats, traits | 1–2 | ⬜ |
+| N5 | Promotions / sales (ribbons + temporary price changes, per stable/horse) | NEW | ✅ | economy | 2 | ⬜ |
+| N6 | Per-stable stablefront copy (headline/subtext/collection name) | NEW | ✅ | config | 1 | ⬜ |
+| N7 | In-preview zoom (scroll) alongside orbit (drag) | NEW | ⚠️ | L5 | 1 | ⬜ |
+
+> Storefront visuals, layout, data bindings and interactions are specified in **[04-UI-DESIGN.md](04-UI-DESIGN.md)**. This supersedes the parchment-ledger placeholder theme used in the Phase 0 NUI shell — the storefront adopts the dark cinematic leather/wood theme from the concept.
 
 ---
 
