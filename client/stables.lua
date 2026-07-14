@@ -11,15 +11,21 @@ local blips  = {}
 local stalls = {}      -- [stableId] = { ped, groomHorse, cfg, groomThread }
 local nearId = nil
 
-local BRUSH      = GetHashKey('Interaction_Brush')
-local BRUSH_PROP = GetHashKey('p_brushHorse02x')
-local INTERACT   = GetHashKey('INTERACT')
+local BRUSH_DICT = 'mech_animal_interaction@horse@right@brushing'
+local BRUSH_CLIP = 'brushing_horse'
 
 local function loadModel(hash)
     RequestModel(hash)
     local t = GetGameTimer()
     while not HasModelLoaded(hash) and (GetGameTimer() - t) < 5000 do Wait(10) end
     return HasModelLoaded(hash)
+end
+
+local function loadAnim(dict)
+    RequestAnimDict(dict)
+    local t = GetGameTimer()
+    while not HasAnimDictLoaded(dict) and (GetGameTimer() - t) < 5000 do Wait(10) end
+    return HasAnimDictLoaded(dict)
 end
 
 local function makeBlip(stable)
@@ -82,23 +88,23 @@ local function rollBreed(stableId, cfg)
     return pool[math.random(#pool)]
 end
 
--- Keep the stablehand brushing the ambient horse, on a loop.
+-- Keep the (stationary) stablehand playing the looping brush animation in
+-- place. Re-asserts the loop if it ever drops.
 local function groomLoop(stall)
     if stall.groomThread then return end
     stall.groomThread = true
     CreateThread(function()
+        loadAnim(BRUSH_DICT)
         while stall.cfg and stall.cfg.enabled and DoesEntityExist(stall.ped) do
-            local horse = stall.groomHorse
-            if horse and DoesEntityExist(horse) then
-                TaskAnimalInteraction(stall.ped, horse, BRUSH, BRUSH_PROP, false)
-                local t = GetGameTimer()
-                repeat Wait(0) until HasAnimEventFired(stall.ped, INTERACT)
-                    or (GetGameTimer() - t) > 8000
-                    or not (stall.groomHorse and DoesEntityExist(stall.groomHorse))
-                Wait(600)
-            else
-                Wait(500)
+            if not IsEntityPlayingAnim(stall.ped, BRUSH_DICT, BRUSH_CLIP, 3) then
+                if HasAnimDictLoaded(BRUSH_DICT) then
+                    -- flag 1 = looping; -1 duration = until told otherwise
+                    TaskPlayAnim(stall.ped, BRUSH_DICT, BRUSH_CLIP, 2.0, 2.0, -1, 1, 0.0, false, false, false)
+                else
+                    loadAnim(BRUSH_DICT)
+                end
             end
+            Wait(1500)
         end
         stall.groomThread = nil
     end)
@@ -109,11 +115,20 @@ end
 function Stables.rerollGroom(stableId)
     local stall = stalls[stableId]
     if not (stall and stall.cfg and stall.cfg.enabled and DoesEntityExist(stall.ped)) then return end
-    if not (stall.cfg.horsePos and #stall.cfg.horsePos >= 3) then return end
     local model = rollBreed(stableId, stall.cfg)
     if not model then return end
+
+    -- Where the groomed horse stands: explicit config, else auto — just in
+    -- front of the ped (facing it) so the brush lines up without a manual coord.
+    local pos = stall.cfg.horsePos
+    if not (pos and #pos >= 3) then
+        local pc  = stall.pedCoords
+        local rad = math.rad(pc[4] or 0.0)
+        pos = { pc[1] - math.sin(rad) * 2.2, pc[2] + math.cos(rad) * 2.2, pc[3], (pc[4] or 0.0) + 180.0 }
+    end
+
     if stall.groomHorse and DoesEntityExist(stall.groomHorse) then DeleteEntity(stall.groomHorse) end
-    stall.groomHorse = spawnHorseAt(model, stall.cfg.horsePos)
+    stall.groomHorse = spawnHorseAt(model, pos)
     Util.log(('groom horse at %s -> %s'):format(stableId, model))
     groomLoop(stall)
 end
@@ -123,9 +138,10 @@ local function makePed(id, stable)
     if not (p and p.enabled and p.coords and #p.coords >= 4) then return end
     local groom = p.grooming
     local grooming = groom and groom.enabled or false
-    local ped = spawnPed(p.model, p.coords[1], p.coords[2], p.coords[3], p.coords[4], not grooming)
+    -- Always frozen: the stablehand stands still and brushes in place.
+    local ped = spawnPed(p.model, p.coords[1], p.coords[2], p.coords[3], p.coords[4], true)
     if not ped then return end
-    stalls[id] = { ped = ped, cfg = groom }
+    stalls[id] = { ped = ped, cfg = groom, pedCoords = { p.coords[1], p.coords[2], p.coords[3], p.coords[4] } }
     if grooming then
         Stables.rerollGroom(id)                 -- spawn a random horse + start brushing
     elseif p.scenario then

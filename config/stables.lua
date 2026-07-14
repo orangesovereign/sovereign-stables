@@ -29,21 +29,21 @@ Config.Stables = {
         ped = {
             enabled  = true,
             model    = 'u_m_m_bwmstablehand_01',
-            coords   = { -365.15, 792.68, 115.18, 178.47 },   -- TODO: move toward the back (x,y,z,heading)
+            coords   = { -367.61, 787.17, 116.16, 92.52 },   -- stablehand stands here (x,y,z,heading)
             scenario = 'WORLD_HUMAN_WAITING_IMPATIENT',        -- fallback only when grooming.enabled = false
             grooming = {
                 enabled  = true,
-                horsePos = { -363.00, 792.00, 115.20, 90.0 },  -- TODO: real back-of-stable spot, in front of the ped
+                horsePos = nil,   -- nil = auto-place the horse just in front of the ped; set {x,y,z,h} to override
                 breeds   = nil,   -- nil = random from this stable's catalog; or a list like { 'A_C_Horse_Morgan_Bay' }
             },
         },
 
-        -- INTERACTION prompt point + radius
-        prompt = { coords = { -365.87, 789.51, 116.17 }, distance = 2.0 },
+        -- INTERACTION prompt point + radius (on the stablehand)
+        prompt = { coords = { -367.61, 787.17, 116.16 }, distance = 1.0 },
 
         -- PREVIEW positions & cameras used by the storefront/customizer
         preview = {
-            horsePos = { -366.51, 787.45, 116.17, 274.97 },
+            horsePos = { -398.02, 773.43, 115.79, 86.77 },
             wagonPos = { -370.11, 786.99, 115.16, 274.18 },
             camHorse = { -367.92, 783.02, 117.77, -36.42, 0.0, -100.98, 50.0 },
             camWagon = { -363.58, 792.11, 118.04, -16.35, 0.0, 143.97, 50.0 },
