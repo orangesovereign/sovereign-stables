@@ -84,3 +84,14 @@ _(Rounds recorded here as they happen — date, who tested, what was confirmed o
 - **Spawn (A1/A2): FAIL — horse invisible + airborne.** Console reported the horse spawned; entity existed (owner could mount it) but was not visible and sat above the ground. A3–A8 skipped (couldn't judge an invisible horse). Same class of bug as sovereign_storyworks Phase 0 "peds spawned airborne."
 - **Root cause:** the spike created the ped without (a) ground-snap and (b) metaped variation init. A raw RDR3 horse renders invisible until `0x283978A15512B2FE` (variation init) is called, and spawns airborne without `GetGroundZAndNormalFor_3dCoord`.
 - **Fix (spike rev 2):** ground-snap Z + variation init + `SetEntityVisible`, mirroring the proven vorp_utils / vorp_stables patterns. **Awaiting retest of A1–A8** (camera already passed — no need to re-run C).
+
+### Round 2 — 2026-07-14 (owner)
+
+- **All 17 PASS.** With rev 2 the horse spawns visible and on the ground.
+- **A1/A2 — coat = model:** confirmed. Swapping to the Turkoman produced a gold Turkoman. Catalog stays model-agnostic.
+- **A3–A7 — mane/tail/tack:** confirmed applying at runtime via `0xD3A7B003ED343FD9` + `UpdatePedVariation`.
+- **A8 — cross-breed: PASS (the deciding answer).** A mane preset that changed the grey Kentucky Saddler ALSO changed the gold Turkoman → components are **not** breed-locked. **Decision: the customizer offers ONE universal component list**, not per-breed lists.
+
+### GATE RULING — 2026-07-14
+
+**PASSED.** Both proofs stand: horse-appearance pipeline (spawn + coat=model + mane/tail/tack apply, universal components) and orbital camera. Confirmed approach recorded in `docs/PHASE1_SPIKE_FINDINGS.md`. `sovereign_spikes` retired (owner removed it from server.cfg). Phase 1 (Core Parity MVP) may begin.

@@ -33,8 +33,8 @@
 | S11 | Heal horses via items or paid stable service (configurable price) | EXCEED | ✅ | inventory, money | 2 | ⬜ |
 | S12 | Horseshoe system — configurable, max upgrade level | EXCEED | ⚠️ | tack, stats | 3 | ⬜ |
 | S13 | Flaming horseshoe support | EXCEED | 🧪 | S12, particles | 4 | ⬜ |
-| S14 | Customize components: body size, colors, manes, tails | EXCEED | ⚠️ | native ped comp | 2 | ⬜ |
-| S15 | Component control UI: circular controls **or** arrow keys (config) | EXCEED | ⚠️ | sovereign_menus | 2 | ⬜ |
+| S14 | Customize components: manes, tails (✅ confirmed); body size, colors (deferred spike) | EXCEED | ✅/⚠️ | native ped comp | 2 | ⬜ |
+| S15 | Component control UI: circular controls **or** arrow keys — **universal component list** (A8 confirmed) | EXCEED | ✅ | custom NUI | 2 | ⬜ |
 | S16 | Faction stables — same-job players share a horse pool | EXCEED | ✅ | vorp jobs, db | 3 | ⬜ |
 | S17 | Three taming minigames, selectable: number-sequence / pull / basic | EXCEED | ⚠️ | wild horses | 4 | ⬜ |
 | S18 | Simulated spawn nodes — define horse spawns where the game has none | EXCEED | 🧪 | wild horses | 4 | ⬜ |
@@ -230,7 +230,7 @@ Every permission below is a per-job (and where noted per-grade) gate resolved se
 
 ## Open feasibility questions (drive tech-prep spikes)
 
-1. **Ped/horse appearance at runtime** (S14, F1, F2, H7) — confirm RDR3 natives for setting mane/tail/coat/body components on a spawned horse and persisting them. *(vorp_stables does manes/tails/tack via the `complements` hashes in `data.lua` — proven path; body-size & coat need a spike.)* **Spike round 1 (2026-07-14): appearance couldn't be judged — horse spawned invisible+airborne. Cause: missing variation-init `0x283978A15512B2FE` + ground-snap `GetGroundZAndNormalFor_3dCoord`. Spike rev 2 patched; A1–A8 retest pending.**
+1. **Ped/horse appearance at runtime** (S14, F1, F2, H7) — confirm RDR3 natives for setting mane/tail/coat/body components on a spawned horse and persisting them. *(vorp_stables does manes/tails/tack via the `complements` hashes in `data.lua` — proven path; body-size & coat need a spike.)* **RESOLVED 2026-07-14 (spike gate PASSED):** spawn = ground-snap + variation-init `0x283978A15512B2FE`; mane/tail/tack apply = `0xD3A7B003ED343FD9` + `UpdatePedVariation`; coat = model; components are NOT breed-locked → universal component list. Full record in `docs/PHASE1_SPIKE_FINDINGS.md`. Body-size & shiny-coat still deferred.
 2. **Bonding/courage natives** (E3, E4) — is RDR3's built-in horse-bonding stat readable/writable, or do we simulate our own?
 3. **Golden vs normal status** (H3) — mapping to RDR3 horse core attributes vs. a custom overlay stat.
 4. **Wheel damage / dirt decals** (WG10, WG11) — native support on RDR3 wagons is uncertain; may need visual approximation.
