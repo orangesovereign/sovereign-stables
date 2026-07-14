@@ -6,7 +6,7 @@ author 'Sovereign County RP'
 name 'sovereign_stables'
 description 'Sovereign County stables, horses & wagons — a from-scratch replacement for vorp_stables (VorpCore).'
 repository 'https://github.com/orangesovereign/sovereign-stables'
-version '0.0.0'
+version '0.1.0'
 lua54 'yes'
 
 -- Load order matters: config -> shared libs -> feature modules.
@@ -23,9 +23,14 @@ shared_scripts {
     'shared/validate.lua',
     'shared/registry.lua',
     'shared/bridge.lua',
+    'shared/catalog.lua',
 }
 
 client_scripts {
+    'client/preview.lua',
+    'client/camera.lua',
+    'client/storefront.lua',
+    'client/stables.lua',
     'client/core.lua',
 }
 

@@ -7,31 +7,65 @@
     <link rel="stylesheet" href="app.css" />
 </head>
 <body>
-    <!-- Root stays hidden until the client sends { action: 'open' }. -->
     <div id="root" class="hidden">
-        <div class="stage">
-            <section class="ledger" role="dialog" aria-label="Sovereign Stables">
-                <header class="ledger__head">
-                    <div class="ledger__seal" aria-hidden="true">SC</div>
-                    <div class="ledger__titles">
-                        <h1>Sovereign County Stables</h1>
-                        <p class="ledger__sub">Livery &amp; Horse Registry</p>
+        <div class="frame">
+            <!-- HEADER -->
+            <header class="hd">
+                <div class="brand">
+                    <div class="seal"><span>SC</span></div>
+                    <div class="brand__t">
+                        <h1>Sovereign Stables</h1>
+                        <p>Stables &amp; Carriage Co.</p>
                     </div>
-                </header>
-
-                <div class="ledger__body">
-                    <p class="ledger__lead">Foundation shell.</p>
-                    <p class="ledger__note">
-                        The storefront, customizer, codex and Horse Creator will render here.
-                        This confirms the branded NUI opens, styles and closes with proper focus.
-                    </p>
                 </div>
+                <button class="chip loc" id="loc"><span class="ic">&#9906;</span><span id="locName">—</span><span class="caret">&#9662;</span></button>
+                <div class="chip who"><span class="ic">&#9737;</span><span id="who">—</span></div>
+                <div class="wallet">
+                    <span class="cash"><span class="ic">&#128176;</span><b id="cash">$0</b></span>
+                    <span class="gold"><span class="ic">&#9673;</span><b id="gold">0</b> <em>Gold</em></span>
+                </div>
+                <button class="esc" id="esc">ESC <span>&#10005;</span></button>
+            </header>
 
-                <footer class="ledger__foot">
-                    <span class="ledger__hint">Press <kbd>Esc</kbd> to close</span>
-                    <button id="closeBtn" class="btn">Take your leave</button>
-                </footer>
-            </section>
+            <div class="body">
+                <!-- LEFT NAV -->
+                <nav class="nav">
+                    <div class="nav__label">Stable Services</div>
+                    <button class="nav__item is-active"><span class="ic">&#9812;</span>Stablefront</button>
+                    <button class="nav__item" disabled><span class="ic">&#9816;</span>My Horses<span class="badge" id="ownBadge">0</span></button>
+                    <button class="nav__item" disabled><span class="ic">&#9109;</span>Components</button>
+                    <button class="nav__item" disabled><span class="ic">&#9881;</span>Wagons</button>
+                    <div class="nav__mgmt">
+                        <div class="shield">&#9877;</div>
+                        <div class="nav__mgmt-t"><b>Stable Management</b><span id="permTier">—</span></div>
+                    </div>
+                </nav>
+
+                <!-- CATALOG -->
+                <section class="cat">
+                    <div class="cat__label">Stable Catalog</div>
+                    <h2 class="cat__head">Find your better half.</h2>
+                    <p class="cat__sub">Every horse has a history. Choose one worthy of yours.</p>
+                    <div class="cat__divider"><span id="collection">Collection</span></div>
+                    <div class="tabs">
+                        <button data-tab="specialty" class="is-active">Specialty Horses</button>
+                        <button data-tab="stock">Stock Horses</button>
+                    </div>
+                    <div class="list" id="list"></div>
+                    <div class="cat__foot" id="catFoot"></div>
+                </section>
+
+                <!-- CENTER STAGE (transparent — the game renders the horse here) -->
+                <section class="stage" id="stage">
+                    <div class="stage__hint">&#10021; Drag to orbit &middot; Scroll to zoom</div>
+                    <button class="arrow arrow--l" id="prev">&#8249;</button>
+                    <button class="arrow arrow--r" id="next">&#8250;</button>
+                    <div class="stage__loc"><span class="ic">&#9906;</span><span id="stageLoc">—</span></div>
+                </section>
+
+                <!-- DETAIL -->
+                <aside class="detail" id="detail"></aside>
+            </div>
         </div>
     </div>
     <script src="app.js"></script>

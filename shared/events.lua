@@ -19,7 +19,10 @@ Events.RequestRetrieve   = e('requestRetrieve')
 Events.RequestSell       = e('requestSell')
 Events.RequestDiag       = e('requestDiag')
 
+Events.RequestHeader     = e('requestHeader')
+
 -- client-bound
 Events.OpenStorefront    = e('openStorefront')
+Events.HeaderData        = e('headerData')
 Events.SyncOwnedRides    = e('syncOwnedRides')
 Events.DiagResult        = e('diagResult')

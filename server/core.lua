@@ -76,4 +76,32 @@ RegisterCommand('stables_diag', function(source)
     end
 end, false)
 
+-- Storefront opened: return the player's identity + wallet for the header.
+-- Server-authoritative — the client never decides what money it has.
+RegisterNetEvent(Events.RequestHeader, function(_stableId)
+    local src = source
+    local ch = Bridge.getCharacter(src)
+    local cash, gold = Bridge.getBalance(src)
+    local job, grade = Bridge.getJob(src)
+
+    local name = 'Rider'
+    if ch then
+        name = ((ch.firstname or '') .. ' ' .. (ch.lastname or '')):gsub('^%s+', ''):gsub('%s+$', '')
+        if name == '' then name = 'Rider' end
+    end
+
+    local permTier = ''
+    if job and job ~= '' then
+        permTier = tostring(job) .. ' · Grade ' .. tostring(grade or 0)
+    end
+
+    TriggerClientEvent(Events.HeaderData, src, {
+        charName = name,
+        job = job or '',
+        permTier = permTier,
+        cash = cash or 0,
+        gold = gold or 0,
+    })
+end)
+
 exports('isBooted', function() return booted end)
