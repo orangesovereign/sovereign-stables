@@ -103,18 +103,38 @@ function Stables.forceNearest()
     if bestId and not Storefront.isOpen() then Storefront.open(bestId) end
 end
 
--- Proximity hint (debounced): a quiet tick when you step into range.
-local function proximityLoop()
+-- On-screen interaction prompt — the proven RDR3 UiPrompt pattern (works this
+-- session, unlike RegisterKeyMapping which only binds after a client restart).
+local promptGroup = GetRandomIntInRange(0, 0xFFFFFF)
+local openPrompt
+
+local function setupPrompt()
+    openPrompt = UiPromptRegisterBegin()
+    UiPromptSetControlAction(openPrompt, 0x760A9C6F)
+    UiPromptSetText(openPrompt, CreateVarString(10, 'LITERAL_STRING', 'Speak with the Stablehand'))
+    UiPromptSetEnabled(openPrompt, true)
+    UiPromptSetVisible(openPrompt, true)
+    UiPromptSetStandardMode(openPrompt, true)
+    UiPromptSetGroup(openPrompt, promptGroup, 0)
+    UiPromptRegisterEnd(openPrompt)
+end
+
+-- Show the prompt while in range; a tap opens the storefront.
+local function promptLoop()
     CreateThread(function()
         while true do
-            local id = Storefront.isOpen() and nil or nearestInRange()
-            if id ~= nearId then
-                nearId = id
-                if id then
-                    Bridge.notifyTick(('Press G to speak with the stablehand at %s'):format(Config.Stables[id].label))
+            local wait = 500
+            local id = (not Storefront.isOpen()) and nearestInRange() or nil
+            nearId = id
+            if id then
+                wait = 0
+                UiPromptSetActiveGroupThisFrame(promptGroup,
+                    CreateVarString(10, 'LITERAL_STRING', Config.Stables[id].label), 0, 0, 0, 0)
+                if UiPromptHasStandardModeCompleted(openPrompt) then
+                    Storefront.open(id)
                 end
             end
-            Wait(400)
+            Wait(wait)
         end
     end)
 end
@@ -124,16 +144,17 @@ Registry.register({
     name = 'stables',
     onInit = function()
         Stables.spawnAll()
-        proximityLoop()
+        setupPrompt()
+        promptLoop()
     end,
 })
 
 -- Interact key (rebindable in the RedM settings menu) + a test command.
-RegisterCommand('sov_stable_interact', function() Stables.interact() end, false)
-RegisterKeyMapping('sov_stable_interact', 'Sovereign Stables: speak with stablehand', 'keyboard', 'G')
-RegisterCommand('stable', function() Stables.interact() end, false)
--- Debug: force-open the nearest stable from anywhere (ignores range).
-RegisterCommand('sovstable', function() Stables.forceNearest() end, false)
+-- The on-screen prompt above is the primary way in. These are extras:
+RegisterCommand('sovstable', function() Stables.interact() end, false)               -- typed command
+RegisterKeyMapping('sovstable', 'Sovereign Stables: speak with stablehand', 'keyboard', 'G') -- rebindable key
+RegisterCommand('stable', function() Stables.interact() end, false)                  -- alias
+RegisterCommand('sovstableforce', function() Stables.forceNearest() end, false)      -- debug: ignores range
 
 AddEventHandler('onResourceStop', function(res)
     if res ~= GetCurrentResourceName() then return end

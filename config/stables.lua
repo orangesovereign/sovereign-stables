@@ -37,7 +37,7 @@ Config.Stables = {
 
         -- PREVIEW positions & cameras used by the storefront/customizer
         preview = {
-            horsePos = { -366.07, 781.81, 115.14, 5.97 },
+            horsePos = { -366.51, 787.45, 116.17, 274.97 },
             wagonPos = { -370.11, 786.99, 115.16, 274.18 },
             camHorse = { -367.92, 783.02, 117.77, -36.42, 0.0, -100.98, 50.0 },
             camWagon = { -363.58, 792.11, 118.04, -16.35, 0.0, 143.97, 50.0 },

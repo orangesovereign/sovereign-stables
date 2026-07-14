@@ -23,8 +23,8 @@ This is the first playable slice and is **browse-only** — buying, summoning an
 
 | # | Check | Expect | Result |
 |---|---|---|---|
-| O1 | Stand near the stablehand | objective slip: "Press G to speak with the stablehand…" | |
-| O2 | Press `G` (or `/stable`; fallback `/sovstable`) | branded storefront opens (dark leather, brass, Sovereign lettering); if not, paste F8 lines | |
+| O1 | Stand near the stablehand | on-screen prompt appears: key + "Speak with the Stablehand" | |
+| O2 | Tap the prompt key (or `/sovstable`; `/sovstableforce` ignores range) | branded storefront opens (dark leather, brass, Sovereign lettering) | |
 | O3 | Read the header | your name + job, and real cash + gold | |
 | O4 | Look at the centre | a horse stands there, visible, on the ground, slowly orbiting | |
 
