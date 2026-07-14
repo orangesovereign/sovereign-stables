@@ -1,0 +1,344 @@
+<style>
+  /* Deliberately single-theme: a western "field ledger by lamplight" — a
+     nocturnal leather/brass world that matches the storefront concept and the
+     game itself. Not a naive dark inversion; built dark on purpose. */
+  :root {
+    --ground:    #140f0b;
+    --sheet:     #1c1510;
+    --raised:    #241b14;
+    --raised-hi: #2c2019;
+    --line:      #3a2c20;
+    --oxblood:   #7a2020;
+    --oxblood-d: #521616;
+    --brass:     #c8a866;
+    --brass-d:   #9c7c44;
+    --parchment: #ece0c8;
+    --muted:     #9c8a70;
+    --faint:     #6f6047;
+    --pass:      #8faf6b;
+    --fail:      #cc5b46;
+    --skip:      #7d7256;
+    --shadow:    rgba(0,0,0,.55);
+    --serif: Georgia, 'Iowan Old Style', 'Times New Roman', serif;
+    --mono: ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, Consolas, monospace;
+    --sans: ui-sans-serif, system-ui, 'Segoe UI', sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background:
+      radial-gradient(120% 80% at 50% -10%, #22190f 0%, var(--ground) 60%) fixed;
+    color: var(--parchment);
+    font-family: var(--serif);
+    line-height: 1.5;
+    padding: clamp(16px, 4vw, 44px);
+  }
+
+  .sheet {
+    max-width: 940px;
+    margin: 0 auto;
+    background:
+      linear-gradient(180deg, var(--sheet), #17110c);
+    border: 1px solid var(--line);
+    box-shadow: 0 30px 70px var(--shadow), inset 0 0 0 4px rgba(200,168,102,.06);
+    border-radius: 4px;
+  }
+
+  /* ---- header ---- */
+  .head {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: clamp(20px, 3vw, 32px);
+    border-bottom: 2px solid var(--brass-d);
+    background: linear-gradient(180deg, rgba(122,32,32,.10), transparent);
+  }
+  .seal {
+    flex: 0 0 auto;
+    width: 52px; height: 52px;
+    display: grid; place-items: center;
+    transform: rotate(45deg);
+    border: 2px solid var(--brass);
+    border-radius: 6px;
+    background: rgba(0,0,0,.25);
+  }
+  .seal span { transform: rotate(-45deg); color: var(--brass); font-weight: 700; letter-spacing: 1px; font-size: 17px; }
+  .head__titles { flex: 1; min-width: 0; }
+  .eyebrow {
+    font-family: var(--sans);
+    text-transform: uppercase;
+    letter-spacing: .22em;
+    font-size: 11px;
+    color: var(--brass);
+    margin: 0 0 4px;
+  }
+  h1 { font-size: clamp(22px, 3.4vw, 30px); margin: 0; letter-spacing: .5px; text-wrap: balance; }
+  .head__sub { color: var(--muted); font-style: italic; font-size: 14px; margin-top: 3px; }
+
+  /* ---- progress ---- */
+  .progress { padding: 16px clamp(20px,3vw,32px); border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .progress__meter { flex: 1; min-width: 200px; height: 10px; background: #0f0b07;
+    border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+  .progress__fill { height: 100%; width: 0%;
+    background: linear-gradient(90deg, var(--brass-d), var(--brass)); transition: width .35s ease; }
+  .progress__count { font-family: var(--mono); font-variant-numeric: tabular-nums;
+    font-size: 13px; color: var(--parchment); white-space: nowrap; }
+  .btn-reset {
+    font-family: var(--sans); font-size: 11px; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--muted); background: transparent; border: 1px solid var(--line);
+    border-radius: 4px; padding: 6px 12px; cursor: pointer;
+  }
+  .btn-reset:hover { color: var(--parchment); border-color: var(--brass-d); }
+
+  /* ---- groups ---- */
+  .group { padding: clamp(18px,3vw,28px) clamp(20px,3vw,32px); border-bottom: 1px solid var(--line); }
+  .group:last-of-type { border-bottom: none; }
+  .group__title { display: flex; align-items: baseline; gap: 12px; margin: 0 0 4px; }
+  .group__title h2 { font-size: 18px; margin: 0; letter-spacing: .4px; }
+  .group__title .n { font-family: var(--mono); font-size: 12px; color: var(--faint); }
+  .group__desc { color: var(--muted); font-size: 14px; font-style: italic; margin: 0 0 18px; max-width: 62ch; }
+
+  /* ---- item ---- */
+  .item { background: var(--raised); border: 1px solid var(--line); border-radius: 5px;
+    padding: 14px 16px; margin-bottom: 12px; }
+  .item:last-child { margin-bottom: 0; }
+  .item.is-critical { border-color: var(--brass-d); box-shadow: inset 3px 0 0 var(--brass); }
+  .item__top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .tag { font-family: var(--mono); font-size: 12px; color: var(--brass);
+    border: 1px solid var(--brass-d); border-radius: 3px; padding: 2px 7px; }
+  .item.is-critical .tag::after { content: ' · key'; color: var(--muted); }
+  .cmd {
+    font-family: var(--mono); font-size: 13px; color: var(--parchment);
+    background: #0f0b07; border: 1px solid var(--line); border-radius: 4px;
+    padding: 5px 10px; cursor: copy; position: relative; user-select: none;
+  }
+  .cmd:hover { border-color: var(--brass-d); }
+  .cmd::before { content: '⧉'; color: var(--faint); margin-right: 7px; }
+  .cmd.copied { color: var(--brass); border-color: var(--brass); }
+  .cmd.copied::after { content: 'copied'; position: absolute; right: -58px; top: 50%;
+    transform: translateY(-50%); font-family: var(--sans); font-size: 10px;
+    letter-spacing: .1em; text-transform: uppercase; color: var(--brass); }
+  .states { display: inline-flex; margin-left: auto; border: 1px solid var(--line);
+    border-radius: 5px; overflow: hidden; }
+  .states button {
+    font-family: var(--sans); font-size: 11px; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--muted); background: var(--raised-hi); border: none; border-left: 1px solid var(--line);
+    padding: 7px 13px; cursor: pointer; transition: background .12s, color .12s;
+  }
+  .states button:first-child { border-left: none; }
+  .states button:hover { color: var(--parchment); }
+  .states button[aria-pressed="true"][data-state="pass"] { background: var(--pass); color: #16210c; }
+  .states button[aria-pressed="true"][data-state="fail"] { background: var(--fail); color: #2a0d07; }
+  .states button[aria-pressed="true"][data-state="skip"] { background: var(--skip); color: #1a160c; }
+  .look { color: var(--parchment); font-size: 14px; margin: 11px 0 0; max-width: 66ch; }
+  .item.is-critical .look { color: var(--brass); }
+  .note {
+    display: block; width: 100%; margin-top: 10px; resize: vertical; min-height: 34px;
+    font-family: var(--serif); font-size: 13px; color: var(--parchment);
+    background: #0f0b07; border: 1px solid var(--line); border-radius: 4px; padding: 7px 10px;
+  }
+  .note::placeholder { color: var(--faint); font-style: italic; }
+  .note:focus, .cmd:focus-visible, .states button:focus-visible, .btn:focus-visible, .btn-reset:focus-visible {
+    outline: 2px solid var(--brass); outline-offset: 2px;
+  }
+
+  /* ---- report ---- */
+  .report { padding: clamp(18px,3vw,28px) clamp(20px,3vw,32px); }
+  .report h2 { font-size: 18px; margin: 0 0 4px; }
+  .report p { color: var(--muted); font-size: 14px; margin: 0 0 16px; }
+  .report__actions { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+  .btn {
+    font-family: var(--sans); font-size: 12px; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--parchment); background: linear-gradient(180deg, var(--oxblood), var(--oxblood-d));
+    border: 1px solid var(--oxblood-d); border-radius: 4px; padding: 10px 18px; cursor: pointer;
+  }
+  .btn:hover { filter: brightness(1.12); }
+  .btn.ghost { background: transparent; color: var(--brass); border-color: var(--brass-d); }
+  #report-out {
+    width: 100%; min-height: 200px; resize: vertical;
+    font-family: var(--mono); font-size: 12.5px; line-height: 1.6; color: var(--parchment);
+    background: #0f0b07; border: 1px solid var(--line); border-radius: 5px; padding: 14px;
+    white-space: pre; overflow-x: auto;
+  }
+  .foot { text-align: center; color: var(--faint); font-size: 12px; font-style: italic;
+    padding: 18px; border-top: 1px solid var(--line); }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="sheet">
+  <div class="head">
+    <div class="seal"><span>SC</span></div>
+    <div class="head__titles">
+      <p class="eyebrow">Sovereign Stables · Field Test Ledger</p>
+      <h1>Phase 1 Spikes — Appearance &amp; Camera</h1>
+      <p class="head__sub">Run each command in-game with the F8 console open, then mark what you saw. Generate the report at the bottom and paste it back.</p>
+    </div>
+  </div>
+
+  <div class="progress">
+    <div class="progress__meter"><div class="progress__fill" id="fill"></div></div>
+    <div class="progress__count" id="count">0 / 0 recorded</div>
+    <button class="btn-reset" id="reset">Reset ledger</button>
+  </div>
+
+  <div id="groups"></div>
+
+  <div class="report">
+    <h2>Build the report</h2>
+    <p>Assembles everything you marked — including notes — into one block to send back.</p>
+    <div class="report__actions">
+      <button class="btn" id="gen">Generate report</button>
+      <button class="btn ghost" id="copy">Copy to clipboard</button>
+    </div>
+    <textarea id="report-out" readonly placeholder="Your results appear here once you press Generate."></textarea>
+  </div>
+
+  <div class="foot">Ticks are saved in this browser — you can close and come back mid-test.</div>
+</div>
+
+<script>
+  const TESTS = [
+    { group: 'Setup', n: 'before you start', items: [
+      { id: 'S1', text: 'Copy spikes/sovereign_spikes/ into your server’s resources/ folder.' },
+      { id: 'S2', cmd: 'ensure sovereign_spikes', text: 'Add to server.cfg — no dependencies, so it can go anywhere.' },
+      { id: 'S3', text: 'Restart the resource, join the server, and open the F8 console (all results print there).' },
+    ]},
+    { group: 'Test A · Horse appearance', n: 'coat = model, plus mane / tail / tack',
+      desc: 'Proves the runtime appearance pipeline the storefront and customizer depend on.', items: [
+      { id: 'A1', cmd: '/spike_horse', text: 'A grey Kentucky Saddler spawns ~3m in front of you.' },
+      { id: 'A2', cmd: '/spike_coat A_C_Horse_Turkoman_Gold', text: 'The horse respawns as a gold Turkoman — confirms each coat is its own model.' },
+      { id: 'A3', cmd: '/spike_mane 1', text: 'The mane changes to the short preset.' },
+      { id: 'A4', cmd: '/spike_mane 3', text: 'The mane changes to the long preset — visibly different from preset 1.' },
+      { id: 'A5', cmd: '/spike_tail 1', text: 'The tail changes to the short preset.' },
+      { id: 'A6', cmd: '/spike_tail 3', text: 'The tail changes to the long preset.' },
+      { id: 'A7', cmd: '/spike_saddle', text: 'A saddle appears on the horse.' },
+      { id: 'A8', cmd: '/spike_mane 3', critical: true, text: 'After the coat swap above, does a mane preset that worked earlier still apply on the new breed? This tells us how breed-specific components are — note exactly what happened.' },
+      { id: 'A9', cmd: '/spike_clear', text: 'The preview horse is removed cleanly.' },
+    ]},
+    { group: 'Test B · Orbital camera', n: 'the storefront’s signature preview',
+      desc: 'A smooth camera that auto-centers on the horse and orbits it.', items: [
+      { id: 'B1', cmd: '/spike_cam', text: 'The camera orbits the horse smoothly, always centered on it.' },
+      { id: 'B2', cmd: '/spike_cam 6 40', text: 'A wider, faster orbit — still smooth, no jitter.' },
+      { id: 'B3', text: 'No stutter, no clipping through the horse, and the camera activated correctly.' },
+      { id: 'B4', cmd: '/spike_camstop', text: 'The camera restores to normal and the player unfreezes.' },
+    ]},
+  ];
+
+  const KEY = 'sov_spike_phase1_v1';
+  let state = {};
+  try { state = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { state = {}; }
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} };
+  const allItems = TESTS.flatMap(g => g.items);
+
+  const groupsEl = document.getElementById('groups');
+  TESTS.forEach(g => {
+    const sec = document.createElement('section');
+    sec.className = 'group';
+    const title = document.createElement('div');
+    title.className = 'group__title';
+    title.innerHTML = '<h2></h2><span class="n"></span>';
+    title.querySelector('h2').textContent = g.group;
+    title.querySelector('.n').textContent = g.n || '';
+    sec.appendChild(title);
+    if (g.desc) { const d = document.createElement('p'); d.className = 'group__desc'; d.textContent = g.desc; sec.appendChild(d); }
+
+    g.items.forEach(it => {
+      const el = document.createElement('div');
+      el.className = 'item' + (it.critical ? ' is-critical' : '');
+      el.dataset.id = it.id;
+
+      const top = document.createElement('div');
+      top.className = 'item__top';
+      const tag = document.createElement('span'); tag.className = 'tag'; tag.textContent = it.id; top.appendChild(tag);
+      if (it.cmd) {
+        const c = document.createElement('code'); c.className = 'cmd'; c.tabIndex = 0; c.textContent = it.cmd;
+        c.title = 'Click to copy';
+        const doCopy = () => { navigator.clipboard && navigator.clipboard.writeText(it.cmd);
+          c.classList.add('copied'); setTimeout(() => c.classList.remove('copied'), 1100); };
+        c.addEventListener('click', doCopy);
+        c.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); doCopy(); } });
+        top.appendChild(c);
+      }
+      const states = document.createElement('div'); states.className = 'states';
+      ['pass','fail','skip'].forEach(s => {
+        const b = document.createElement('button'); b.dataset.state = s; b.textContent = s;
+        b.setAttribute('aria-pressed', String((state[it.id] || {}).state === s));
+        b.addEventListener('click', () => {
+          state[it.id] = state[it.id] || {};
+          state[it.id].state = (state[it.id].state === s) ? null : s;
+          states.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.state === state[it.id].state)));
+          save(); refresh();
+        });
+        states.appendChild(b);
+      });
+      top.appendChild(states);
+      el.appendChild(top);
+
+      const look = document.createElement('p'); look.className = 'look'; look.textContent = it.text; el.appendChild(look);
+
+      const note = document.createElement('textarea'); note.className = 'note'; note.rows = 1;
+      note.placeholder = 'Notes (optional)'; note.value = (state[it.id] || {}).note || '';
+      note.addEventListener('input', () => { state[it.id] = state[it.id] || {}; state[it.id].note = note.value; save(); });
+      el.appendChild(note);
+
+      sec.appendChild(el);
+    });
+    groupsEl.appendChild(sec);
+  });
+
+  const fill = document.getElementById('fill');
+  const count = document.getElementById('count');
+  function refresh() {
+    const done = allItems.filter(it => (state[it.id] || {}).state).length;
+    const total = allItems.length;
+    fill.style.width = (total ? (done / total * 100) : 0) + '%';
+    count.textContent = done + ' / ' + total + ' recorded';
+  }
+  refresh();
+
+  document.getElementById('reset').addEventListener('click', () => {
+    if (!confirm('Clear every mark and note in this ledger?')) return;
+    state = {}; save();
+    document.querySelectorAll('.states button').forEach(b => b.setAttribute('aria-pressed', 'false'));
+    document.querySelectorAll('.note').forEach(n => n.value = '');
+    document.getElementById('report-out').value = '';
+    refresh();
+  });
+
+  const MARK = { pass: '[PASS]', fail: '[FAIL]', skip: '[skip]' };
+  function buildReport() {
+    const lines = [];
+    lines.push('SOVEREIGN STABLES — Phase 1 Spike Results');
+    lines.push('Date: ' + new Date().toISOString().slice(0, 10));
+    TESTS.forEach(g => {
+      lines.push('');
+      lines.push('== ' + g.group + ' ==');
+      g.items.forEach(it => {
+        const s = state[it.id] || {};
+        const mark = s.state ? MARK[s.state] : '[ -- ]';
+        let line = mark + ' ' + it.id + (it.cmd ? '  ' + it.cmd : '');
+        lines.push(line);
+        if (s.note && s.note.trim()) lines.push('        note: ' + s.note.trim());
+      });
+    });
+    const passed = allItems.filter(it => (state[it.id]||{}).state === 'pass').length;
+    const failed = allItems.filter(it => (state[it.id]||{}).state === 'fail').length;
+    lines.push('');
+    lines.push('Summary: ' + passed + ' pass · ' + failed + ' fail · ' + allItems.length + ' total');
+    return lines.join('\n');
+  }
+
+  document.getElementById('gen').addEventListener('click', () => {
+    document.getElementById('report-out').value = buildReport();
+  });
+  document.getElementById('copy').addEventListener('click', () => {
+    const out = document.getElementById('report-out');
+    if (!out.value) out.value = buildReport();
+    out.select();
+    navigator.clipboard && navigator.clipboard.writeText(out.value);
+    const b = document.getElementById('copy'); const t = b.textContent; b.textContent = 'Copied';
+    setTimeout(() => b.textContent = t, 1200);
+  });
+</script>
