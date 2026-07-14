@@ -35,7 +35,7 @@ Config.Stables = {
                 enabled  = true,
                 -- Where the groomed horse stands — use your exact coords (Z as-is, no snap).
                 -- Placeholder for now; replace with a real spot. nil = no horse.
-                horsePos = { -369.60, 787.13, 116.16, 182.0 },
+                horsePos = { -368.706, 787.138, 116.029, 180.0 },
                 breeds   = nil,   -- nil = random from this stable's catalog; or a list like { 'A_C_Horse_Morgan_Bay' }
             },
         },
