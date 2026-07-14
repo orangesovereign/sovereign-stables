@@ -61,4 +61,23 @@ Milestone 1.1 passes when boot is clean, the storefront opens over a visible orb
 
 ## Test log
 
-### Round 1 — (pending owner test)
+### Round 1 — 2026-07-14 (owner)
+
+- Boot/health/blip/travel PASS. Storefront **would not open** (O2): opening was gated on a server round-trip and aborted silently on any failure, leaving `isOpen = true` so retries no-op'd. Also `sovereign_notify` renders plain text — the RDR3 colour codes `~o~G~q~` printed literally (O1).
+- **Fixes:** open the NUI first (browsing never waits on the server); wrap preview/camera in pcall; header fills in via a separate `header` message; plain-text notify; F8 breadcrumbs.
+
+### Round 2 — 2026-07-14 (owner)
+
+- **16/17 PASS.** Storefront, header, catalog, tabs, arrows, drag/zoom, framing, purchase stub, close — all good.
+- O2 FAIL: `G` did nothing; only the raw keybind command opened it. **Cause:** `RegisterKeyMapping` only binds its default key after a full *client* restart, not a resource restart. **Fix:** switched to the RDR3 **UiPrompt** system (proven vorp_stables pattern) — an on-screen prompt that works immediately; renamed the command to `/sovstable`.
+- R1 feedback: preview horse moved out of the cubby to the owner's chosen open spot.
+
+### Round 3 — 2026-07-14 (owner) — ambient grooming
+
+- Stablehand + groomed horse added (owner request). Two bugs, both fixed:
+  - **Contorted ped:** `brushing_horse` is a *synced interaction* clip; played raw via `TaskPlayAnim` it wrecked the pose. → replaced with the base-game scenario `WORLD_HUMAN_HORSE_TEND_BRUSH_LINK` (`TaskStartScenarioInPlace`). Ped now stands and brushes correctly.
+  - **Floating ped/horse:** ambient entities spawned at **world-load while the player was far away**, so barn collision wasn't loaded and the ground query failed — leaving them at the raw config Z (~1m high from a player-position tool). Not a coord or heading problem. → **proximity-streamed** the ambient ped/horse (in 35m / out 55m) so collision is loaded and ground-snap works.
+
+### GATE RULING — 2026-07-14
+
+**PASSED. Owner: "1.1 is done… both horse and ped are on the ground."** Valentine stable spine complete: blip, streamed stablehand grooming a re-rolling random horse, on-ped interact prompt, branded storefront with live orbital preview, browse/tabs/arrows/detail/close. Milestone **1.2 (buy → own loop)** begins.
