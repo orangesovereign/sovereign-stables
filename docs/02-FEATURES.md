@@ -108,8 +108,9 @@ Everything else only **downs** it: a horse drops to a downed state (instantly on
 | E3 | Bonding system that reduces spooking | EXCEED | ⚠️ | native bonding | 3 | ⬜ |
 | E4 | Courage training — improves fear resistance | EXCEED | ⚠️ | E3 | 3 | ⬜ |
 | E5 | Personality & behavior system (traits) | EXCEED | 🧪 | db | 4 | ⬜ |
-| E6 | Ageing: aging speed, age-reset items, and **max age 31 = permanent death** (one of only two ways a horse dies for good — see the death rules below) | EXCEED | ⚠️ | db, loop | 3 | ⬜ |
+| E6 | Ageing on **wall time** (~2.3 real days per horse-year): foal 3–4 → adult at 5 → **death at 31**; age-reset items. See [05-LIFECYCLE](05-LIFECYCLE.md) | EXCEED | ⚠️ | db, loop | 3 | ⬜ |
 | E7 | Horse EXP loss on restart (see S9) | EXCEED | ✅ | db | 2 | ⬜ |
+| E8 | **Age-related stat decline** — as a horse gets on in years its stats *quietly* decrease (no announcement; the numbers just drift). Horses slow down. Curve/floor TBD — see 05-LIFECYCLE open #1–2 | NEW | ⚠️ | E6, stats | 3 | ⬜ |
 
 ## F. Tack & Components
 
