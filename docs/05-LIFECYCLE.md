@@ -98,20 +98,39 @@ At **2.3 real days per horse-year**:
 4. **"Moderately priced" stock** — needs a number when the 60+ breed catalog (M1) gets filled. Current placeholders: Kentucky $130, Ardennes $180, Mule $60, vs the Vesper specialty at $3,200.
 5. **Training curve** — how long does closing the 1.5–2 untrained gap take, and via which activities (E1)?
 
-## The stat model (rulings #13–14)
+## The stat model (rulings #13–14, revised 2026-07-15)
 
 | | |
 |---|---|
-| **The four stats** | **Acceleration · Speed · Stamina · Turn** — predetermined at birth, fixed for life |
-| **Health** | *Separate*, max **150** (H13) — not one of the four |
+| **The five stats** | **Health · Stamina · Speed · Acceleration · Turn** — predetermined at birth, fixed for life |
+| **Scale** | **0–100** (kept) |
+| **Max health** | **100** — *revised down from 150* |
 | **Courage** | *Separate*, trainable (E4) — and the one thing a foal may **not** train |
-| **Scale** | ~1–10 (a stock horse "reads as a 6") |
 | **Configured value** | the **fully trained ceiling** |
-| **At birth/purchase** | ceiling **− 1.5 to 2** (a 6 starts ~4–4.5) |
+| **At birth/purchase** | ceiling **− the untrained gap** (see the open question below) |
 | **Training** | closes the gap up to the ceiling; never past it |
-| **Age** | only late decline (27 / 25 fast), speed + stamina only |
+| **Age** | only late decline (27 / 25 fast), **speed + stamina only** |
 
-> ⚠️ **Consequences for what's already built:** our `config/horses.lua` currently carries `stats = { health, stamina, speed, acceleration }` on a **0–100** scale (Vesper: health 88, stamina 94…). That's the wrong set *and* the wrong scale. It becomes `{ acceleration, speed, stamina, turn }` on ~1–10, with health moving out to its own field. **The storefront stat bars are hard-coded to render 0–100 and will need rescaling.** Not urgent — the catalog is placeholder data — but it must land before the 60+ breed fill (M1).
+✅ Keeping 0–100 means **the storefront stat bars need no rescaling** — they already render 0–100. The only config change is **adding `turn`**.
+
+### ❓ Open: how big is the untrained gap on a 0–100 scale?
+
+The ruling was *"a stock horse may read as a 6 — that's the fully trained stat; untrained it's lowered by 1.5 to 2."* That was said while we were looking at a **1–10** scale (sirevlc's), where 6 → ~4–4.5 is a **25–33% haircut** — a big, meaningful gap that training visibly closes.
+
+On a **0–100** scale, taken literally, "−1.5 to 2" means a trained **60 → untrained 58**. That's invisible, and training would be pointless.
+
+**Almost certainly the intent is the proportional equivalent: −15 to −20 points** (trained 60 → untrained 40–45). Needs confirming before the catalog fill — get it wrong and 60 breeds carry the wrong numbers.
+
+## Damage model (ruling, 2026-07-15)
+
+| | |
+|---|---|
+| **Max health** | 100 |
+| **Headshot** | **instant down** (H11) — same as players |
+| **Limb / arm / backside** | must **not** bottom out health — peripheral hits do proportionally little damage |
+| **Vitals** | do a lot |
+
+**"A shot in the arm or backside shouldn't bottom out a horse."** So damage is **locational**, not a flat pool (H14): where you're hit matters as much as how often. This is what makes the downed state (H11) a *tactical* system rather than a health bar — you can wing a horse without killing it, and a clean headshot ends it.
 
 ## Spikes this pillar needs
 

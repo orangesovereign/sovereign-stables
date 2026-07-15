@@ -66,7 +66,8 @@
 | H10 | **Stabled horses auto-clean after a configurable timer (minutes)** — a dirty horse left at a stable is groomed clean by the stablehand over time | EXCEED | ⚠️ | metabolism, db | 2 | ⬜ |
 | H11 | **Horses are DOWNED, not killed** — the same state model as players, including **instant down on a headshot**. Configurable max minutes downed; exceed it and the horse is permanently dead. **Supersedes the instant hard-death / long_term_hp toll shipped in 1.3** | NEW | 🧪 | death rework, db | 2 | ⬜ |
 | H12 | **Horse Reviver items** — a downed horse can only be brought back with a reviver item | NEW | ✅ | H11, inventory | 2 | ⬜ |
-| H13 | **Max horse health 150** (configurable) | NEW | ⚠️ | native health cap | 2 | ⬜ |
+| H13 | **Max horse health 100** (configurable) — *revised down from 150, owner 2026-07-15* | NEW | ⚠️ | native health cap | 2 | ⬜ |
+| H14 | **Locational damage weighting** — a headshot downs instantly (H11), but a hit to a limb/arm/backside must **not** bottom out health. Peripheral hits do proportionally little; vitals do a lot. Applies to horses (and mirrors how players are handled) | NEW | 🧪 | native bone/damage | 2 | ⬜ |
 
 ### ⚖️ Death rules — owner ruling, 2026-07-15
 

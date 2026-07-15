@@ -136,7 +136,8 @@
             '</div>' +
             '<p class="detail__lore">' + (d.lore || '') + '</p>' +
             (traits ? '<div class="traits">' + traits + '</div>' : '') +
-            '<div class="stats">' + bar('Health', s.health) + bar('Stamina', s.stamina) + bar('Speed', s.speed) + bar('Acceleration', s.acceleration) + '</div>' +
+            '<div class="stats">' + bar('Health', s.health) + bar('Stamina', s.stamina) + bar('Speed', s.speed) +
+                bar('Acceleration', s.acceleration) + bar('Turn', s.turn) + '</div>' +
             (isOwned ? '' : '<div class="price"><b>' + money(d.cash) + '</b>' + (d.gold ? '<span> or ' + d.gold + ' <em>gold</em></span>' : '') + '</div>') +
             (isOwned
                 ? '<button class="buy" id="bringout">Bring Out</button>' +
