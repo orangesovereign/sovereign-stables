@@ -60,8 +60,10 @@ function Horse.spawn(data)
     Horse.despawn(true)
 
     local ped = PlayerPedId()
-    local behind = GetOffsetFromEntityInWorldCoords(ped, 0.0, -12.0, 0.0)
-    local horse = place(data.model, behind.x, behind.y, behind.z, GetEntityHeading(ped), data.name)
+    -- In FRONT of the player, facing them, so it's obviously arrived — then it
+    -- trots the last few metres to you.
+    local infront = GetOffsetFromEntityInWorldCoords(ped, 0.0, 8.0, 0.0)
+    local horse = place(data.model, infront.x, infront.y, infront.z, GetEntityHeading(ped) + 180.0, data.name)
     if not horse then
         Util.err(('horse spawn FAILED for model %s'):format(tostring(data.model)))
         Bridge.notify('Your horse could not reach you.')
@@ -117,14 +119,34 @@ function Horse.toggleFollow()
     end
 end
 
+-- Send a horse trotting off and only then take it out of the world. Used by
+-- dismiss, and by the flee-home command (D13) when that lands.
+function Horse.fleeAndDespawn(ent)
+    if not (ent and DoesEntityExist(ent)) then return end
+    FreezeEntityPosition(ent, false)
+    ClearPedTasks(ent)
+    local away = GetOffsetFromEntityInWorldCoords(ent, 0.0, 40.0, 0.0)
+    TaskGoStraightToCoord(ent, away.x, away.y, away.z, 3.0, -1, 0.0, 0.0)
+    CreateThread(function()
+        Wait(4500)                       -- let it get clear before it vanishes
+        if DoesEntityExist(ent) then DeleteEntity(ent) end
+    end)
+end
+
 function Horse.dismiss()
     if not (active and DoesEntityExist(active.ent)) then
         Bridge.notify('You have no horse out.')
         return
     end
     if isMounted() then Bridge.notify('Step down first.'); return end
+
+    local ent = active.ent
     TriggerServerEvent(Events.ReportDismiss, active.id)
-    Horse.despawn()
+    Bridge.notify(('%s wanders off.'):format(active.name or 'Your horse'))
+
+    -- Let go of it first, then let it walk away on its own before it goes.
+    active, following = nil, false
+    Horse.fleeAndDespawn(ent)
 end
 
 --------------------------------------------------------------------------------

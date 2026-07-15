@@ -67,6 +67,54 @@ This is why the horse is unusable during training — not a lockout flag, but ge
 
 Config: `Config.Training.tierOffset` / `.daysForTier` in `config/config.lua`; per-horse `storeLevel = { min, max }` in `config/horses.lua`.
 
+## The training session (ruled, 2026-07-15)
+
+Training is **an activity, not a menu click**. This answers the open question outright: it's a craft.
+
+### Getting in
+1. The trainer **leads the horse**.
+2. **Right-Click Hold + ENTER** → the Training option.
+3. The trainer **automatically stops leading**, and the horse enters **training mode**.
+
+### In training mode
+The moves are listed **bottom-right of the screen**:
+
+| Move | Key |
+|---|---|
+| Mirror | **L-ALT** |
+| Dance | **Up** |
+| Jump | **Down** |
+| Rear | **Left** |
+| Foot Scratch | **Right** |
+| Longeing | **ENTER** |
+| **End Training** | **ESC** |
+
+Each move **gradually increases the horse's XP**, climbing toward level 4.
+
+### XP ceilings — by stat tier
+
+| Horse | XP to level 4 |
+|---|---|
+| **Low / mid-tier stats** | **1,450 XP** |
+| **High-tier stats** | **2,460 XP** |
+
+**A better horse takes ~70% longer to finish.** That's a quietly elegant balance: the expensive breeds aren't just costlier to buy, they're costlier to *make good* — so a finished Turkoman is genuinely rare, and a trainer prices accordingly.
+
+### Open — needs numbers
+
+1. **XP per move.** This sets the session length. If ~30 minutes is the target for a low/mid horse, 1,450 XP works out around **~48 XP/min** — so a move worth ~10 XP fired every ~12s. Do the moves differ (is Longeing worth more than a Foot Scratch)? Should repeats decay, so a trainer can't spam one key?
+2. **XP thresholds per level.** The ceiling is level 4; where do 2 and 3 sit? **Proposed: even thirds** — low/mid `L2 = 483, L3 = 966, L4 = 1450`; high `L2 = 820, L3 = 1640, L4 = 2460`. And a horse bought at level 2 presumably starts with that level's XP already banked.
+3. **Which stat tier is a horse in?** "High-tier stats" needs a definition — the fast breeds (Arabian/Thoroughbred/Turkoman)? Or any horse above some stat total? A per-horse config flag is safest.
+
+### How the session and the day-timer fit together
+
+They're separate, and both matter:
+
+- The **session** is the work — the trainer earns the horse's XP in ~30 minutes.
+- The **days** are the delivery — the horse stays in the trainer's custody for N real days regardless.
+
+So a trainer can do the work in one evening but still can't hand back a tier-4 horse for four days. The session is the craft; the wait is the product.
+
 ### Trainer caps (ruled)
 
 Trainers get a **higher horse cap** (per-job, already supported by `Perms.maxHorses` over `config/jobs.lua`). Additionally `Config.Training.heldHorsesIgnoreCap = true` — horses held **in custody for training** don't consume the trainer's own slots, so a busy trainer can't be locked out of taking work.
@@ -75,7 +123,7 @@ Trainers get a **higher horse cap** (per-job, already supported by `Perms.maxHor
 
 **Settled:** ~~cap 3 vs tier 4~~ (3 = store cap; max training tier = **4**) · ~~horse usable while training~~ (no — custody transfers) · ~~"Tier N = N days"~~ (target tier's number = days, wherever it started) · ~~trainer caps~~ (higher cap + held horses don't count) · ~~where fast breeds generate~~ (middle/high stat stock rolls 2–3).
 
-1. **What does the trainer actually *do* in their 30 minutes?** Lunging, obstacle courses, riding (E1)? Or a menu action that starts the timer? *(This decides whether training is a minigame or an errand.)*
+1. ~~What does the trainer do in their 30 minutes?~~ **RESOLVED — see The training session above.** It's an activity: lead → Right-Click Hold + ENTER → perform moves for XP.
 2. **Payment** — pure player-to-player, or NPC contracts as a floor when no customers are online?
 3. **Is trainer theft intended?** Custody transfer means a trainer can simply keep the horse. Assumed deliberate (a reputation economy), but worth stating out loud.
 4. **What does a trainer charge per tier?** Needs the economy pass — it's the number that decides whether the job pays.
