@@ -96,13 +96,17 @@ end
 --------------------------------------------------------------------------------
 -- NOTIFY (sovereign_notify) — safe on both sides via its export signatures
 --------------------------------------------------------------------------------
+-- POLICY (owner ruling 2026-07-15): the parchment "Objective" slip is reserved
+-- for Storyworks MISSIONS. Sovereign Stables must never send one. Everything
+-- routine here is a Tick (slim chip); big moments are a Card.
 if IS_SERVER then
-    function Bridge.notify(src, text)         exports.sovereign_notify:Objective(src, text) end
+    function Bridge.notify(src, text)         exports.sovereign_notify:Tick(src, text) end
+    function Bridge.notifyTick(src, text)     exports.sovereign_notify:Tick(src, text) end
     function Bridge.notifyCard(src, variant, title, body)
         exports.sovereign_notify:Card(src, variant, title, body)
     end
 else
-    function Bridge.notify(text)              exports.sovereign_notify:Objective(text) end
+    function Bridge.notify(text)              exports.sovereign_notify:Tick(text) end
     function Bridge.notifyTick(text)          exports.sovereign_notify:Tick(text) end
     function Bridge.notifyCard(variant, title, body)
         exports.sovereign_notify:Card(variant, title, body)

@@ -169,18 +169,52 @@ CreateThread(function()
 end)
 
 --------------------------------------------------------------------------------
--- Keys & commands
--- NOTE: RegisterKeyMapping defaults only bind after a full CLIENT restart —
--- the commands always work immediately.
+-- THE WHISTLE  [D11]
 --------------------------------------------------------------------------------
-RegisterCommand('sovwhistle', function() Horse.summon() end, false)
-RegisterKeyMapping('sovwhistle', 'Sovereign Stables: whistle for your horse', 'keyboard',
-    (Config.Keys and Config.Keys.callHorse) or 'H')
+-- We use RDR2's OWN whistle control rather than RegisterKeyMapping. H is
+-- already the game's whistle key, so this works immediately — no client
+-- restart, no clash with E (which is the mount key).
+--     INPUT_WHISTLE           0x24978A28  H  (on foot)
+--     INPUT_WHISTLE_HORSEBACK 0xE7EB9185  H  (mounted)
+-- Owner ruling: a SHORT whistle (tap) tells the horse to follow / stop
+-- following. A LONG whistle (hold) calls it to you from wherever it is.
+--------------------------------------------------------------------------------
+local WHISTLE_ONFOOT = 0x24978A28
+local WHISTLE_MOUNT  = 0xE7EB9185
+local LONG_WHISTLE_MS = 350      -- held at least this long = a long whistle
 
-RegisterCommand('sovfollow', function() Horse.toggleFollow() end, false)
-RegisterKeyMapping('sovfollow', 'Sovereign Stables: horse follow / stay', 'keyboard',
-    (Config.Keys and Config.Keys.follow) or 'E')
+function Horse.shortWhistle()
+    if not (active and DoesEntityExist(active.ent)) then
+        Bridge.notify('No horse at hand to answer.')
+        return
+    end
+    Horse.toggleFollow()
+end
 
+function Horse.longWhistle()
+    Horse.summon()   -- spawns it if it's away, or calls it over if it's already out
+end
+
+CreateThread(function()
+    local downAt = nil
+    while true do
+        local ctrl = IsPedOnMount(PlayerPedId()) and WHISTLE_MOUNT or WHISTLE_ONFOOT
+        if IsControlJustPressed(0, ctrl) then
+            downAt = GetGameTimer()
+        elseif IsControlJustReleased(0, ctrl) and downAt then
+            local held = GetGameTimer() - downAt
+            downAt = nil
+            Util.log(('whistle: %dms -> %s'):format(held, held >= LONG_WHISTLE_MS and 'LONG' or 'SHORT'))
+            if held >= LONG_WHISTLE_MS then Horse.longWhistle() else Horse.shortWhistle() end
+        end
+        Wait(0)
+    end
+end)
+
+-- Commands remain as a fallback / for testing. No RegisterKeyMapping: its
+-- defaults only bind after a full CLIENT restart, and E is the mount key.
+RegisterCommand('sovwhistle', function() Horse.longWhistle() end, false)
+RegisterCommand('sovfollow', function() Horse.shortWhistle() end, false)
 RegisterCommand('sovdismiss', function() Horse.dismiss() end, false)
 
 AddEventHandler('onResourceStop', function(res)

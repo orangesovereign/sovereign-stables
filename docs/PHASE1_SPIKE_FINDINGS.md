@@ -62,6 +62,30 @@ Used for the ambient stablehand vignette now, and feature **H5 (clean/brush your
 
 Ambient grooming ped is implemented via the directed-brush loop in `client/stables.lua` (per-stable `ped.grooming` config; breed re-rolls on entry).
 
+## RDR2's own horse controls — use these, don't invent keys
+
+From `_reference/rdr3_discoveries/Controls/README.md`. **The game already binds everything we were trying to build**, which means `RegisterKeyMapping` (unreliable until a client restart) is unnecessary — just poll the native control.
+
+| Control | Hash | Key | Context |
+|---|---|---|---|
+| `INPUT_WHISTLE` | `0x24978A28` | **H** | OnFoot |
+| `INPUT_WHISTLE_HORSEBACK` | `0xE7EB9185` | **H** | OnMount |
+| `INPUT_HORSE_COMMAND_FOLLOW` | `0x763E4D27` | E | HorseCommands / InteractionLockOn |
+| `INPUT_HORSE_COMMAND_FLEE` | `0x4216AF06` | **F** | HorseCommands / InteractionLockOn |
+| `INPUT_INTERACT_HORSE_BRUSH` | `0x63A38F2C` | B | InteractionLockOn |
+| `INPUT_HORSE_STOP` | `0xE16B9AAD` | Ctrl | OnMount |
+| `INPUT_OPEN_SATCHEL_HORSE_MENU` | `0x5966D52A` | B | OnFoot |
+
+Notes:
+- **H is already the whistle key.** Short/long whistle (D11) = tap vs hold on `INPUT_WHISTLE` / `INPUT_WHISTLE_HORSEBACK` (we use a 350ms threshold). Works immediately.
+- **E is the mount key** (`INPUT_HORSE_EXIT`) — never bind it. `INPUT_HORSE_COMMAND_FOLLOW` shares E but only inside the HorseCommands context.
+- **`INPUT_HORSE_COMMAND_FLEE` (F, lock-on context) is exactly D13** — look at the horse, focus, F: it bolts and despawns. The baseline vorp_stables uses the same interaction.
+- Controls are **context-scoped**: an OnMount control cannot be read OnFoot. Pick the control for the context the player is actually in.
+
+## Notification policy (owner ruling 2026-07-15)
+
+**The parchment `Objective` slip is reserved for Storyworks MISSIONS.** Sovereign Stables must never send one. Routine feedback = `Tick` (slim chip); big moments = `Card`. `Bridge.notify()` is wired to `Tick`, so use it freely.
+
 ## Hard-won gotchas (milestone 1.1 — apply to every future stable/ped work)
 
 1. **Ambient world entities MUST be proximity-streamed.** Spawning a ped/horse at world-load while the player is far away means the area's collision isn't loaded, so `GetGroundZAndNormalFor_3dCoord` fails and the entity hangs at the raw config Z (which reads ~1m high off a player-position tool). Indoors, a snap can also grab the terrain *under* the building and sink it. Stream in near the player (we use 35m in / 55m out) and snap then — the coords/heading are almost never the culprit.
