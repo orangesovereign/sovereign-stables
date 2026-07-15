@@ -139,10 +139,12 @@ RegisterNUICallback('zoom', function(data, cb)
     cb({ ok = true })
 end)
 
--- Ask the server to buy. It decides price, permission, caps and funds.
+-- Ask the server to buy. It decides price, permission, caps and funds; the
+-- buyer only chooses the name and gender (N8/N9), which the server sanitizes.
 RegisterNUICallback('purchase', function(data, cb)
     if data and data.model and currentStable then
-        TriggerServerEvent(Events.RequestPurchase, currentStable, data.model)
+        TriggerServerEvent(Events.RequestPurchase, currentStable, data.model,
+            { name = data.name, sex = data.sex })
     end
     cb({ ok = true })
 end)
@@ -158,6 +160,7 @@ RegisterNUICallback('selectOwned', function(data, cb)
         showPreview(row.model)
         local d = detailOf(row.model) or {}
         d.name      = row.name or d.name
+        d.sex       = row.sex or d.sex      -- the gender chosen at purchase [N9]
         d.ownedId   = row.id
         d.isDefault = (tonumber(row.is_default) == 1)
         SendNUIMessage({ action = 'detail', detail = d })

@@ -16,6 +16,18 @@
 |---|---|---|---|
 | B1 | Deploy 1.3, `restart sovereign_stables` | no red errors | |
 | B2 | `/stables_diag` | dependencies OK, Database OK, no config problems | |
+| B3 | **Required:** run `sql/upgrades.sql` in MySQL (adds the new `sex` column) | runs clean; "Duplicate column name 'sex'" = you already have it, ignore | |
+
+## 1b. Name & gender at purchase (N8 · N9 — the 1.2b addendum)
+
+| # | Check | Expect | Result |
+|---|---|---|---|
+| N1 | Storefront → pick a horse → **Request Purchase** | a form: **Name** (pre-filled with the breed's name) + **Gender** (Stallion/Mare, pre-picked from the catalog card) | |
+| N2 | Clear the name → **Confirm Purchase** | refused; box outlines red; nothing bought, no money moves | |
+| N3 | Type your own name, pick a gender → **Confirm Purchase** | green card using **your** name | |
+| N4 | MySQL: `sovereign_horses` | the `name` and `sex` you chose — not the catalog's | |
+| N5 | My Horses → select that horse | your name + the gender **you** picked in the right panel | |
+| N6 | Try a silly name (tags, symbols, 60 chars) | cleaned and cut to 24 chars — never stored raw | |
 
 ## 2. Whistle her up (D1 · D2 · S6)
 

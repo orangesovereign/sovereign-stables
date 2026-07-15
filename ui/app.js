@@ -112,6 +112,7 @@
         var wrap = document.getElementById('detail');
         if (!d) { wrap.innerHTML = ''; return; }
         var isOwned = !!d.ownedId;
+        var defSex = (d.sex === 'Mare') ? 'Mare' : 'Stallion';   // catalog sex preselects the toggle
         var ribbon = isOwned ? '<div class="ribbon">&#9733; Yours &#9733;</div>'
             : ((d.tier === 'specialty') ? '<div class="ribbon">&#9733; Specialty &#9733;</div>' : '');
         var traits = (d.traits || []).map(function (t) {
@@ -142,12 +143,52 @@
                   (d.isDefault
                     ? '<div class="detail__default">&#9733; Your default ride</div>'
                     : '<button class="buy ghost" id="mkdef">Make Default Ride</button>')
-                : '<button class="buy" id="buy">Request Purchase</button>') +
+                : '<button class="buy" id="buy">Request Purchase</button>' +
+                  '<div class="buyform hidden" id="buyform">' +
+                    '<label class="field"><span>Name</span>' +
+                      '<input id="hname" maxlength="24" spellcheck="false" placeholder="Name your horse" /></label>' +
+                    '<div class="field"><span>Gender</span><div class="seg" id="sexseg">' +
+                      '<button data-sex="Stallion" class="' + (defSex === 'Stallion' ? 'is-active' : '') + '">Stallion</button>' +
+                      '<button data-sex="Mare" class="' + (defSex === 'Mare' ? 'is-active' : '') + '">Mare</button>' +
+                    '</div></div>' +
+                    '<p class="buyform__note">Chosen once, at purchase. Renaming later needs a deed.</p>' +
+                    '<button class="buy" id="confirmbuy">Confirm Purchase</button>' +
+                    '<button class="buy ghost" id="cancelbuy">Cancel</button>' +
+                  '</div>') +
             '<div class="detail__foot">' +
                 (isOwned ? 'Owned &middot; papers on file' : 'Includes ownership papers &middot; Stable slot required') +
             '</div>';
+        // Purchase is a two-step: reveal the form, name her, pick a gender, confirm.
         var buy = document.getElementById('buy');
-        if (buy) buy.addEventListener('click', function () { post('purchase', { model: d.model }); });
+        var form = document.getElementById('buyform');
+        var seg = document.getElementById('sexseg');
+        function closeForm() { if (form) form.classList.add('hidden'); if (buy) buy.classList.remove('hidden'); }
+        if (buy && form) {
+            buy.addEventListener('click', function () {
+                form.classList.remove('hidden');
+                buy.classList.add('hidden');
+                var n = document.getElementById('hname');
+                n.value = d.name || '';
+                n.focus(); n.select();
+            });
+        }
+        if (seg) {
+            seg.addEventListener('click', function (e) {
+                var b = e.target.closest('button[data-sex]'); if (!b) return;
+                seg.querySelectorAll('button').forEach(function (x) { x.classList.toggle('is-active', x === b); });
+            });
+        }
+        var confirmbuy = document.getElementById('confirmbuy');
+        if (confirmbuy) confirmbuy.addEventListener('click', function () {
+            var input = document.getElementById('hname');
+            var name = (input.value || '').trim();
+            if (!name) { input.focus(); input.classList.add('invalid'); return; }
+            var picked = seg && seg.querySelector('button.is-active');
+            post('purchase', { model: d.model, name: name, sex: picked ? picked.dataset.sex : defSex });
+            closeForm();
+        });
+        var cancelbuy = document.getElementById('cancelbuy');
+        if (cancelbuy) cancelbuy.addEventListener('click', closeForm);
         var mkdef = document.getElementById('mkdef');
         if (mkdef) mkdef.addEventListener('click', function () { post('setDefault', { id: d.ownedId }); });
         var bringout = document.getElementById('bringout');

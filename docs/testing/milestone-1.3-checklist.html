@@ -173,15 +173,25 @@
       why: "Clean start before anything else counts.", items: [
       { id: 'B1', t: "Deploy the 1.3 build and <code>restart sovereign_stables</code>.", x: "<b>Expect:</b> no red errors on start." },
       { id: 'B2', t: "In game: <code>/stables_diag</code>", x: "<b>Expect:</b> dependencies OK, Database OK, no config problems." },
+      { id: 'B3', t: "<b>Required:</b> run <code>sql/upgrades.sql</code> in MySQL (adds the new <code>sex</code> column).", x: "<b>Expect:</b> it runs clean. If it says <em>Duplicate column name 'sex'</em> you already have it &mdash; ignore and carry on." },
     ]},
-    { art: 'II', title: 'Whistle Her Up', tag: 'D1 · D2 · S6',
+    { art: 'II', title: 'Name &amp; Gender at Purchase', tag: 'N8 · N9 · 1.2b',
+      why: "A horse you buy should be yours from the first breath — your name on it, your choice of mare or stallion. Chosen once, at the point of sale.", items: [
+      { id: 'N1', t: "At the storefront, pick a horse and press <code>Request Purchase</code>.", x: "<b>Expect:</b> a form appears &mdash; <b>Name</b> (pre-filled with the breed's name) and <b>Gender</b> (Stallion/Mare, pre-picked to match the catalog card)." },
+      { id: 'N2', t: "Clear the name and press <code>Confirm Purchase</code>.", x: "<b>Expect:</b> refused &mdash; the box outlines red, nothing is bought, no money moves." },
+      { id: 'N3', t: "Type a name of your own, pick a gender, press <code>Confirm Purchase</code>.", x: "<b>Expect:</b> a green card using <b>your</b> name &mdash; &ldquo;<em>&lt;your name&gt;</em> is yours.&rdquo;" },
+      { id: 'N4', t: "MySQL: <code>sovereign_horses</code>.", x: "<b>Expect:</b> the <code>name</code> and <code>sex</code> you chose &mdash; not the catalog's." },
+      { id: 'N5', t: "<code>My Horses</code> &rarr; select that horse.", x: "<b>Expect:</b> your name, and the gender <b>you</b> picked, shown in the right panel." },
+      { id: 'N6', t: "Try a silly name: tags, symbols, or 60 characters.", x: "<b>Expect:</b> it's cleaned up and cut to 24 characters &mdash; never stored raw." },
+    ]},
+    { art: 'III', title: 'Whistle Her Up', tag: 'D1 · D2 · S6',
       why: "The moment the horse stops being a database row and becomes your ride.", items: [
       { id: 'W1', t: "Away from any stable, type <code>/sovwhistle</code> (or press <code>H</code> if it's bound).", x: "<b>Expect:</b> your <b>default</b> horse appears behind you and trots over, with its name above it. It is visible and on the ground." },
       { id: 'W2', t: "Mount it and ride.", x: "<b>Expect:</b> it rides normally — it's your mount, not a wild ped." },
       { id: 'W3', t: "While it's already out, whistle again.", x: "<b>Expect:</b> it comes to you. It does <b>not</b> spawn a second horse." },
       { id: 'W4', t: "Whistle with no horse owned (or on a character with none).", x: "<b>Expect:</b> &ldquo;You keep no horse.&rdquo; and nothing spawns." },
     ]},
-    { art: 'III', title: 'Follow, Stay, Dismiss', tag: 'D4 · D3',
+    { art: 'IV', title: 'Follow, Stay, Dismiss', tag: 'D4 · D3',
       why: "Field commands and the recall cooldown that stops whistle-spam.", items: [
       { id: 'F1', t: "On foot with the horse out: <code>/sovfollow</code> (or <code>E</code>).", x: "<b>Expect:</b> &ldquo;Your horse will follow you.&rdquo; and it walks after you." },
       { id: 'F2', t: "<code>/sovfollow</code> again.", x: "<b>Expect:</b> &ldquo;Your horse holds its ground.&rdquo; and it stops following." },
@@ -189,11 +199,11 @@
       { id: 'F4', t: "Immediately whistle again.", x: "<b>Expect:</b> &ldquo;Give it a moment — Ns.&rdquo; (the recall cooldown, 30s by default). Wait it out and it comes." },
       { id: 'F5', t: "Try <code>/sovdismiss</code> while mounted.", x: "<b>Expect:</b> &ldquo;Step down first.&rdquo; — it won't vanish from under you." },
     ]},
-    { art: 'IV', title: 'Bring Out at the Stable', tag: 'S7',
+    { art: 'V', title: 'Bring Out at the Stable', tag: 'S7',
       why: "Collecting a horse in person — ignores the whistle rule by design.", items: [
       { id: 'S1', t: "At Valentine, open the storefront &rarr; <code>My Horses</code> &rarr; pick a horse &rarr; <code>Bring Out</code>.", x: "<b>Expect:</b> the shop closes and that horse (not necessarily your default) comes out to you." },
     ]},
-    { art: 'V', title: 'Stray &amp; Death', tag: 'auto-recall · hard death',
+    { art: 'VI', title: 'Stray &amp; Death', tag: 'auto-recall · hard death',
       why: "The unglamorous guards: a horse left behind, and a horse killed. Hard death is real — a horse can be lost for good.", items: [
       { id: 'D1', t: "Leave the horse and walk/ride far away (past ~200m) on foot.", x: "<b>Expect:</b> within a few seconds it quietly reappears near you rather than being stranded." },
       { id: 'D2', t: "Kill your horse (sorry). Watch the notification.", x: "<b>Expect:</b> a red card — &ldquo;<em>&lt;name&gt;</em> is badly hurt (75%).&rdquo; The horse despawns." },
@@ -201,7 +211,7 @@
       { id: 'D4', t: "Whistle right after the death.", x: "<b>Expect:</b> &ldquo;Give it a moment — Ns.&rdquo; (the dead-horse cooldown, 120s by default)." },
       { id: 'D5', t: "<b>Optional / destructive:</b> kill the same horse until its <code>long_term_hp</code> hits 0.", x: "<b>Expect:</b> &ldquo;<em>&lt;name&gt;</em> is gone for good.&rdquo;, the row is <b>deleted</b> from <code>sovereign_horses</code>, and a <code>horse_lost</code> row appears in <code>sovereign_ledger</code>." },
     ]},
-    { art: 'VI', title: 'Cleanup', tag: '—',
+    { art: 'VII', title: 'Cleanup', tag: '—',
       items: [
       { id: 'X1', t: "Check the F8 console for the whole session.", x: "<b>Expect:</b> no red Lua errors from <code>sovereign_stables</code>." },
     ]},

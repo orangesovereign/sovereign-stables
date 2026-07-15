@@ -163,6 +163,7 @@ Every permission below is a per-job (and where noted per-grade) gate resolved se
 | J20 | Horse painting (coat) | S14, M3 |
 | J21 | Wagon crafting | WG8 |
 | J22 | Horse Creator access (job **+ grade** locked) | M2 |
+| J23 | **Buy foals** — may choose Foal instead of Adult at purchase (Horse Trainer) | N10 |
 
 ## L. Presentation, NUI & Camera
 
@@ -225,6 +226,9 @@ Every permission below is a per-job (and where noted per-grade) gate resolved se
 | N5 | Promotions / sales (ribbons + temporary price changes, per stable/horse) | NEW | ✅ | economy | 2 | ⬜ |
 | N6 | Per-stable stablefront copy (headline/subtext/collection name) | NEW | ✅ | config | 1 | ⬜ |
 | N7 | In-preview zoom (scroll) alongside orbit (drag) | NEW | ⚠️ | L5 | 1 | ⬜ |
+| N8 | **Name your horse at purchase** (purchase-time only — later renaming stays H8, item-gated) | NEW | ✅ | db `name` | 1.2b | ⬜ |
+| N9 | **Choose gender at purchase** (Stallion/Mare; purchase-time only). Feeds breeding (G) and neutering (G5) | NEW | ✅ | db `sex` (new col) | 1.2b | ⬜ |
+| N10 | **Choose Foal or Adult at purchase — Horse Trainer job only** (see J23). A foal must then *grow up*, so this is gated on the ageing system | NEW | 🧪 | E6 ageing, G6 growth, foal-representation spike | 3 | ⬜ |
 
 > Storefront visuals, layout, data bindings and interactions are specified in **[04-UI-DESIGN.md](04-UI-DESIGN.md)**. This supersedes the parchment-ledger placeholder theme used in the Phase 0 NUI shell — the storefront adopts the dark cinematic leather/wood theme from the concept.
 
@@ -243,5 +247,6 @@ Every permission below is a per-job (and where noted per-grade) gate resolved se
 9. **Shiny coat FX** (M3) — native means to apply a gloss/shine overlay to a horse coat at runtime.
 10. **Horse Creator** (M2) — persisting player-authored breed definitions (component/coat/stat combos) to config or DB and spawning them reliably.
 11. **Horse dirt / cleanliness native** (H5, H10, L9, L6) — confirm the RDR3 native to read *and* force a horse's dirt level (baseline `vorp_stables` has a brush-to-clean interaction, so a write path exists). Needed to force the preview horse clean (L9) and to auto-clean stabled horses (H10). Small spike in Phase 2.
+12. **How is a foal represented?** (N10, G6) — does RDR2 ship rideable/standable foal peds, or is a foal a scaled adult, or a non-rideable placeholder until grown? This decides whether "buy a foal" is even coherent, and how a foal *becomes* an adult. Spike before Phase 3.
 
 Each ❓/🧪/⚠️ item gets a short spike in `docs/spikes/` before it enters a build phase.

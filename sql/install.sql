@@ -15,7 +15,8 @@ CREATE TABLE IF NOT EXISTS `sovereign_horses` (
   `identifier`     VARCHAR(64)  NULL,                 -- owning player identifier
   `charid`         INT(11)      NOT NULL,             -- owning character id
   `faction`        VARCHAR(64)  NULL,                 -- job id if faction-owned [S16]
-  `name`           VARCHAR(64)  NOT NULL DEFAULT 'Horse',
+  `name`           VARCHAR(64)  NOT NULL DEFAULT 'Horse',   -- chosen by the buyer at purchase [N8]
+  `sex`            VARCHAR(16)  NOT NULL DEFAULT 'Stallion', -- chosen at purchase; feeds breeding [N9]
   `model`          VARCHAR(96)  NOT NULL,             -- model/coat id (stock or community)
   `is_default`     TINYINT(1)   NOT NULL DEFAULT 0,
   `stable_origin`  VARCHAR(64)  NULL,                 -- stable id where stored [S7]

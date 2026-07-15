@@ -15,7 +15,7 @@ local busy = {}   -- [src] = true while a purchase is in flight (anti-spam/dupe)
 --------------------------------------------------------------------------------
 function Horses.listOwned(charid)
     return Db.awaitQuery(
-        'SELECT id, name, model, is_default, stable_origin, xp, age FROM sovereign_horses WHERE charid = ? ORDER BY id',
+        'SELECT id, name, sex, model, is_default, stable_origin, xp, age FROM sovereign_horses WHERE charid = ? ORDER BY id',
         { charid }) or {}
 end
 
@@ -30,6 +30,24 @@ local function logLedger(charid, action, subject, cash, gold, meta)
         { charid, action, subject, cash or 0, gold or 0, meta and json.encode(meta) or nil })
 end
 
+-- Clean up a player-supplied horse name [N8]. Never trust it: strip control
+-- characters and markup, collapse whitespace, cap the length, fall back to the
+-- catalog name if they left it blank.
+local function sanitizeName(raw, fallback)
+    if type(raw) ~= 'string' then return fallback end
+    local s = raw:gsub('[%c]', ' '):gsub('[<>~\\]', ''):gsub('%s+', ' '):gsub('^%s+', ''):gsub('%s+$', '')
+    if s == '' then return fallback end
+    if #s > 24 then s = s:sub(1, 24) end
+    return s
+end
+
+-- Gender is chosen at purchase [N9]. Only these are valid — a Gelding is made
+-- by neutering (G5), never bought.
+local VALID_SEX = { Stallion = true, Mare = true }
+local function sanitizeSex(raw, fallback)
+    return VALID_SEX[raw] and raw or (fallback or 'Stallion')
+end
+
 -- Does this stable actually sell this model? (Stops a spoofed model id.)
 local function stableSells(stableId, model)
     for _, h in ipairs(Catalog.horsesFor(stableId)) do
@@ -42,7 +60,8 @@ end
 -- Purchase
 --------------------------------------------------------------------------------
 -- Returns ok:boolean, message:string
-function Horses.buy(src, stableId, model)
+-- `wanted` = { name, sex } chosen by the buyer at purchase (N8/N9).
+function Horses.buy(src, stableId, model, wanted)
     if not (Config.Economy and Config.Economy.enableBuying) then
         return false, 'The stables are not selling today.'
     end
@@ -79,20 +98,25 @@ function Horses.buy(src, stableId, model)
         return false, 'Payment failed.'
     end
 
+    -- The buyer names it and picks its gender (N8/N9); both sanitized here.
+    wanted = wanted or {}
+    local name = sanitizeName(wanted.name, card.name or card.label or model)
+    local sex  = sanitizeSex(wanted.sex, card.sex)
+
     -- Record it. First horse becomes the default ride.
     local isDefault = (owned == 0) and 1 or 0
     local id = Db.awaitInsert(
-        'INSERT INTO sovereign_horses (identifier, charid, name, model, stable_origin, is_default) VALUES (?, ?, ?, ?, ?, ?)',
-        { Bridge.getIdentifier(src), charid, card.name or card.label or model, model, stableId, isDefault })
+        'INSERT INTO sovereign_horses (identifier, charid, name, sex, model, stable_origin, is_default) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        { Bridge.getIdentifier(src), charid, name, sex, model, stableId, isDefault })
 
     if not id then
         Bridge.pay(src, cash, gold)   -- refund: never take money without a horse
         return false, 'The paperwork failed — you were not charged.'
     end
 
-    logLedger(charid, 'buy_horse', model, cash, gold, { stable = stableId, horseId = id })
-    Util.log(('char %s bought %s at %s for %s/%s (horse #%s)'):format(charid, model, stableId, cash, gold, id))
-    return true, ('%s is yours.'):format(card.name or model)
+    logLedger(charid, 'buy_horse', model, cash, gold, { stable = stableId, horseId = id, name = name, sex = sex })
+    Util.log(('char %s bought %s (%s, %s) at %s for %s/%s (horse #%s)'):format(charid, model, name, sex, stableId, cash, gold, id))
+    return true, ('%s is yours.'):format(name)
 end
 
 --------------------------------------------------------------------------------
@@ -105,13 +129,13 @@ local function pushOwned(src, charid)
     })
 end
 
-RegisterNetEvent(Events.RequestPurchase, function(stableId, model)
+RegisterNetEvent(Events.RequestPurchase, function(stableId, model, wanted)
     local src = source
     if busy[src] then return end
     busy[src] = true
     CreateThread(function()
         local ok, msg = false, 'Something went wrong.'
-        local success, err = pcall(function() ok, msg = Horses.buy(src, stableId, model) end)
+        local success, err = pcall(function() ok, msg = Horses.buy(src, stableId, model, wanted) end)
         if not success then Util.err('purchase failed: ' .. tostring(err)) end
 
         local cash, gold = Bridge.getBalance(src)

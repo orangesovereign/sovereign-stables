@@ -127,6 +127,26 @@ html, body { width: 100%; height: 100%; background: transparent; overflow: hidde
 .detail__default { margin-top: 10px; text-align: center; font-family: var(--f-disp); font-size: 11px;
   letter-spacing: 2px; text-transform: uppercase; color: var(--brass-hi); }
 
+/* purchase form: name + gender, chosen at the point of sale */
+.buyform { border: 1px solid var(--line); background: rgba(0,0,0,.22); border-radius: 4px; padding: 14px; }
+.field { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.field > span { flex: 0 0 62px; font-family: var(--f-disp); font-size: 10.5px; letter-spacing: 1.5px;
+  text-transform: uppercase; color: var(--parch-dim); }
+.field input { flex: 1; min-width: 0; font-family: var(--f-body); font-size: 14px; color: var(--parch);
+  background: rgba(0,0,0,.4); border: 1px solid var(--line); border-radius: 3px; padding: 8px 10px; }
+.field input:focus { outline: none; border-color: var(--brass); }
+.field input.invalid { border-color: var(--oxblood); }
+.field input::placeholder { color: var(--parch-dim); font-style: italic; opacity: .7; }
+.seg { display: flex; flex: 1; border: 1px solid var(--line); border-radius: 3px; overflow: hidden; }
+.seg button { flex: 1; font-family: var(--f-disp); font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--parch-dim); background: rgba(0,0,0,.3); border: none; border-left: 1px solid var(--line);
+  padding: 8px 4px; cursor: pointer; }
+.seg button:first-child { border-left: none; }
+.seg button:hover { color: var(--parch); }
+.seg button.is-active { color: var(--parch); background: linear-gradient(180deg, var(--oxblood), var(--oxblood-2)); }
+.buyform__note { font-family: var(--f-fell); font-style: italic; font-size: 12px; color: var(--parch-dim);
+  margin: 2px 0 12px; text-align: center; }
+
 /* ---------- center stage (transparent) ---------- */
 .stage { position: relative; background: transparent; }
 .stage__hint { position: absolute; top: 16px; left: 0; right: 0; text-align: center;
