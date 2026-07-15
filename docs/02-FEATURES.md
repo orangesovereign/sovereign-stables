@@ -31,7 +31,7 @@
 | S9 | Configurable horse XP loss on server restart | EXCEED | ✅ | db | 2 | ⬜ |
 | S10 | Black-market horse sales with per-sale cooldown | EXCEED | ⚠️ | wild (W*), db | 4 | ⬜ |
 | S11 | Heal horses via items or paid stable service (configurable price) | EXCEED | ✅ | inventory, money | 2 | ⬜ |
-| S12 | Horseshoe system — configurable, max upgrade level | EXCEED | ⚠️ | tack, stats | 3 | ⬜ |
+| S12 | Horseshoe system — configurable, max upgrade level. ⚠️ **NO COMPONENT HASHES YET.** vorp_stables (our MIT source) has no horseshoe table; bcc-stables has one but is **GPL and ruled out** (owner, 2026-07-15 — see [CREDITS](CREDITS.md)). Needs a permissive source or our own extraction **before** Phase 3 | EXCEED | ⚠️ | tack, stats, **hash source** | 3 | ⬜ |
 | S13 | Flaming horseshoe support | EXCEED | 🧪 | S12, particles | 4 | ⬜ |
 | S14 | Customize components: manes, tails (✅ confirmed); **body size — `_SET_PED_SCALE` `0x25ACFC650B65C538`, 0.70–1.50 ✅**; **colours — `_SET_META_PED_TAG` `0xBC6DF00D7A4A6819` + palette + tint0/1/2 ✅**. Build the customiser on the tag pipeline, NOT by swapping pre-baked hash variants — that's what the Q1 "colour changes" ruling needs | EXCEED | ✅ | native ped comp | 2 | ⬜ |
 | S15 | Component control UI: circular controls **or** arrow keys — **universal component list** (A8 confirmed) | EXCEED | ✅ | custom NUI | 2 | ⬜ |

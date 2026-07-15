@@ -93,24 +93,39 @@ natives saved this project two spikes and a phase gate.
 
 ---
 
-## bcc-stables (BryceCanyonCounty) — GPL-3.0 ⚠️ REFERENCE ONLY
+## bcc-stables (BryceCanyonCounty) — GPL-3.0 🚫 RULED OUT
 
-**Nothing from bcc-stables is used, and nothing may be copied into this resource
-without a deliberate decision by the project owner.**
+> ### ⚖️ OWNER RULING, 2026-07-15: **"I don't want it GPL at the moment."**
+>
+> **Nothing from bcc-stables may be copied into this resource — not code, not
+> config, not data tables.** This is settled, not pending. If a future session
+> finds a hash or a category it wants and notices bcc has it: **the answer is
+> still no** unless the owner reverses this in writing.
 
-**Why:** GPL-3.0 is **copyleft**. Copying its code *or its data tables* into
-sovereign_stables would oblige this project to be released **entirely under
-GPL-3.0** — full source published, and anyone free to take, modify and
-redistribute it, including competing servers. That is a business decision for the
-owner, not something to acquire by accident in a commit.
+**Why it matters:** GPL-3.0 is **copyleft**. Copying its code *or its data tables*
+would oblige sovereign_stables to be released **entirely under GPL-3.0** — full
+source published, and anyone free to take, modify and redistribute it, competing
+servers included. This project is the owner's competitive edge; that is a
+business decision, and it has been made.
 
-**What it would offer if that decision were ever made:** 910 component hashes
-(**478 already covered** by our MIT-sourced table, so ~432 genuinely new) and
-four categories we lack — **Bridles, Horseshoes, Holsters, Mustaches**.
-Horseshoes is S12 on our own roadmap.
+**What the ruling costs us, stated honestly** — 910 component hashes, of which
+**478 are already covered** by our MIT table, so **~432 are foregone**, plus four
+categories we do not have:
 
-**Status:** read for ideas only (ideas are not copyrighted). Any of those gaps we
-want should be sourced independently or from a permissive source.
+| Category | Where it hurts |
+|---|---|
+| **Horseshoes** | **S12 is on our own roadmap (Phase 3)** — needs an independent source |
+| **Bridles** | a real tack slot we simply lack |
+| Holsters | **coal_stables has these** (free-for-devs) — coverable |
+| Mustaches | cosmetic; no source yet |
+
+**Status:** read for ideas only. Ideas are not copyrighted, and reading a GPL
+project to understand *how* something is done — then writing our own — is
+legitimate and unrestricted. Only copying is barred.
+
+**The gaps get sourced elsewhere:** `coal_stables` (permitted, see above) covers
+holsters and adds cantles/genitals; horseshoes and bridles need a permissive
+source or our own extraction before S12.
 
 ---
 
