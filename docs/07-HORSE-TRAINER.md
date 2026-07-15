@@ -22,7 +22,7 @@ Every grade can tend horses and **train them fully** — grade is not a training
 
 1. **Finishing** — every horse sells below its ceiling, and a buyer can't tell by looking. Only a trainer can close it.
 2. **Raising foals** — buy at 3–4, hold ~2.3–4.6 real days, sell a 5-year-old adult.
-3. **Appraisal** — J17 stats visibility. Because the gap is invisible, someone who can *read* a horse has value even when they're not training one.
+3. **Remediation** — a half-taught horse goes to a *better* trainer to learn the gaps it never got. *(Replaces "appraisal", which Claude overclaimed — the repertoire is never displayed, so there's no readout to sell. A good trainer's **opinion** is worth having, but that's reputation, not a mechanic.)*
 4. **Breeding & wild stock** — breed 5→28; tame wild horses (the only source of anything over 7).
 
 ## Training — the tier system (ruled)
@@ -159,8 +159,27 @@ So mirroring keeps its XP crown *and* acquires a real cost: a mirrored horse is 
 | **Dance** | Dance under saddle (hold **SPACE**) |
 | **Jump** | Clears ground obstacles cleanly |
 | **Rear** | Rears on command |
-| **Foot Scratch** | *(ability TBD)* |
-| **Longeing** | *(ability TBD — gait control? works on command at distance?)* |
+| **Foot Scratch** | **Nothing — the horse just foot-scratches *less*.** The reward is the absence of a nuisance: an untrained horse fidgets. |
+| **Longeing** | **Stamina** *(recommended — see below)*, or better odds of answering the whistle. |
+
+### Longeing — stamina, not recall (recommendation)
+
+The owner offered two options: *"improve the chances of a horse listening when you whistle… or make that a stamina reward."*
+
+**Recommend stamina**, for two reasons:
+
+1. **Recall overlaps with Mirroring**, which already owns "follows better, comes quicker, listens." If longeing *also* improved recall, the two moves would compete over the same reward and both would be diminished. Every move should own something.
+2. **Longeing is conditioning work.** In life, that's exactly what a lunge line is for — you're building the horse's wind, not its manners. Stamina is also a stat an owner genuinely *feels*.
+
+**Open — the mechanism.** Stats are predetermined at birth with a trained ceiling, and the tier ladder already closes the gap on *all* stats at once. So "a stamina reward" could mean either:
+- **(a)** longeing contributes extra toward the **stamina** portion of the gap; or
+- **(b)** the repertoire is **per-stat**, not just per-trick — mirror-only and the horse's stamina never finishes, even at tier 4.
+
+**(b) is the more interesting** and fits E10's spirit exactly — but it's a bigger change to the tier model. Needs a ruling.
+
+### Foot Scratch — a joke with a point
+
+It teaches nothing, and that's the *joke*: the reward for training it is that the horse **stops doing it**. An untrained horse fidgets and scratches; a worked one stands quiet. It costs a trainer time for no capability — which is precisely why a lazy trainer skips it, and precisely how you'd spot one.
 
 ### Why this is the right shape
 
@@ -170,7 +189,7 @@ So mirroring keeps its XP crown *and* acquires a real cost: a mirrored horse is 
 - **Reputation becomes mechanical without a stat.** "Who trained this?" is now a question with a discoverable answer. A trainer known for mirroring everything will be known for it — because their horses can't do anything.
 - **It makes the longeing sub-menu worth building.** It teaches something no other move does.
 - **It creates a remediation market.** A half-trained horse can be sent back to a *better* trainer to learn the gaps — another revenue line, and a second chance for the horse.
-- **It makes appraisal (J17) genuinely valuable.** Repertoire is invisible from the outside, so someone who can *read* a horse can tell a buyer "this one's never seen an obstacle." That's the appraisal business, justified.
+- **It rewards actual horsemanship.** Repertoire is never displayed anywhere (see below) — so knowing how to read a horse is *player* skill, earned at the paddock, not a stat someone hands you.
 
 ### 🎲 Chance, not on/off — and RDR2 may already do most of this
 
@@ -211,11 +230,24 @@ Perks unlock at bond **2/3/4**, and there is a flag literally named **"bond lock
 
 ### Open
 
-1. **What do Foot Scratch and Longeing teach?** Longeing feels like it should teach something meaty — gait control, working at distance, turning under command — given it's the deliberate, craft-heavy option.
+**Settled:** ~~what Foot Scratch teaches~~ (nothing — it just scratches *less*) · ~~is the repertoire visible~~ (**no — never**, see below).
+
+1. **Longeing: stamina or recall?** Recommend **stamina** (recall overlaps Mirroring). And if stamina — mechanism **(a)** extra progress toward the stamina gap, or **(b)** a per-stat repertoire?
 2. **Reps per move.** How many times must a move be worked before it sticks? First pass in `Config.Training.repertoire.repsToLearn`, tunable.
-3. **Is the repertoire visible to the owner?** *"Secretly and quietly"* suggests **no** — you discover it by asking the horse and getting nothing (or getting it *badly*). **Recommend: hidden by default, revealed by a trainer's appraisal (J17).** That turns "what can this horse actually do?" into a service worth paying for.
-4. **Schema:** Phase 3 needs a `training` JSON blob on `sovereign_horses` — level, xp, per-move rep counts, and learned abilities/odds.
-5. **Native vs ours** — see the table above. Decide (a)/(b)/(c) after the bonding spike.
+3. **Schema:** Phase 3 needs a `training` JSON blob on `sovereign_horses` — level, xp, per-move rep counts, and learned abilities/odds.
+4. **Native vs ours** — see the table above. Decide (a)/(b)/(c) after the bonding spike.
+
+## 🔒 The repertoire is never shown. Anywhere. (ruled, 2026-07-15)
+
+> *"No. You discover it by being a good trainer and learning horses and RPing."*
+
+**No UI. No readout. No appraisal panel. No codex entry.** The horse's repertoire is never surfaced to anyone, ever — not to the owner, not to a trainer, not by any job permission.
+
+You learn what a horse can do by **working with it**. A good trainer knows because they've handled a hundred horses and can tell. That knowledge lives in the **player**, not the interface.
+
+> ⚠️ **This corrects an overclaim by Claude.** I had pitched "appraisal" as a trainer revenue line — a trainer reading a horse's hidden repertoire for a buyer. **That was wrong.** There is no appraisal readout to sell. A trainer may still *offer an opinion* on a horse, and a good one's opinion will be worth having — but that's roleplay and reputation, not a mechanic, and it can't be built. J17 (stats visibility) remains a separate question about **stats**; it has nothing to do with repertoire.
+
+**The trainer's real revenue lines are therefore: finishing, raising foals, breeding/wild stock, and remediation** — all of which are actual work, not information brokerage.
 
 ### 📐 Design principle: mechanical dominance of a *playstyle* is not a problem
 

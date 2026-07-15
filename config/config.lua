@@ -146,8 +146,8 @@ Config.Training = {
             dance       = 15,   -- dance under saddle (hold SPACE)
             jump        = 15,   -- clears ground obstacles cleanly
             rear        = 15,   -- rears on command
-            footScratch = 15,   -- ability TBD
-            longeing    = 20,   -- ability TBD (gait control / works at distance?)
+            footScratch = 15,   -- teaches nothing — the horse just foot-scratches LESS
+            longeing    = 20,   -- stamina (proposed; recall would overlap mirroring)
         },
     },
 
