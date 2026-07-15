@@ -172,12 +172,50 @@ So mirroring keeps its XP crown *and* acquires a real cost: a mirrored horse is 
 - **It creates a remediation market.** A half-trained horse can be sent back to a *better* trainer to learn the gaps — another revenue line, and a second chance for the horse.
 - **It makes appraisal (J17) genuinely valuable.** Repertoire is invisible from the outside, so someone who can *read* a horse can tell a buyer "this one's never seen an obstacle." That's the appraisal business, justified.
 
+### 🎲 Chance, not on/off — and RDR2 may already do most of this
+
+**Owner (2026-07-15):** *"I believe those things actually work on chance natively — like the chance of the horse falling on train tracks."*
+
+That reframes E10. These behaviours are **probabilistic in the base game** (the track-stumble chance is already on our list as **D8**). So the repertoire probably shouldn't be a hard *can/can't* — it should move the **odds**:
+
+- An untaught horse still *tries* to rear — it just does it **rarely, or badly**.
+- An untaught horse doesn't refuse a log — it **stumbles over it more often**.
+- A well-taught horse does it cleanly, first time.
+
+That's softer, more natural, and almost certainly easier to implement (nudge an existing chance rather than intercept an input). It also *reads* better: your horse isn't broken, it's **green**.
+
+#### The native bond ladder — a big find
+
+`rdr3_discoveries` shows RDR2 already gates horse abilities behind a **1–4 bond ladder**:
+
+| Flag | Hash |
+|---|---|
+| `TF_HORSE_BONDLVL_2_PERKS` | `0x151A0091` |
+| `TF_HORSE_BONDLVL_3_PERKS` | `0x916DC0D8` |
+| `TF_HORSE_BONDLVL_4_PERKS` | `0x54B66C3C` |
+| `TF_HORSE_BOND_LOCK_ACTION` | `0x1101AD0C` |
+
+Perks unlock at bond **2/3/4**, and there is a flag literally named **"bond lock action"**. The game already does *"this horse can't do that yet."* **And our training tiers are also 1–4** — the ladders line up.
+
+#### The design question this creates
+
+| Approach | Gets us | Costs us |
+|---|---|---|
+| **(a) Drive the native bond level from our training level** | RDR2's own perks unlock for free — rear, dance, skid, drift — with no ability system to build | Bond is **one scalar**: it can't express "mirrored-only", so the repertoire's whole point is lost |
+| **(b) Gate every ability ourselves, per move** | Full granularity | Fighting the game; re-implementing what it already does |
+| **(c) Hybrid — native bond level from training tier, our per-move record on top as a *chance modifier*** | Native perks unlock by tier **and** an untaught move stays clumsy | Most design work, but it's the only one that keeps both halves |
+
+**Leaning (c)**, and it fits the owner's instinct exactly: the tier opens the door, the reps decide how well the horse walks through it.
+
+**Needs a spike before Phase 3:** can bond level be read/written from script, do the perk flags fire off it, and are the underlying success chances (rear, obstacle, stumble) reachable? This also touches **E3** (bonding reduces spooking) and **D8** (track stumble) — they may all be the same native system.
+
 ### Open
 
 1. **What do Foot Scratch and Longeing teach?** Longeing feels like it should teach something meaty — gait control, working at distance, turning under command — given it's the deliberate, craft-heavy option.
 2. **Reps per move.** How many times must a move be worked before it sticks? First pass in `Config.Training.repertoire.repsToLearn`, tunable.
-3. **Is the repertoire visible to the owner?** *"Secretly and quietly"* suggests **no** — you discover it by asking the horse and getting nothing. **Recommend: hidden by default, revealed by a trainer's appraisal (J17).** That turns "what can this horse actually do?" into a service worth paying for.
-4. **Schema:** Phase 3 needs a `training` JSON blob on `sovereign_horses` — level, xp, per-move rep counts, and learned abilities.
+3. **Is the repertoire visible to the owner?** *"Secretly and quietly"* suggests **no** — you discover it by asking the horse and getting nothing (or getting it *badly*). **Recommend: hidden by default, revealed by a trainer's appraisal (J17).** That turns "what can this horse actually do?" into a service worth paying for.
+4. **Schema:** Phase 3 needs a `training` JSON blob on `sovereign_horses` — level, xp, per-move rep counts, and learned abilities/odds.
+5. **Native vs ours** — see the table above. Decide (a)/(b)/(c) after the bonding spike.
 
 ### 📐 Design principle: mechanical dominance of a *playstyle* is not a problem
 
