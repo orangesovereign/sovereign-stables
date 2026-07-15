@@ -36,6 +36,10 @@ Nothing in this file overrides the [death rules](02-FEATURES.md#️-death-rules-
 8. **Foals may be trained, fed and watered.** The *only* thing they can't do is **fear/courage training** (E4).
 9. **Decline is speed + stamina, and it starts at 27** — **25 for the faster breeds**. Not before.
 10. **Stables only sell horses aged 5–7.** Anything older exists **only in the wild**. Stock horses are **moderately priced**.
+11. **Age-reset items: once per horse, per lifetime.** Hard to obtain by design. So a horse can be rewound *once* — it is a reprieve, not immortality.
+12. **Breeding window: 5 → 28.** A horse can breed from the day it's an adult until three years before it dies.
+13. **Stats are predetermined from birth to death** — **Acceleration, Speed, Stamina, Turn**. A foal is *not* statistically weaker than its adult self; the numbers are set at birth and don't grow with age. (Late-life decline at 27/25 is the one exception, and only touches speed + stamina.)
+14. **The configured stat is the FULLY TRAINED value.** A stock horse reading `6` is a 6 *when trained*. **Untrained it sits 1.5–2 lower** (~4–4.5), and training closes the gap up to its ceiling. The ceiling never moves.
 
 ## Stages
 
@@ -86,13 +90,28 @@ At **2.3 real days per horse-year**:
 
 **Settled:** ~~time scale~~ (wall time, 2.3 days/year) · ~~stage boundaries~~ (foal 3–4, adult 5, dead 31) · ~~does age cost anything~~ (yes, E8) · ~~where decline starts~~ (27; 25 fast breeds) · ~~which stats~~ (speed + stamina) · ~~are foals rideable~~ (no — unmountable) · ~~foal representation~~ (same model, scaled down) · ~~purchased adult ages~~ (5–7 only; older is wild-only).
 
-1. **Which breeds are "faster breeds"** (decline at 25 instead of 27)? Needs a per-breed flag in `config/horses.lua` — Arabian/Turkoman/Thoroughbred are the obvious candidates, but it's your call which ones pay for their speed with a shorter prime.
+**Also settled:** ~~foal stats~~ (full from birth, #13) · ~~aged breeding~~ (5→28, #12) · ~~age-reset immortality~~ (once per lifetime, #11).
+
+1. **Which breeds are "faster breeds"** (decline at 25)? → **[06-BREEDS](06-BREEDS.md) recommends Arabian, Thoroughbred, Turkoman** — the only speed-9 breeds, with a three-point gap to the next tier. Awaiting ruling.
 2. **Is there a floor to the decline?** A 31-year-old is about to die anyway, but should speed/stamina bottom out at, say, 60% rather than trending toward zero? An ancient horse should be *clearly past it*, not unusable.
-3. **Do foals have weaker stats** that grow into their adult numbers, or full stats from the start (just unmountable)?
-4. **Can an aged horse still breed?** (Decides whether old horses have a second career — and whether declining stats get inherited.)
-5. **Age-reset items (E6).** They rewind age — do they make a horse immortal? Cap uses per horse, or make them rare/costly? This is the pressure valve for the wall-clock ruling, so it matters.
-6. **What happens to a dead horse's tack and inventory?** Lost, or returned to the stable?
-7. **"Moderately priced" stock** — needs a number when the 60+ breed catalog (M1) gets filled. Current placeholders: Kentucky $130, Ardennes $180, Mule $60, vs the Vesper specialty at $3,200.
+3. **What happens to a dead horse's tack and inventory?** Lost, or returned to the stable?
+4. **"Moderately priced" stock** — needs a number when the 60+ breed catalog (M1) gets filled. Current placeholders: Kentucky $130, Ardennes $180, Mule $60, vs the Vesper specialty at $3,200.
+5. **Training curve** — how long does closing the 1.5–2 untrained gap take, and via which activities (E1)?
+
+## The stat model (rulings #13–14)
+
+| | |
+|---|---|
+| **The four stats** | **Acceleration · Speed · Stamina · Turn** — predetermined at birth, fixed for life |
+| **Health** | *Separate*, max **150** (H13) — not one of the four |
+| **Courage** | *Separate*, trainable (E4) — and the one thing a foal may **not** train |
+| **Scale** | ~1–10 (a stock horse "reads as a 6") |
+| **Configured value** | the **fully trained ceiling** |
+| **At birth/purchase** | ceiling **− 1.5 to 2** (a 6 starts ~4–4.5) |
+| **Training** | closes the gap up to the ceiling; never past it |
+| **Age** | only late decline (27 / 25 fast), speed + stamina only |
+
+> ⚠️ **Consequences for what's already built:** our `config/horses.lua` currently carries `stats = { health, stamina, speed, acceleration }` on a **0–100** scale (Vesper: health 88, stamina 94…). That's the wrong set *and* the wrong scale. It becomes `{ acceleration, speed, stamina, turn }` on ~1–10, with health moving out to its own field. **The storefront stat bars are hard-coded to render 0–100 and will need rescaling.** Not urgent — the catalog is placeholder data — but it must land before the 60+ breed fill (M1).
 
 ## Spikes this pillar needs
 
