@@ -46,18 +46,26 @@ end
 -- Shared gate for both whistle and stable pick-up.
 -- Returns ok, payloadOrMessage
 local function authorize(src, row, requireWhistle)
-    if not row then return false, 'You keep no horse.' end
+    if not row then
+        Util.log('summon denied: no horse row for this character')
+        return false, 'You keep no horse.'
+    end
     local charid = Bridge.getCharId(src)
+    Util.log(('summon check: horse #%s (%s) requireWhistle=%s'):format(
+        tostring(row.id), tostring(row.model), tostring(requireWhistle)))
 
     if requireWhistle and not whistleAllowed(row.model) then
+        Util.log('summon denied: whistle not allowed for this horse')
         return false, 'That one waits for you at the stable.'
     end
 
     local until_ = cdGet(charid, row.id)
     local left = until_ - os.time()
     if left > 0 then
+        Util.log(('summon denied: cooldown %ds remaining'):format(left))
         return false, ('Give it a moment — %ds.'):format(left)
     end
+    Util.log(('summon granted: horse #%s'):format(tostring(row.id)))
 
     return true, {
         id         = row.id,
@@ -74,8 +82,14 @@ RegisterNetEvent(Events.RequestSummon, function()
     local src = source
     CreateThread(function()
         local charid = Bridge.getCharId(src)
-        if not charid then return end
-        local ok, res = authorize(src, defaultHorse(charid), true)
+        Util.log(('whistle received from src %s (charid %s)'):format(tostring(src), tostring(charid)))
+        if not charid then
+            TriggerClientEvent(Events.SummonResult, src, { ok = false, message = 'No active character.' })
+            return
+        end
+        local row = defaultHorse(charid)
+        Util.log(('whistle: default horse lookup -> %s'):format(row and ('#' .. tostring(row.id)) or 'NONE'))
+        local ok, res = authorize(src, row, true)
         TriggerClientEvent(Events.SummonResult, src,
             ok and { ok = true, horse = res } or { ok = false, message = res })
     end)

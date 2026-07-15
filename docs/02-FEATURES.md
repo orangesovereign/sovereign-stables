@@ -64,6 +64,9 @@
 | H8 | Rename horse via configurable item | EXCEED | ✅ | inventory | 2 | ⬜ |
 | H9 | Tether horse using configurable item | EXCEED | ⚠️ | native rope/anim | 3 | ⬜ |
 | H10 | **Stabled horses auto-clean after a configurable timer (minutes)** — a dirty horse left at a stable is groomed clean by the stablehand over time | EXCEED | ⚠️ | metabolism, db | 2 | ⬜ |
+| H11 | **Horses are DOWNED, not killed** — same state model as players. Configurable max minutes in the downed state; exceed it and the horse actually dies. **Supersedes the instant hard-death model** | NEW | 🧪 | death rework, db | 2 | ⬜ |
+| H12 | **Horse Reviver items** — a downed horse can only be brought back with a reviver item | NEW | ✅ | H11, inventory | 2 | ⬜ |
+| H13 | **Max horse health 150** (configurable) | NEW | ⚠️ | native health cap | 2 | ⬜ |
 
 ## D. Horse — Movement, Commands & Recovery
 
@@ -78,6 +81,9 @@
 | D7 | Weapon head-strike command while mounted | EXCEED | 🧪 | native anim | 3 | ⬜ |
 | D8 | Stumble/fall on rail tracks & dangerous terrain (toggle, trait-linked) | EXCEED | 🧪 | personality | 4 | ⬜ |
 | D9 | Horse inventory access: everyone vs selected players (config) | MATCH+ | ✅ | inventory | 2 | ⬜ |
+| D10 | **Horse map blip that follows your horse** (map + minimap). Losing the blip = the horse is out of range | NEW | ✅ | — | 1.3 | ⬜ |
+| D11 | **Short whistle = follow / unfollow toggle · Long whistle (hold) = come to me from wherever** (within a configurable reasonable distance). Supersedes the separate follow key | NEW | ⚠️ | key hold detect | 1.3 | ⬜ |
+| D12 | **Strayed horses return to the stable instead of teleporting to you.** If the horse's blip drops off the minimap it goes home and must be whistled/collected again — **replaces** the auto-recall teleport | NEW | ✅ | D10 | 1.3 | ⬜ |
 
 ## E. Horse — Progression & Behavior
 
@@ -136,6 +142,8 @@
 Every horse model configurable individually: I1 purchase availability · I2 allowed stable locations · I3 cash & gold prices · I4 storage capacity · I5 max carried hides · I6 job/group purchase restriction · I7 resale value · I8 breeding permission · I9 body-size options · I10 mane/tail/coat color options · I11 flaming-horseshoe support · I12 wild capture/storage/black-market settings. — **Bar EXCEED · Feasibility ✅ (data-driven config) · Phase 1 scaffolding, filled per feature.**
 
 ## J. Job Permissions (per job, some per grade)
+
+> 🗣️ **Design session queued (owner, 2026-07-15): the Horse Trainer job.** Once Phase 1 closes, work through the whole job — what a trainer *is* on this server, its permissions and grades, what only they may do (buy foals J23, breed, tame, install horseshoes, access others' horses, the Horse Creator J22), and how it earns. The J-table below is a scaffold, not a decision.
 
 Every permission below is a per-job (and where noted per-grade) gate resolved server-side. All are **Feasibility ✅** (config gates over existing features); each gate is wired when its underlying feature lands, scaffolding built in Phase 1.
 

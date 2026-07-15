@@ -60,9 +60,13 @@ function Horse.spawn(data)
     Horse.despawn(true)
 
     local ped = PlayerPedId()
-    local behind = GetOffsetFromEntityInWorldCoords(ped, 0.0, -18.0, 0.0)
+    local behind = GetOffsetFromEntityInWorldCoords(ped, 0.0, -12.0, 0.0)
     local horse = place(data.model, behind.x, behind.y, behind.z, GetEntityHeading(ped), data.name)
-    if not horse then Bridge.notify('Your horse could not reach you.'); return end
+    if not horse then
+        Util.err(('horse spawn FAILED for model %s'):format(tostring(data.model)))
+        Bridge.notify('Your horse could not reach you.')
+        return
+    end
 
     active = { ent = horse, id = data.id, name = data.name, model = data.model }
     following = false
@@ -70,7 +74,9 @@ function Horse.spawn(data)
     -- Trot over to the player rather than appearing on top of them.
     TaskGoToEntity(horse, ped, -1, 3.0, 3.0, 1073741824, 0)
     Bridge.notify(('%s answers your whistle.'):format(data.name or 'Your horse'))
-    Util.log(('horse #%s (%s) summoned'):format(tostring(data.id), tostring(data.model)))
+    local hc = GetEntityCoords(horse)
+    Util.log(('horse #%s (%s) spawned at %.1f, %.1f, %.1f (entity %s)'):format(
+        tostring(data.id), tostring(data.model), hc.x, hc.y, hc.z, tostring(horse)))
 end
 
 function Horse.despawn(silent)
@@ -87,10 +93,12 @@ function Horse.active() return active end
 function Horse.summon()
     if active and DoesEntityExist(active.ent) then
         -- already out: call it over instead of spawning a second one
+        Util.log('whistle: horse already out, calling it over')
         TaskGoToEntity(active.ent, PlayerPedId(), -1, 3.0, 3.0, 1073741824, 0)
         Bridge.notify(('%s comes to you.'):format(active.name or 'Your horse'))
         return
     end
+    Util.log('whistle: asking the server for your default horse')
     TriggerServerEvent(Events.RequestSummon)
 end
 
@@ -124,6 +132,8 @@ end
 --------------------------------------------------------------------------------
 RegisterNetEvent(Events.SummonResult, function(res)
     res = res or {}
+    Util.log(('summon result: ok=%s msg=%s horse=%s'):format(
+        tostring(res.ok), tostring(res.message), res.horse and tostring(res.horse.model) or 'nil'))
     if not res.ok then
         Bridge.notify(res.message or 'No horse answers.')
         return
