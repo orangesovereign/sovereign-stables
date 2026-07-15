@@ -49,22 +49,36 @@ This is why the horse is unusable during training — not a lockout flag, but ge
 
 **And it makes training a relationship, not a transaction.** Nothing mechanically stops a trainer keeping the horse. That's a deliberate trust/reputation economy — the RP *is* the safeguard. (Worth confirming this is intended rather than incidental.)
 
-### How tiers map onto the stat model — **needs re-confirming**
+### The ladder — SETTLED (owner, 2026-07-15)
 
-My earlier mapping assumed level 3 = fully trained. **The store-cap clarification breaks that**: if the shop can already sell a level 3, and the configured stat is the *fully trained ceiling*, then the ceiling must sit **above** level 3 — otherwise the best breeds would arrive already finished and trainers would have nothing to sell them.
+**Max training tier = 4.** The shop generates 1–3; **only a trainer reaches 4**.
 
-So the ladder likely runs: store generates 1–3 → **training climbs past it to a maximum tier that equals the ceiling**. The open question is simply **what that maximum tier is** (5? 6?), and how the 10–20 point gap distributes across the rungs.
+| Tier | Stat vs ceiling | Days to train | Who can produce it |
+|---|---|---|---|
+| **1** | **−20** | 1 | shop (low-stat stock) |
+| **2** | **−15** | 2 | shop (low-stat stock tops out here) |
+| **3** | **−10** | 3 | shop (middle & high-stat stock only) |
+| **4** | **ceiling** | 4 | **trainer only** |
+
+- **Low-stat stock** rolls **1–2**. **Middle and high-stat stock** rolls **2–3**.
+- Every shop horse therefore lands **10–20 points below its ceiling** — exactly the owner's earlier ruling. The two systems are the same system.
+- **Tier 4 is the biggest single jump (−10 → 0).** That's deliberate: the trainer's exclusive rung is also the most valuable one. It's what they sell.
+- **The tier's number IS the day count, wherever the horse started** (ruled): a level-2 horse going to tier 4 costs **4 days**, not 2. Each rung is progressively dearer.
+
+Config: `Config.Training.tierOffset` / `.daysForTier` in `config/config.lua`; per-horse `storeLevel = { min, max }` in `config/horses.lua`.
+
+### Trainer caps (ruled)
+
+Trainers get a **higher horse cap** (per-job, already supported by `Perms.maxHorses` over `config/jobs.lua`). Additionally `Config.Training.heldHorsesIgnoreCap = true` — horses held **in custody for training** don't consume the trainer's own slots, so a busy trainer can't be locked out of taking work.
 
 ## Open questions
 
-1. ~~Cap 3 vs Tier 4~~ **RESOLVED: 3 is the STORE's generation cap; training goes beyond it.** Remaining: **what is the maximum training tier** (= the stat ceiling)?
-2. ~~Is the horse usable while training?~~ **RESOLVED: no — ownership transfers to the trainer.**
-3. **Does "Tier N = N days" mean the TARGET level, or the number of levels gained?** Read literally — *"purchase Tier 4 training, it's automatically 4 days"* — the **target tier's number is the day count**, regardless of where the horse starts. So a level-2 horse going to level 4 costs **4 days**, not 2. That makes each rung progressively dearer, which is good design. **Confirm.**
-4. **Do customer horses count against a trainer's own horse cap (J1)?** If yes, a Senior Trainer with three clients is full and can't take work. **Recommend: horses held for training don't count** — or trainers get a much larger cap.
-5. **What does the trainer actually *do* in their 30 minutes?** Lunging, obstacle courses, riding (E1)? Or a menu action that starts the timer?
-6. **Where do fast/sought-after breeds generate?** Higher (2–3, justifying the price) or greener (1, so you pay for potential)?
-7. **Payment** — pure player-to-player, or NPC contracts as a floor when no customers are online?
-8. **Is trainer theft intended?** Custody transfer means a trainer can simply keep the horse. Assumed deliberate (reputation economy), but worth stating out loud.
+**Settled:** ~~cap 3 vs tier 4~~ (3 = store cap; max training tier = **4**) · ~~horse usable while training~~ (no — custody transfers) · ~~"Tier N = N days"~~ (target tier's number = days, wherever it started) · ~~trainer caps~~ (higher cap + held horses don't count) · ~~where fast breeds generate~~ (middle/high stat stock rolls 2–3).
+
+1. **What does the trainer actually *do* in their 30 minutes?** Lunging, obstacle courses, riding (E1)? Or a menu action that starts the timer? *(This decides whether training is a minigame or an errand.)*
+2. **Payment** — pure player-to-player, or NPC contracts as a floor when no customers are online?
+3. **Is trainer theft intended?** Custody transfer means a trainer can simply keep the horse. Assumed deliberate (a reputation economy), but worth stating out loud.
+4. **What does a trainer charge per tier?** Needs the economy pass — it's the number that decides whether the job pays.
 
 ## Economy anchor
 

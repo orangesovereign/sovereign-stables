@@ -9,6 +9,30 @@
 
   Only a couple of examples are filled in for Phase 0. The full 60+ roster is
   populated as the storefront comes online.
+
+  ---------------------------------------------------------------------
+  THE PRICE LADDER (tune freely — every number here is yours)
+  ---------------------------------------------------------------------
+  Anchored on RDR2's own stable prices so the numbers feel familiar, then
+  pulled down to suit a low-wage economy. See docs/06-BREEDS.md for which
+  breed sits in which band.
+
+    Pack (mule, donkey)                            $30 -  $50
+    Work / draft   (spd 2-4: Shire, Belgian,       $60 - $110
+                    Ardennes, Suffolk Punch,
+                    Breton, Gypsy Cob, Dutch
+                    Warmblood, Hungarian Halfbred)
+    Standard riding (spd 5-6: Kentucky Saddler,   $120 - $190
+                    Tennessee Walker, Am.
+                    Standardbred, Morgan, Criollo,
+                    Norfolk Roadster, Appaloosa,
+                    Am. Paint)
+    Superior       (Missouri Fox Trotter, Nokota, $220 - $320
+                    Andalusian, Mustang, Kladruber)
+    Race / elite   (spd 9: Arabian, Thoroughbred, $550 - $850  (+ a gold option)
+                    Turkoman)
+
+  A gold price is optional and sits alongside cash — the buyer picks.
 =====================================================================]]--
 
 Config = Config or {}
@@ -38,6 +62,11 @@ Config.HorseDefaults = {
     -- everything; 25 for the FAST BREEDS (Arabian, Thoroughbred, Turkoman) —
     -- they burn brighter and shorter. Death is always 31. See docs/06-BREEDS.md.
     declineAge = 27,
+
+    -- The training level range the SHOP may generate for this horse, { min, max }.
+    -- Low-stat stock tops out at 2; middle and high-stat stock can roll 2-3.
+    -- The shop never generates a 4 — that tier is trainer-only.
+    storeLevel = { 1, 2 },
 
     -- Storefront display card [N1-N4]. `tier` sorts it into the Specialty or
     -- Stock tab. Stats are configured base values now; they go live once the
@@ -70,9 +99,10 @@ Config.Horses = {
         tier  = 'specialty',
         name  = 'Vesper',
         breed = 'Gold Turkoman',
-        price = { cash = 3200.0, gold = 12.0 },
+        price = { cash = 750.0, gold = 6.0 },   -- race/elite tier (see the ladder above)
         storage = 40, breedable = true,
-        declineAge = 25,   -- Turkoman: a FAST breed — burns brighter, fades sooner
+        declineAge = 25,          -- Turkoman: a FAST breed — burns brighter, fades sooner
+        storeLevel = { 2, 3 },    -- high-stat stock: the shop may roll 2-3
         sex = 'Stallion', age = 6, hands = 16.2,
         lore = 'A refined warmblood with a willing mind and disciplined heart. Built for stamina, born for the long road ahead.',
         traits = {
@@ -84,7 +114,8 @@ Config.Horses = {
 
     ['A_C_Horse_KentuckySaddle_Grey'] = {
         label = 'Kentucky Saddler', tier = 'stock', breed = 'Grey Kentucky Saddler',
-        price = { cash = 130.0, gold = 0.0 },
+        price = { cash = 130.0, gold = 0.0 },   -- standard riding tier
+        storeLevel = { 2, 3 },                  -- middling stats: the shop may roll 2-3
         sex = 'Mare', age = 5, hands = 15.1,
         lore = 'A steady grey saddler — even-tempered and honest under saddle.',
         stats = { health = 66, stamina = 70, speed = 72, acceleration = 68, turn = 50 },
@@ -92,7 +123,8 @@ Config.Horses = {
 
     ['A_C_Horse_Ardennes_BayRoan'] = {
         label = 'Ardennes', tier = 'stock', breed = 'Bay Roan Ardennes',
-        price = { cash = 180.0, gold = 0.0 },
+        price = { cash = 95.0, gold = 0.0 },    -- work/draft tier
+        storeLevel = { 1, 2 },                  -- lower-end stats: tops out at 2
         sex = 'Gelding', age = 7, hands = 16.0, storage = 38,
         lore = 'A heavy draft breed — strong of back, calm in a storm.',
         stats = { health = 90, stamina = 78, speed = 58, acceleration = 52, turn = 30 },
@@ -100,7 +132,8 @@ Config.Horses = {
 
     ['A_C_HorseMule_01'] = {
         label = 'Mule', tier = 'stock', breed = 'Working Mule',
-        price = { cash = 60.0, gold = 0.0 },
+        price = { cash = 35.0, gold = 0.0 },    -- pack tier
+        storeLevel = { 1, 2 },                  -- lower-end stats: tops out at 2
         breedable = false, maxHides = 5,
         scale = 0.90,   -- a mule is smaller than a horse at "full size"
         -- Stables only sell horses aged 5-7; anything older is wild-only (see docs/05-LIFECYCLE.md).

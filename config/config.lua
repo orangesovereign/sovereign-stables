@@ -83,6 +83,34 @@ Config.Death = {
 }
 
 --------------------------------------------------------------------------------
+-- TRAINING  [07-HORSE-TRAINER]
+--   Only a Horse Trainer may train. A horse's stats in config/horses.lua are
+--   its FULLY TRAINED ceiling (tier 4); a greener horse sits below it.
+--   The shop never generates above tier 3 — tier 4 is the thing you cannot buy.
+--------------------------------------------------------------------------------
+Config.Training = {
+    maxTier      = 4,   -- the ceiling. Trainer-only.
+    storeMaxTier = 3,   -- the highest level the shop can ever generate
+
+    -- How far below the ceiling each tier sits, in stat points (0-100 scale).
+    -- A store horse is therefore always 10-20 points off its ceiling, and only
+    -- a trainer closes the last (biggest) step.
+    tierOffset = { [1] = -20, [2] = -15, [3] = -10, [4] = 0 },
+
+    -- Real-life DAYS of training to reach a tier. The tier's number IS the day
+    -- count, whatever level the horse arrived at: tier 4 is always 4 days.
+    daysForTier = { [1] = 1, [2] = 2, [3] = 3, [4] = 4 },
+
+    -- Training takes custody: the owner transfers the horse to the trainer
+    -- (server session id — "hat size"), it becomes the trainer's property for
+    -- the duration, and the trainer transfers it back when done.
+    custodyTransfer = true,
+
+    -- Horses a trainer is holding for training don't count against their cap.
+    heldHorsesIgnoreCap = true,
+}
+
+--------------------------------------------------------------------------------
 -- INTEGRATION HOOKS  (built now, switched on when the partner scripts arrive)
 --------------------------------------------------------------------------------
 Config.Integrations = {
