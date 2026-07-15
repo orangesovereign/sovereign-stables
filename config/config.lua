@@ -135,20 +135,29 @@ Config.Training = {
     longeJumpBonus = 25,   -- one-off XP for pressing Jump during a longe
 
     -- THE REPERTOIRE [E10]: a horse only knows what you actually taught it.
-    -- Each move must be worked this many times during training before the horse
-    -- learns the matching ability. Nothing is announced — the owner finds out the
-    -- first time they ask for it and get nothing. Mirror all night and you get a
-    -- level-4 horse that follows beautifully and can't rear, dance or jump.
+    -- Each move must be worked this many times before the horse learns it.
+    -- Nothing is announced and nothing is ever displayed — the owner finds out
+    -- the first time they ask for it and get nothing (or get it badly).
+    --
+    -- Everything here teaches a TRICK, with ONE exception: longeing is the only
+    -- move that touches a STAT, and it's stamina. In the West stamina beats
+    -- speed — a horse that goes all day beats one that goes fast for ten
+    -- minutes. So mirror all night and you get a level-4 horse that is fast,
+    -- handsome, obedient, and CANNOT GO THE DISTANCE. You can't shortcut wind.
     repertoire = {
         enabled = true,
         repsToLearn = {
-            mirroring   = 20,   -- responsiveness: follows, comes quicker, listens
-            dance       = 15,   -- dance under saddle (hold SPACE)
-            jump        = 15,   -- clears ground obstacles cleanly
-            rear        = 15,   -- rears on command
-            footScratch = 15,   -- teaches nothing — the horse just foot-scratches LESS
-            longeing    = 20,   -- stamina (proposed; recall would overlap mirroring)
+            mirroring   = 20,   -- trick: responsiveness — follows, comes quicker, listens
+            dance       = 15,   -- trick: dance under saddle (hold SPACE)
+            jump        = 15,   -- trick: clears ground obstacles cleanly
+            rear        = 15,   -- trick: rears on command
+            footScratch = 15,   -- trick: teaches nothing — the horse just foot-scratches LESS
+            longeing    = 20,   -- STAT: stamina. The only stat a trainer cannot fake.
         },
+        -- Stamina is gated behind longeing reps ON TOP of the tier ladder: a
+        -- tier-4 horse that was never longed still falls short of its stamina
+        -- ceiling. Every other stat closes with the tier as normal.
+        staminaRequiresLongeing = true,
     },
 
     -- The longeing sub-menu (its own panel, bottom-right).

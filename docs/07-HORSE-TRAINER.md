@@ -160,22 +160,27 @@ So mirroring keeps its XP crown *and* acquires a real cost: a mirrored horse is 
 | **Jump** | Clears ground obstacles cleanly |
 | **Rear** | Rears on command |
 | **Foot Scratch** | **Nothing — the horse just foot-scratches *less*.** The reward is the absence of a nuisance: an untrained horse fidgets. |
-| **Longeing** | **Stamina** *(recommended — see below)*, or better odds of answering the whistle. |
+| **Longeing** | **STAMINA** — the only move that touches a stat. Skip it and the horse never finishes its wind, whatever its tier. |
 
-### Longeing — stamina, not recall (recommendation)
+### ⚖️ RULED: the repertoire is **per trick** — and Longeing is the **one stat exception**
 
-The owner offered two options: *"improve the chances of a horse listening when you whistle… or make that a stamina reward."*
+> *"Per trick. Longeing could be the only stat one… because in reality, in the wild west, stamina matters more than any fast horse."*
 
-**Recommend stamina**, for two reasons:
+| | |
+|---|---|
+| **Mirroring · Dance · Jump · Rear · Foot Scratch** | teach **tricks / behaviours** |
+| **Longeing** | the **only** move that touches a **stat** — **stamina** |
 
-1. **Recall overlaps with Mirroring**, which already owns "follows better, comes quicker, listens." If longeing *also* improved recall, the two moves would compete over the same reward and both would be diminished. Every move should own something.
-2. **Longeing is conditioning work.** In life, that's exactly what a lunge line is for — you're building the horse's wind, not its manners. Stamina is also a stat an owner genuinely *feels*.
+**So a mirror-only horse is fast, handsome, obedient — and cannot go the distance.**
 
-**Open — the mechanism.** Stats are predetermined at birth with a trained ceiling, and the tier ladder already closes the gap on *all* stats at once. So "a stamina reward" could mean either:
-- **(a)** longeing contributes extra toward the **stamina** portion of the gap; or
-- **(b)** the repertoire is **per-stat**, not just per-trick — mirror-only and the horse's stamina never finishes, even at tier 4.
+This is the whole design landing in one place:
 
-**(b) is the more interesting** and fits E10's spirit exactly — but it's a bigger change to the tier model. Needs a ruling.
+- **The mirroring ruling stands untouched.** No nerf, no cap. Mirroring is *still* the fastest XP. It just produces a horse that's no good on a long ride.
+- **The craft option owns the most valuable stat.** In the West, stamina beats speed — a horse that goes all day beats a horse that goes fast for ten minutes. So the one move that requires patience and a sub-menu rewards the one stat that actually matters out there.
+- **It's a consequence, not a punishment.** Nobody took anything from the lazy trainer. They simply never built the horse's wind, because you can't shortcut fitness. That's true of real horses too.
+- **It's discoverable exactly where it hurts.** Not at the paddock — twenty miles out, when the horse is blown and the buyer starts wondering who trained it.
+
+**Mechanism:** the tier ladder closes the gap on the other stats as normal; **stamina additionally requires longeing reps.** A tier-4 horse that was never longed still has stamina short of its ceiling — the only stat the trainer can't fake.
 
 ### Foot Scratch — a joke with a point
 
