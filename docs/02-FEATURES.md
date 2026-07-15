@@ -33,7 +33,7 @@
 | S11 | Heal horses via items or paid stable service (configurable price) | EXCEED | ✅ | inventory, money | 2 | ⬜ |
 | S12 | Horseshoe system — configurable, max upgrade level | EXCEED | ⚠️ | tack, stats | 3 | ⬜ |
 | S13 | Flaming horseshoe support | EXCEED | 🧪 | S12, particles | 4 | ⬜ |
-| S14 | Customize components: manes, tails (✅ confirmed); body size, colors (deferred spike) | EXCEED | ✅/⚠️ | native ped comp | 2 | ⬜ |
+| S14 | Customize components: manes, tails (✅ confirmed); **body size — `_SET_PED_SCALE` `0x25ACFC650B65C538`, 0.70–1.50 ✅**; **colours — `_SET_META_PED_TAG` `0xBC6DF00D7A4A6819` + palette + tint0/1/2 ✅**. Build the customiser on the tag pipeline, NOT by swapping pre-baked hash variants — that's what the Q1 "colour changes" ruling needs | EXCEED | ✅ | native ped comp | 2 | ⬜ |
 | S15 | Component control UI: circular controls **or** arrow keys — **universal component list** (A8 confirmed) | EXCEED | ✅ | custom NUI | 2 | ⬜ |
 | S16 | Faction stables — same-job players share a horse pool | EXCEED | ✅ | vorp jobs, db | 3 | ⬜ |
 | S17 | Three taming minigames, selectable: number-sequence / pull / basic | EXCEED | ⚠️ | wild horses | 4 | ⬜ |
@@ -63,7 +63,7 @@
 | H7 | Add/remove & store horse furs | EXCEED | ⚠️ | native ped comp | 3 | ⬜ |
 | H8 | Rename horse via configurable item | EXCEED | ✅ | inventory | 2 | ⬜ |
 | H9 | Tether horse using configurable item | EXCEED | ⚠️ | native rope/anim | 3 | ⬜ |
-| H10 | **Stabled horses auto-clean after a configurable timer (minutes)** — a dirty horse left at a stable is groomed clean by the stablehand over time | EXCEED | ⚠️ | metabolism, db | 2 | ⬜ |
+| H10 | **Stabled horses auto-clean after a configurable timer (minutes)** — a dirty horse left at a stable is groomed clean by the stablehand over time. **`SET_PED_DIRT_LEVEL` (`0x7A56D66C78D1AAB7`) + the clear-pass; no spike needed** | EXCEED | ✅ | metabolism, db | 2 | ⬜ |
 | H11 | **Horses are DOWNED, not killed** — the same state model as players, including **instant down on a headshot**. Configurable max minutes downed; exceed it and the horse is permanently dead. **Supersedes the instant hard-death / long_term_hp toll shipped in 1.3** | NEW | 🧪 | death rework, db | 2 | ⬜ |
 | H12 | **Horse Reviver items** — a downed horse can only be brought back with a reviver item | NEW | ✅ | H11, inventory | 2 | ⬜ |
 | H13 | **Max horse health 100** (configurable) — *revised down from 150, owner 2026-07-15* | NEW | ⚠️ | native health cap | 2 | ⬜ |
@@ -200,8 +200,8 @@ Every permission below is a per-job (and where noted per-grade) gate resolved se
 | L3 | Blips individually toggleable | MATCH | ✅ | — | 1 | ⬜ |
 | L4 | Horse preview in stable catalog | MATCH | ✅ | native cam | 1 | ⬜ |
 | L5 | Orbital camera auto-centering on horse | EXCEED | ✅ (spike PASSED 2026-07-14) | native cam | 1 | ⬜ |
-| L6 | Horses get dirty (or not) while stored — configurable | EXCEED | ⚠️ | metabolism | 3 | ⬜ |
-| L9 | **Storefront preview horses always render clean** — the catalog/preview horse is forced to zero dirt, whatever the underlying horse's state | EXCEED | ⚠️ | native cleanliness | 2 | ⬜ |
+| L6 | Horses get dirty (or not) while stored — configurable. ⚠️ **Conflicts with H10 — decide whether to keep L6 at all** | EXCEED | ✅ | metabolism | 3 | ⬜ |
+| L9 | **Storefront preview horses always render clean** — the catalog/preview horse is forced to zero dirt, whatever the underlying horse's state. **`SET_PED_DIRT_LEVEL(ped, 0.0)` + `CLEAR_PED_ENV_DIRT` / `CLEAR_PED_DAMAGE_DECAL` / `_CLEAR_PED_TEXTURE` / `ClearPedWetness`** | EXCEED | ✅ | native cleanliness | 2 | ⬜ |
 | L7 | Notifications via `sovereign_notify` (=K1) | NEW | ✅ | sovereign_notify | 1 | ⬜ |
 | L8 | Lightweight lists/prompts/confirmations via `sovereign_menus` | NEW | ✅ | sovereign_menus | 1 | ⬜ |
 
@@ -211,7 +211,7 @@ Every permission below is a per-job (and where noted per-grade) gate resolved se
 |----|---------|-----|-------------|------|-------|--------|
 | M1 | 60+ breeds + custom coat presets | EXCEED | ✅ | catalog | 1 (fill ongoing) | ⬜ |
 | M2 | **Horse Creator** — build new breeds in-game via custom menu, job+grade locked | NEW | 🧪 | catalog, db, L1 | 5 | ⬜ |
-| M3 | Shiny/glossy coats via configurable items | EXCEED | ⚠️ | native coat FX | 3 | ⬜ |
+| M3 | Shiny/glossy coats via configurable items. **Likely the `_SET_META_PED_TAG` palette/tint surface rather than an FX — re-scope before spiking** | EXCEED | ⚠️ | native coat FX | 3 | ⬜ |
 
 ## X. Operator, Integration & QoL additions *(scoped 2026-07-14)*
 
@@ -272,7 +272,7 @@ Every permission below is a per-job (and where noted per-grade) gate resolved se
 8. **Orbital camera** (L5) — native cam path for a smooth auto-centering orbit around a previewed horse.
 9. **Shiny coat FX** (M3) — native means to apply a gloss/shine overlay to a horse coat at runtime.
 10. **Horse Creator** (M2) — persisting player-authored breed definitions (component/coat/stat combos) to config or DB and spawning them reliably.
-11. **Horse dirt / cleanliness native** (H5, H10, L9, L6) — confirm the RDR3 native to read *and* force a horse's dirt level (baseline `vorp_stables` has a brush-to-clean interaction, so a write path exists). Needed to force the preview horse clean (L9) and to auto-clean stabled horses (H10). Small spike in Phase 2.
+11. ~~**Horse dirt / cleanliness native**~~ ✅ **ANSWERED 2026-07-15 — no spike needed.** `SET_PED_DIRT_LEVEL` (`0x7A56D66C78D1AAB7`) is a write path; a full clean pass is that plus `CLEAR_PED_ENV_DIRT` (`0x6585D955A68452A5`), `CLEAR_PED_DAMAGE_DECAL` (`0x9C720776DAA43E7E`), `_CLEAR_PED_TEXTURE` (`0xB63B9178D0F58D82`) and `ClearPedWetness`. `TF_HORSE_DIRTY`/`TF_HORSE_FILTHY` confirm the game tracks **two dirt tiers**. This was a **gate on Phase 2**; H5/H10/L9 are now a config timer plus those calls. See PHASE1_SPIKE_FINDINGS.
 12. ~~How is a foal represented?~~ **CLOSED ✅ — no spike needed.** A foal is the same breed model, **scaled down** and unmountable, growing in phases to full size at 5 (owner ruling 2026-07-15). Ped scaling is **proven**: the owner runs servers that scale horses, and the owned `sirevlc_horses` config does it (`BREEDING_SCALE_MULTIPLIER_PHASE_1/2/3 = 0.75/0.80/0.90` — *"Ped scale multiplier applied when the foal is in phase 1"* — plus a per-breed base `SCALE` of 0.90–1.0). **Scale must be a multiplier of the breed's base scale, not absolute.** Only the exact native remains to be named at build time.
 13. **Use Rockstar's horse blips, don't invent ours** (D10, D11, H11, H12) — the RPF reference documents `BLIP_MODIFIER_PLAYER_HORSE_IN_RANGE_WHISTLE` (a horse blip that pulses when in whistle range), `BLIP_MODIFIER_HORSE_REVIVE`, and `BLIP_MODIFIER_MP_DOWNED` / `BLIP_AMBIENT_PED_DOWNED`. The base game already models the exact concepts the owner asked for. Confirm they're settable from script. Spike before 1.3 blips / Phase 2 downed.
 

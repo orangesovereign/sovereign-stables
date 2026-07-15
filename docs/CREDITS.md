@@ -55,6 +55,65 @@ SOFTWARE.
 
 ---
 
+## coal_stables — Santa Tollimus
+
+**Permission:** the project owner confirms (2026-07-15) that coal_stables is
+**free for developers to use** — its author wrote and shared it for other devs
+while learning to develop himself.
+
+> ⚠️ **Recorded because there is no licence file.** The distribution
+> (`Coal_Stables demo-…`, `fxmanifest` author *"Santa Tollimus & ChatGPT 5.1"*)
+> ships **no LICENSE, no README and no terms**, so the permission above rests on
+> the owner's word rather than a written grant. That is enough for us to proceed,
+> and it is written down here so a later session doesn't re-open the question —
+> or wrongly assume a licence exists. If coal is ever published with explicit
+> terms, replace this note with them.
+
+**Used for:** **reference only — no code or data is copied.** Reading it settled
+three natives we had scheduled as future spikes (see
+[`PHASE1_SPIKE_FINDINGS.md`](PHASE1_SPIKE_FINDINGS.md)):
+
+- `_SET_META_PED_TAG` (`0xBC6DF00D7A4A6819`) — the **tint pipeline** behind the
+  owner's "colour changes" ruling, plus RDR2's 13 metaped palette names.
+- `_SET_PED_SCALE` (`0x25ACFC650B65C538`) — **foal scaling**, clamped 0.70–1.50
+  in coal, which corroborates sirevlc's 0.75–0.90 breeding multipliers.
+- `SET_PED_DIRT_LEVEL` (`0x7A56D66C78D1AAB7`) and its clear-pass companions —
+  which **answered open question 11**, a gate on Phase 2.
+
+It also **independently corroborates our Phase 1 approach**: coal applies tack
+with the same `0xD3A7B003ED343FD9` + `0xCC8CA3E88256E58F` + `0x283978A15512B2FE`
+sequence our spike proved on a live horse.
+
+Native ids and palette names are **facts about RDR2**, not authored content —
+the same facts appear in any script that touches this system. Our implementation
+of them is our own.
+
+**Credit is given here regardless of licence, because it's owed.** Naming three
+natives saved this project two spikes and a phase gate.
+
+---
+
+## bcc-stables (BryceCanyonCounty) — GPL-3.0 ⚠️ REFERENCE ONLY
+
+**Nothing from bcc-stables is used, and nothing may be copied into this resource
+without a deliberate decision by the project owner.**
+
+**Why:** GPL-3.0 is **copyleft**. Copying its code *or its data tables* into
+sovereign_stables would oblige this project to be released **entirely under
+GPL-3.0** — full source published, and anyone free to take, modify and
+redistribute it, including competing servers. That is a business decision for the
+owner, not something to acquire by accident in a commit.
+
+**What it would offer if that decision were ever made:** 910 component hashes
+(**478 already covered** by our MIT-sourced table, so ~432 genuinely new) and
+four categories we lack — **Bridles, Horseshoes, Holsters, Mustaches**.
+Horseshoes is S12 on our own roadmap.
+
+**Status:** read for ideas only (ideas are not copyrighted). Any of those gaps we
+want should be sourced independently or from a permissive source.
+
+---
+
 ## femga/rdr3_discoveries
 
 **Used for:** reference only — native ids, control hashes, tutorial-flag and

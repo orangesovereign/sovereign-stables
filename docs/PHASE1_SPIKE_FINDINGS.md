@@ -94,6 +94,87 @@ Notes:
 4. **`mech_*` / `mech_animal_interaction@…` clips are synced-interaction anims**, not standalone loops — playing them raw with `TaskPlayAnim` contorts the ped. For ambient activity use a **scenario** (`TaskStartScenarioInPlace`), which handles pose, prop and looping.
 5. **Never gate UI on a server round-trip.** Open the NUI first and fill data in when it arrives; and never leave an `isOpen` flag set on an early-abort path or every retry silently no-ops.
 
+## 🎁 Natives from `coal_stables` (2026-07-15) — three future gates answered early
+
+`coal_stables` (author **Santa Tollimus**) is a RedM stables overhaul the owner has
+on disk and has confirmed is **free for devs to use** — see [`CREDITS.md`](CREDITS.md).
+Reading it settled **three separate questions we had scheduled as future work**.
+
+**It independently confirms our pipeline first:** coal applies tack with the same
+`0xD3A7B003ED343FD9` + `0xCC8CA3E88256E58F` + `0x283978A15512B2FE` we proved in the
+spike. Two unrelated shipping scripts, same three natives — that's the strongest
+evidence we have that the Phase 1 approach is correct.
+
+| Native | Signature | What it unblocks |
+|---|---|---|
+| `0xBC6DF00D7A4A6819` | `_SET_META_PED_TAG(ped, drawable, albedo, normal, material, palette, tint0, tint1, tint2)` | **S14/S15 tints** — the mechanism behind the owner's Q1 "colour changes" ruling |
+| `0xAAB86462966168CE` | `_UPDATE_PED_VARIATION(ped, true)` | tint refresh (pairs with the above; then `0xCC8CA3E88256E58F`) |
+| `0x25ACFC650B65C538` | `_SET_PED_SCALE(ped, scale)` | **FOAL SCALING** (05-LIFECYCLE ruling #7) |
+| `0x7A56D66C78D1AAB7` | `SET_PED_DIRT_LEVEL(ped, 0.0)` | **DIRT — open question 11**, and H5 / H10 / L9 |
+| `0x6585D955A68452A5` | `CLEAR_PED_ENV_DIRT(ped)` | dirt |
+| `0x9C720776DAA43E7E` | `CLEAR_PED_DAMAGE_DECAL(ped)` | grime/blood overlays |
+| `0xB63B9178D0F58D82` | `_CLEAR_PED_TEXTURE(ped)` | dirt |
+| `0x772A1969F649E902` | `_IS_THIS_MODEL_A_HORSE(model)` | cheap validation before we treat a ped as a horse |
+| `0x1902C4CFCC5BE57C` | `SET_PED_OUTFIT_PRESET(ped, n)` | forces a full preset (often includes saddle/tack) |
+
+### 1. Dirt — open question 11 is answered
+
+**`SET_PED_DIRT_LEVEL(ped, 0.0)` is a WRITE path**, and coal pairs it with three
+clears for a full clean pass:
+
+```lua
+Citizen.InvokeNative(0x7A56D66C78D1AAB7, ped, 0.0)   -- SET_PED_DIRT_LEVEL
+Citizen.InvokeNative(0x6585D955A68452A5, ped)        -- CLEAR_PED_ENV_DIRT
+Citizen.InvokeNative(0x9C720776DAA43E7E, ped)        -- CLEAR_PED_DAMAGE_DECAL
+Citizen.InvokeNative(0xB63B9178D0F58D82, ped)        -- _CLEAR_PED_TEXTURE
+ClearPedWetness(ped)
+```
+
+This was a **gate on Phase 2** (L9 "the storefront never shows a dirty horse",
+H10 "stabled horses auto-clean"). Both are now a config timer plus these calls.
+Pairs with `TF_HORSE_DIRTY` / `TF_HORSE_FILTHY` from `tutorial_flags.lua`, which
+told us the game tracks **two dirt tiers**.
+
+### 2. Foal scaling — the native is named
+
+`_SET_PED_SCALE(ped, scale)`. Memory recorded *"only the exact native remains to
+name at build time"* — this is it. **coal clamps 0.70–1.50 in a shipping script**,
+which is real-world evidence of the safe range, and it sits either side of
+sirevlc's `BREEDING_SCALE_MULTIPLIER_PHASE_1/2/3 = 0.75/0.80/0.90`. Two
+independent products agreeing on the range.
+
+Remember the lifecycle rule: **scale is a MULTIPLIER of the breed's base scale**
+(`foal size = breed.scale × phase multiplier`), never absolute — a Mule's base is
+0.90.
+
+### 3. Tints — the Q1 ruling has a mechanism
+
+Tack isn't only pre-baked colour variants. `_SET_META_PED_TAG` sets the raw
+metaped asset **plus a palette and three tint indices**, which is what actually
+recolours a saddle. Coal's palettes:
+
+```
+metaped_tint_horse · metaped_tint_horse_leather · metaped_tint_generic
+metaped_tint_animal · metaped_tint_combined_leather · metaped_tint_genericclean
+metaped_tint_eye · metaped_tint_hair · metaped_tint_leather · metaped_tint_hat
+metaped_tint_mpadv · metaped_tint_makeup · metaped_tint_generic_weathered
+```
+
+Leather tack uses `metaped_tint_leather` / `metaped_tint_combined_leather`; manes
+and tails use the hair/horse palettes.
+
+**This is the difference between our two data sources, and both are right:**
+vorp's `variants` are *pre-baked colourways addressed by one hash* — which is what
+Phase 1 ships and what already passed its gate. Coal's tags are *live tint control*.
+The owner's Q1 ruling ("adjust a tack and you pay only the difference — colour
+changes") wants the **live** version, so **S14/S15 in Phase 2 should build on
+`_SET_META_PED_TAG`**, with vorp's variant lists as the fallback and cross-check.
+
+⚠️ **Do not swap Phase 1's apply path to this.** Milestone 1.4's tack articles
+passed on the hash path, including the restart test. The tag pipeline is an
+*addition* for the customiser, not a replacement.
+
 ## Deferred (not Phase 1 blockers)
 
-- **Body size** and **shiny/gloss coat (M3)** — not covered by this spike; separate follow-up investigations before their phases.
+- **Shiny/gloss coat (M3)** — still not covered; separate follow-up before its phase.
+- ~~**Body size**~~ — **answered above** (`_SET_PED_SCALE`).
