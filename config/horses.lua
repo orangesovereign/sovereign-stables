@@ -35,8 +35,11 @@ Config.HorseDefaults = {
     tier   = 'stock',        -- 'specialty' | 'stock'
     name   = nil,            -- showcase name (specialty). nil = use label.
     breed  = nil,            -- breed line under the name. nil = use label.
-    sex    = 'Gelding',      -- Stallion | Mare | Gelding
-    age    = 4,              -- years (display)
+    sex    = 'Gelding',      -- Stallion | Mare | Gelding (buyers pick Stallion/Mare at purchase [N9])
+    -- Age in years. STABLES MAY ONLY SELL 5-7 — anything older exists only in the
+    -- wild. Foals (bred, or bought by a Horse Trainer) enter at 3-4 and become
+    -- adults at 5. Death at 31. See docs/05-LIFECYCLE.md.
+    age    = 5,
     hands  = 15.2,           -- height in hands [N3]
     lore   = 'A dependable mount, sound of wind and limb.',
     traits = {},             -- { { name='Steadfast', desc='...', level=1 }, ... }
@@ -81,7 +84,8 @@ Config.Horses = {
         label = 'Mule', tier = 'stock', breed = 'Working Mule',
         price = { cash = 60.0, gold = 0.0 },
         breedable = false, maxHides = 5,
-        sex = 'Gelding', age = 8, hands = 14.3,
+        -- Stables only sell horses aged 5-7; anything older is wild-only (see docs/05-LIFECYCLE.md).
+        sex = 'Gelding', age = 7, hands = 14.3,
         lore = 'Stubborn, sure-footed, and worth its weight on a long haul.',
         stats = { health = 72, stamina = 82, speed = 44, acceleration = 40 },
     },

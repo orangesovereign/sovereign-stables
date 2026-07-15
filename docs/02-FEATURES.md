@@ -110,7 +110,7 @@ Everything else only **downs** it: a horse drops to a downed state (instantly on
 | E5 | Personality & behavior system (traits) | EXCEED | 🧪 | db | 4 | ⬜ |
 | E6 | Ageing on **wall time** (~2.3 real days per horse-year): foal 3–4 → adult at 5 → **death at 31**; age-reset items. See [05-LIFECYCLE](05-LIFECYCLE.md) | EXCEED | ⚠️ | db, loop | 3 | ⬜ |
 | E7 | Horse EXP loss on restart (see S9) | EXCEED | ✅ | db | 2 | ⬜ |
-| E8 | **Age-related stat decline** — as a horse gets on in years its stats *quietly* decrease (no announcement; the numbers just drift). Horses slow down. Curve/floor TBD — see 05-LIFECYCLE open #1–2 | NEW | ⚠️ | E6, stats | 3 | ⬜ |
+| E8 | **Age-related decline of speed + stamina** — quietly, no announcement; the numbers just drift. **Starts at 27 (25 for faster breeds)**, so a horse spends ~85% of its life in its prime. Needs a per-breed "fast" flag | NEW | ⚠️ | E6, stats | 3 | ⬜ |
 
 ## F. Tack & Components
 
@@ -270,6 +270,7 @@ Every permission below is a per-job (and where noted per-grade) gate resolved se
 9. **Shiny coat FX** (M3) — native means to apply a gloss/shine overlay to a horse coat at runtime.
 10. **Horse Creator** (M2) — persisting player-authored breed definitions (component/coat/stat combos) to config or DB and spawning them reliably.
 11. **Horse dirt / cleanliness native** (H5, H10, L9, L6) — confirm the RDR3 native to read *and* force a horse's dirt level (baseline `vorp_stables` has a brush-to-clean interaction, so a write path exists). Needed to force the preview horse clean (L9) and to auto-clean stabled horses (H10). Small spike in Phase 2.
-12. **How is a foal represented?** (N10, G6) — does RDR2 ship rideable/standable foal peds, or is a foal a scaled adult, or a non-rideable placeholder until grown? This decides whether "buy a foal" is even coherent, and how a foal *becomes* an adult. Spike before Phase 3.
+12. ~~How is a foal represented?~~ **ANSWERED (owner 2026-07-15): a foal is the same breed model, scaled down and unmountable; it auto-scales to full size at 5.** The remaining risk is narrower but real: **can a horse ped be scaled at runtime?** No ped-scale native appears in the local `rdr3_discoveries` reference, so it must be **confirmed by spike, not assumed**. Fallback if not: a genuinely smaller model, or foals stay full-size and are simply unmountable. Spike before Phase 3.
+13. **Use Rockstar's horse blips, don't invent ours** (D10, D11, H11, H12) — the RPF reference documents `BLIP_MODIFIER_PLAYER_HORSE_IN_RANGE_WHISTLE` (a horse blip that pulses when in whistle range), `BLIP_MODIFIER_HORSE_REVIVE`, and `BLIP_MODIFIER_MP_DOWNED` / `BLIP_AMBIENT_PED_DOWNED`. The base game already models the exact concepts the owner asked for. Confirm they're settable from script. Spike before 1.3 blips / Phase 2 downed.
 
 Each ❓/🧪/⚠️ item gets a short spike in `docs/spikes/` before it enters a build phase.
