@@ -173,7 +173,7 @@
       why: "Clean start before anything else counts.", items: [
       { id: 'B1', t: "Deploy the 1.4 build and <code>restart sovereign_stables</code>.", x: "<b>Expect:</b> no red errors on start." },
       { id: 'B2', t: "In game: <code>/stables_diag</code>", x: "<b>Expect:</b> dependencies OK, Database OK, no config problems." },
-      { id: 'B3', t: "<b>Required:</b> run <code>sql/upgrades.sql</code> in MySQL &mdash; it adds the new <code>sovereign_tack</code> table.", x: "<b>Expect:</b> runs clean. It only <em>adds</em> a table and touches nothing you already have, so it is safe on your live database. Running it twice is also fine." },
+      { id: 'B3', t: "<b>Required:</b> run <code>sql/upgrades.sql</code> in MySQL &mdash; it adds the new <code>sovereign_tack</code> table. <b>Pull the latest first</b> &mdash; this file was rewritten on 2026-07-15.", x: "<b>Expect:</b> no errors, and a final table with <b>two rows that both say YES</b>. <b>If you ran the old version and it only mentioned <code>sex</code>, the tack table was never created</b> &mdash; the old first statement threw <em>Duplicate column name 'sex'</em> and MySQL stopped the whole script there. The new one checks before it acts, so it is safe to paste whole and safe to run again. <b>Both lines must read YES before anything in Articles V or VI can work.</b>" },
     ]},
     { art: 'II', title: 'The 1.3 Carry-Over', tag: 'never verified',
       why: "Three lines from 1.3 that were built but never checked — you said to roll them into the next test. X1 matters most: the F8 console has never once been recorded across three rounds, and it is the thing that would have explained the old dismiss/follow failures.", items: [

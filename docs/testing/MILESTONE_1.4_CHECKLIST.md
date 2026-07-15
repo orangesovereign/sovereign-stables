@@ -18,7 +18,7 @@
 |---|---|---|---|
 | B1 | Deploy 1.4, `restart sovereign_stables` | no red errors | |
 | B2 | `/stables_diag` | dependencies OK, Database OK, no config problems | |
-| B3 | **Required:** run `sql/upgrades.sql` in MySQL (adds the new `sovereign_tack` table) | runs clean; only *adds* a table, safe on a live DB, safe to run twice | |
+| B3 | **Required:** run `sql/upgrades.sql` in MySQL (adds the new `sovereign_tack` table). **Pull the latest first — rewritten 2026-07-15** | no errors, and a final table with **two rows that both say YES**. If you ran the old version and it only mentioned `sex`, the tack table was **never created** — the old first statement threw *Duplicate column name 'sex'* and MySQL stopped the script there. **Both lines must read YES or Articles V/VI cannot work** | |
 
 ## Art. II — The 1.3 carry-over (never verified)
 
