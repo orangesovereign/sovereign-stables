@@ -214,7 +214,17 @@ RegisterNetEvent(Events.RequestCallWagon, function(wagonId, stableId)
             return
         end
 
-        Util.log(('wagon call granted: #%s (char %s) at %s'):format(tostring(row.id), tostring(charid), tostring(stableId)))
+        -- A wrecked wagon [WG9]. Off by default because no repair system exists
+        -- yet — turning it on would brick a destroyed wagon permanently.
+        local dmg = Config.WagonDamage or {}
+        if dmg.wreckedNeedsRepair and (tonumber(row.health) or 0) <= 0 then
+            TriggerClientEvent(Events.CallWagonResult, src, { ok = false,
+                message = ('%s is a wreck — it needs repairing first.'):format(row.name or 'That wagon') })
+            return
+        end
+
+        Util.log(('wagon call granted: #%s (char %s) at %s — stored health %s')
+            :format(tostring(row.id), tostring(charid), tostring(stableId), tostring(row.health)))
         TriggerClientEvent(Events.CallWagonResult, src, { ok = true, wagon = {
             id = row.id, name = row.name, model = row.model, health = row.health, tint = row.tint,
             stableId = stableId,
@@ -235,11 +245,18 @@ end)
 RegisterNetEvent(Events.ReportWagonHealth, function(wagonId, health)
     local src = source
     if not wagonId then return end
-    health = math.max(0, math.floor(tonumber(health) or 0))
+    if (Config.WagonDamage or {}).persist == false then return end
+
+    local maxHp = (Config.WagonDamage or {}).maxHealth or 1000
+    health = math.max(0, math.min(maxHp, math.floor(tonumber(health) or 0)))
     CreateThread(function()
         local charid = Bridge.getCharId(src)
         if not charid then return end
         Db.execute('UPDATE sovereign_wagons SET health = ? WHERE id = ? AND charid = ?', { health, wagonId, charid })
+        -- Logged because 1.4 round 1 silently wrote full health forever (the
+        -- client was reading a ped native on a vehicle). If damage still doesn't
+        -- stick, this line proves whether the server is being told about it.
+        Util.log(('wagon #%s health <- %d (char %s)'):format(tostring(wagonId), health, tostring(charid)))
     end)
 end)
 

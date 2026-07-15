@@ -25,11 +25,107 @@ Wagon = Wagon or {}
 
 local active = nil    -- { ent, id, name, model }
 
+local wagonBlip = nil
+
 local function loadModel(hash)
     RequestModel(hash)
     local t = GetGameTimer()
     while not HasModelLoaded(hash) and (GetGameTimer() - t) < 5000 do Wait(10) end
     return HasModelLoaded(hash)
+end
+
+--------------------------------------------------------------------------------
+-- HEALTH  [WG9]
+--------------------------------------------------------------------------------
+-- ⚠️ WHICH NATIVE REPORTS A WAGON'S DAMAGE IN RDR3 IS NOT SETTLED.
+--
+-- None of vorp_stables, bcc-stables or coal_stables persist wagon health, so
+-- there is no reference implementation to copy — we are first here.
+--
+-- 1.4 round 1 used `GetEntityHealth`, which is the PED health native, on a
+-- VEHICLE. It reported a constant, so every save wrote full health and damage
+-- never persisted (ledger V5/V6/V7). The comment at the top of this file even
+-- said "a wagon is a VEHICLE, not a ped — different natives", and then the code
+-- used the ped one anyway.
+--
+-- So rather than guess a second time: read EVERY candidate, log them all, and
+-- use the first that exists. The next test round's F8 capture tells us which one
+-- actually moves when you shoot a wagon — then this collapses to one call.
+local HEALTH_MAX = 1000.0
+
+local function probeHealth(veh)
+    if not (veh and DoesEntityExist(veh)) then return nil end
+    local body   = GetVehicleBodyHealth   and GetVehicleBodyHealth(veh)   or nil
+    local engine = GetVehicleEngineHealth and GetVehicleEngineHealth(veh) or nil
+    local ent    = GetEntityHealth(veh)
+    return body, engine, ent
+end
+
+-- Returns a 0..HEALTH_MAX integer, or nil if nothing readable.
+local function readHealth(veh)
+    local body, engine, ent = probeHealth(veh)
+    if body == nil and engine == nil and ent == nil then return nil end
+    if Config.Debug then
+        Util.log(('wagon health probe -> body=%s engine=%s entity=%s max=%s')
+            :format(tostring(body), tostring(engine), tostring(ent),
+                    tostring(veh and GetEntityMaxHealth and GetEntityMaxHealth(veh))))
+    end
+    -- Prefer BODY: a horse-drawn wagon has no engine, and body is what takes the
+    -- damage when you drive it off a cliff or shoot it.
+    local v = body or engine or ent
+    if not v then return nil end
+    return math.max(0, math.min(HEALTH_MAX, math.floor(v + 0.5)))
+end
+
+local function applyHealth(veh, hp)
+    hp = tonumber(hp)
+    if not hp then return end
+    hp = math.max(0, math.min(HEALTH_MAX, hp))
+    if hp >= HEALTH_MAX then return end          -- nothing to restore
+
+    local cfg = Config.WagonDamage or {}
+    if hp <= 0 then hp = cfg.wreckedHealth or 150 end   -- don't hand back a 0-hp wagon
+
+    if SetVehicleBodyHealth   then SetVehicleBodyHealth(veh, hp + 0.0) end
+    if SetVehicleEngineHealth then SetVehicleEngineHealth(veh, hp + 0.0) end
+    SetEntityHealth(veh, math.max(1, math.floor(hp)))
+end
+
+--------------------------------------------------------------------------------
+-- BLIP  — owner request 2026-07-15: a wagon blip that follows it once it's out.
+--------------------------------------------------------------------------------
+-- Uses R★'s OWN player-wagon blip style (`blip_mp_player_wagon`, 1612913921),
+-- which already does the thing you'd otherwise hand-roll: its documented
+-- conditional style HIDES the blip while you are riding the entity. Same trick
+-- as the player horse blip. Don't invent a sprite — the game has one.
+local function makeWagonBlip(veh, name)
+    local cfg = Config.WagonBlip or {}
+    if cfg.enabled == false then return end
+    if not (veh and DoesEntityExist(veh)) then return end
+
+    -- BlipAddForEntity — the blip tracks the entity, so no per-frame updating.
+    -- ⚠️ UNVERIFIED IN THIS ENVIRONMENT: no local reference resource uses it, so
+    -- it is wrapped. If it fails, the wagon still works — you just lose the blip.
+    local ok, blip = pcall(function()
+        return Citizen.InvokeNative(0x23F74C2FDA6E7C61, cfg.style or 1664425300, veh)
+    end)
+    if not ok or not blip or blip == 0 then
+        Util.warn('wagon blip: BlipAddForEntity failed — wagon is fine, blip is not')
+        return
+    end
+    pcall(function()
+        Citizen.InvokeNative(0x74F74D3207ED525C, blip, cfg.sprite or 1612913921, 1)  -- SetBlipSprite
+        Citizen.InvokeNative(0x9CB1A1623062F402, blip, name or cfg.label or 'Wagon') -- SetBlipName
+    end)
+    wagonBlip = blip
+    Util.log(('wagon blip created (%s)'):format(tostring(blip)))
+end
+
+local function removeWagonBlip()
+    if wagonBlip then
+        pcall(function() RemoveBlip(wagonBlip) end)
+        wagonBlip = nil
+    end
 end
 
 local function isDriving()
@@ -86,11 +182,7 @@ function Wagon.spawn(data)
 
     -- Restore remembered damage [WG9]. Health is stored server-side, so a wagon
     -- you wrecked yesterday is still wrecked today.
-    if data.health then
-        local hp = math.max(1, tonumber(data.health) or 1000)
-        SetEntityHealth(veh, hp)
-        SetVehicleEngineHealth(veh, hp + 0.0)
-    end
+    if data.health then applyHealth(veh, data.health) end
 
     -- Livery / colour [WG4], when the tint table lands.
     if data.tint and SetVehicleTint then
@@ -98,6 +190,7 @@ function Wagon.spawn(data)
     end
 
     active = { ent = veh, id = data.id, name = data.name, model = data.model }
+    makeWagonBlip(veh, data.name)
     Bridge.notify(('%s is brought round.'):format(data.name or 'Your wagon'))
     local c = GetEntityCoords(veh)
     Util.log(('wagon #%s (%s) spawned at %.1f, %.1f, %.1f (entity %s)'):format(
@@ -108,15 +201,20 @@ end
 -- being dismissed — which would make WG9 pointless.
 local function reportHealth()
     if not (active and active.ent and DoesEntityExist(active.ent)) then return end
-    local hp = math.floor(GetEntityHealth(active.ent) or 1000)
+    local hp = readHealth(active.ent)
+    if not hp then return end          -- nothing readable: never write a guess
     TriggerServerEvent(Events.ReportWagonHealth, active.id, hp)
 end
 
-function Wagon.despawn(silent)
+-- `keepReported` = we have ALREADY sent a final figure (e.g. 0 for a wreck), so
+-- do not re-read and overwrite it. Round 1 reported 0 on destruction and then
+-- immediately called despawn(), which read the dead entity and clobbered it.
+function Wagon.despawn(silent, keepReported)
     if active and active.ent and DoesEntityExist(active.ent) then
-        reportHealth()
+        if not keepReported then reportHealth() end
         DeleteEntity(active.ent)
     end
+    removeWagonBlip()
     active = nil
     if not silent then Bridge.notify('Your wagon is put away.') end
 end
@@ -140,10 +238,9 @@ function Wagon.dismiss()
     end
     if isDriving() then Bridge.notify('Step down first.'); return end
 
-    reportHealth()
     TriggerServerEvent(Events.ReportWagonDismiss, active.id)
     Bridge.notify(('%s is put away.'):format(active.name or 'Your wagon'))
-    Wagon.despawn(true)
+    Wagon.despawn(true)   -- saves the damage on its way out
 end
 
 --------------------------------------------------------------------------------
@@ -174,17 +271,22 @@ CreateThread(function()
     while true do
         if active and active.ent then
             if not DoesEntityExist(active.ent) then
+                -- Vanished from under us (streamed out, cleaned up by the engine).
+                -- Drop the blip too, or it hangs on the map pointing at nothing.
+                removeWagonBlip()
                 active = nil
             elseif IsEntityDead(active.ent) then
                 Util.log(('wagon #%s destroyed'):format(tostring(active.id)))
                 TriggerServerEvent(Events.ReportWagonHealth, active.id, 0)
-                Wagon.despawn(true)
+                Wagon.despawn(true, true)   -- keep the 0; don't re-read a corpse
                 Bridge.notify('Your wagon is wrecked.')
             else
                 reportHealth()   -- cheap, and means a crash never loses the damage
             end
         end
-        Wait(10000)
+        -- 3s, not 10s: the gap between "drove it off a cliff" and "put it away"
+        -- is often shorter than 10 seconds, and an unsaved tick loses the damage.
+        Wait(3000)
     end
 end)
 

@@ -43,13 +43,14 @@
 
 | # | Check | Expect | Result |
 |---|---|---|---|
-| V1 | `Bring It Round` (or `/sovwagon`) | shop closes; wagon appears **in front**, **on the ground** | |
+| V1 | `Bring It Round` *(no `/sovwagon` any more — stable only, your ruling)* | shop closes; wagon appears **in the stable yard** (Valentine -361.88, 805.78), on the ground. **Fixed round 1** — recheck | |
+| V8 | **NEW — the wagon blip.** Wagon out → look at minimap. Then drive it | a blip that **follows it**, named after your wagon; **hides while driving**, returns when you step off (R★'s own `blip_mp_player_wagon`). ⚠️ entity-blip native unverified here — if no blip, check F8 for "BlipAddForEntity failed" | |
 | V2 | Drive it | drives normally, is yours | |
 | V3 | `/sovwagonaway` | "*<name>* is put away." | |
 | V4 | Call it back immediately | "Give it a moment — Ns." (30s recall cooldown) | |
-| V5 | **The real one:** call out → **damage it** → put away → call back | comes back **still damaged**. Dismissing must not heal it | |
-| V6 | MySQL `health` on that wagon | dropped; list shows e.g. "64% sound" | |
-| V7 | *Optional/destructive:* destroy it outright | "Your wagon is wrecked.", despawns, `health` = 0. **Not** deleted — repair is a later phase | |
+| V5 | **The real one:** call out → **damage it** → put away → call back. **Watch F8 while damaging** | comes back **still damaged**. ⚠️ **The F8 line matters more than pass/fail.** Round 1 read `GetEntityHealth` (a *ped* native) on a vehicle → constant → every save wrote full health. Nobody persists wagon health (vorp/bcc/coal), so no reference exists: this probes **all three** natives and logs `wagon health probe -> body=… engine=… entity=…` every 3s. **Paste one line undamaged + one wrecked** — whichever number MOVES is the right native | |
+| V6 | MySQL `health` on that wagon; also F8 `wagon #N health <- …` | dropped; list shows e.g. "64% sound". The F8 line proves whether the **server** was told at all — 1000 every time = client still reading wrong; real number but MySQL disagrees = the write. Two different bugs | |
+| V7 | *Optional/destructive:* destroy it outright, then call it back | "Your wagon is wrecked.", despawns, `health` = 0 — and it returns **battered at 150hp, not fresh**. Not deleted; repair is a later phase. **See Q3** | |
 
 ## Art. V — The tack room, owning (F1 · F5)
 
@@ -107,6 +108,7 @@
 | # | Question | Result |
 |---|---|---|
 | Q1 | **Tack trade-in.** You said *"never re-buy what you own — adjust a tack and you pay only the difference."* I read that as a **trade-in** and built it: one piece per slot, a $60 saddle while owning a $40 one costs **$20** and the $40 one is gone. The alternative is a **collection**: every piece bought outright and kept, so you could keep a work saddle *and* a good one for different horses. Trade-in matches your words; collection matches owning a stable of different horses. **Which?** Config: `Config.TackRules.tradeInWithinSlot` | |
+| Q3 | **NEW — what is a wrecked wagon?** You destroyed one and the stable handed you a fresh one — obviously wrong. The fix has two shapes and only you pick. **(a) Battered but yours** — comes back at 150hp, ugly, still yours. **(b) Wrecked means wrecked** — it can't leave the stable until repaired. (b) is the honest rule and probably where this belongs, **but there's no repair system yet**, so switching it on today permanently bricks any destroyed wagon with no way back. Shipping (a) until repair exists. **Rule:** (a) or (b)? And if (b), does repair go in Phase 2 with the care/health work? Config: `Config.WagonDamage.wreckedNeedsRepair` / `wreckedHealth` | |
 | Q2 | **The wagon key.** RDR2 gives us `INPUT_WHISTLE` for horses — there is **no native equivalent for wagons**. So a wagon is called by `/sovwagon` or from the stable (what vorp_stables does), and `Config.Keys.callWagon = 'J'` is **not bound**. Leave it a command, or bind `J` anyway (accepting it only takes effect after a full *client* restart)? | |
 
 ## Art. X — Cleanup

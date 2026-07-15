@@ -66,6 +66,38 @@ Config.Access = {
 }
 
 --------------------------------------------------------------------------------
+-- WAGON BLIP  (owner request, 2026-07-15) — follows the wagon while it's out.
+--------------------------------------------------------------------------------
+-- Uses RDR2's OWN player-wagon blip style rather than a hand-rolled one. Its
+-- documented behaviour already includes the bit you'd otherwise have to build:
+-- the blip HIDES itself while you are riding the wagon, and shows again when you
+-- step off. Same trick the player's horse blip uses.
+Config.WagonBlip = {
+    enabled = true,
+    sprite  = 1612913921,   -- blip_mp_player_wagon (R★'s own)
+    style   = 1664425300,   -- the default blip style, as our stable blips use
+    label   = 'Wagon',      -- fallback name; the wagon's own name is used if set
+}
+
+--------------------------------------------------------------------------------
+-- WAGON DAMAGE  [WG9] — a wagon you wrecked yesterday is still wrecked today.
+--------------------------------------------------------------------------------
+Config.WagonDamage = {
+    persist   = true,
+    maxHealth = 1000,       -- matches the `health` column default in sql/install.sql
+
+    -- ⚠️ NEEDS A RULING — see the 1.4 ledger.
+    -- What happens when a wagon is destroyed OUTRIGHT (health hits 0)?
+    --   false = it comes back at `wreckedHealth` — battered but driveable.
+    --   true  = it cannot be brought out at all until repaired.
+    -- `true` is the honest, harsher rule and probably where this ends up — but
+    -- THERE IS NO REPAIR SYSTEM YET, so turning it on today permanently bricks
+    -- any wagon a player destroys. Left false until repair exists.
+    wreckedNeedsRepair = false,
+    wreckedHealth      = 150,
+}
+
+--------------------------------------------------------------------------------
 -- TRANSFER  — handing a horse or wagon to another player [milestone 1.4]
 --   Identified by SERVER SESSION ID ("hat size" in RP). Ownership genuinely
 --   moves; there is no lending flag. The Horse Trainer's custody transfer in
