@@ -90,6 +90,53 @@ so the harsher rule is now genuinely available. *(Owner's call — see the ledge
 **Still open:** where a field repair happens (a kit item? a prompt at the wagon?
 at a stable only?), and whether it costs anything.
 
+### 🎨 Customization — three tiers, ruled 2026-07-15
+
+> *"Everyone can use the stable to select and purchase tack and maybe a choice of
+> maybe **4 colors** available. But a **trainer has access to all of the
+> customization** with the exception of the **Horse Maker tool. That's admin
+> gated.**"*
+
+| Tier | Who | What they get |
+|---|---|---|
+| **The counter** | **anyone** | buy tack · fit it · a short colour list (`publicTints`, 4) · one tint slot |
+| **The full palette** | `fullCustomization` — **Horse Trainer, Senior, Boss** | the whole tint range (0–255) · all three tint slots |
+| **The Horse Maker** | `horseCreator` — **Stable Owner only** | authoring new breeds [M2] |
+
+**The Horse Maker is admin-gated by construction, not by a special case.** Only
+Stable Owner (3) holds `horseCreator`, and grade 3 is admin-granted only. There's
+nothing extra to enforce — the existing rule already says it.
+
+**The Wagon Maker does *not* get `fullCustomization`.** Their trade is wagons
+(`wagonCustomizing`), not horses. They buy tack at the counter like everyone else.
+
+#### 📐 The same shape, a third time
+
+This is now the pattern the whole design runs on:
+
+| | Free floor | Paid ceiling |
+|---|---|---|
+| **Horses** | good enough untrained | tier 4 — trainer only |
+| **Wagons** | field-repaired, limps home | 100% — Wagon Maker only |
+| **Colour** | four colours, one slot | the whole palette — trainer only |
+
+Every time: **nobody is ever blocked**, and the good version is a service someone
+sells. A player can always dress their horse — they just can't get *that* colour
+without a trainer.
+
+**All of it is configurable**, per the ruling — `Config.Customization`
+(`publicTints`, `fullTintRange`, `publicMayUseAllTintSlots`) plus the
+`fullCustomization` permission, so any of it can be handed to any job or grade.
+
+**Resolution lives in `Perms`, not the customiser:** `Perms.tintsFor(job, grade)`,
+`Perms.mayUseTint(job, grade, tint)`, `Perms.tintSlotsFor(job, grade)`. Client and
+server call the *same* function — the client to grey out swatches, the server to
+refuse a spoofed tint index. Anyone can send a number; only the server decides.
+
+⚠️ **Nothing reads this yet** — the customiser is S14/S15 in **Phase 2**, riding
+on `_SET_META_PED_TAG`. The rules are settled now so Phase 2 builds a UI, not a
+policy.
+
 #### ⚠️ Grades are configured but NOT ENFORCED (as of 2026-07-15)
 
 `Perms.get(job)` takes **only the job**. There is no grade parameter anywhere in

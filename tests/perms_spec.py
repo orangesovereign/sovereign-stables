@@ -28,6 +28,11 @@ try:
 except ImportError:
     sys.exit("needs lupa:  pip install lupa")
 
+# Windows terminals default to cp1252 and will crash on any non-latin1 character
+# in a test name. Force UTF-8 rather than restricting what the names may say.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 L = lupa.LuaRuntime(unpack_returned_tuples=True)
 L.execute("Config = {}")
@@ -39,6 +44,9 @@ get = L.eval("function(j,g) return Perms.get(j,g) end")
 horses = L.eval("function(j,g) return Perms.maxHorses(j,g) end")
 wagons = L.eval("function(j,g) return Perms.maxWagons(j,g) end")
 title = L.eval("function(j,g) return Perms.title(j,g) end")
+tints = L.eval("function(j,g) return Perms.tintsFor(j,g) end")
+may_tint = L.eval("function(j,g,t) return Perms.mayUseTint(j,g,t) end")
+slots = L.eval("function(j,g) return Perms.tintSlotsFor(j,g) end")
 
 T = "horsetrainer"
 CHECKS = [
@@ -73,6 +81,34 @@ CHECKS = [
     ("field floor < pro ceiling",            L.eval("Config.WagonDamage.fieldRepairTo") <
                                              L.eval("Config.WagonDamage.proRepairTo")),
     ("field floor > 0 (never stranded)",     L.eval("Config.WagonDamage.fieldRepairTo") > 0),
+
+    # ── Customization tiers (ruled 2026-07-15) ─────────────────────────────
+    # "Everyone can select and purchase tack and maybe a choice of maybe 4
+    #  colors. But a trainer has access to all of the customization with the
+    #  exception of the Horse Maker tool. That's admin gated."
+    ("everyone may buy + fit tack",          can(None, None, "customization") is True),
+    ("public does NOT get full palette",     can(None, None, "fullCustomization") is False),
+    ("Trainer(0) DOES get full palette",     can(T, 0, "fullCustomization") is True),
+    ("Senior(1) gets full palette",          can(T, 1, "fullCustomization") is True),
+    ("Wagon Maker(2) does NOT (wagons, not horses)", can(T, 2, "fullCustomization") is False),
+    ("Wagon Maker(2) still buys tack",       can(T, 2, "customization") is True),
+    ("Boss(3) gets full palette",            can(T, 3, "fullCustomization") is True),
+
+    # The Horse Maker tool is admin-gated BY CONSTRUCTION: only Stable Owner has
+    # it, and that grade is admin-granted. No special case needed.
+    ("Horse Maker: NOT public",              can(None, None, "horseCreator") is False),
+    ("Horse Maker: NOT Trainer(0)",          can(T, 0, "horseCreator") is False),
+    ("Horse Maker: NOT Senior(1)",           can(T, 1, "horseCreator") is False),
+    ("Horse Maker: NOT Wagon Maker(2)",      can(T, 2, "horseCreator") is False),
+    ("Horse Maker: ONLY Stable Owner(3)",    can(T, 3, "horseCreator") is True),
+
+    # Tint resolution — the thing Phase 2 will call.
+    ("public gets a short colour list",      1 <= len(list(tints(None, None).values())) <= 8),
+    ("trainer gets the whole palette",       len(list(tints(T, 0).values())) == 256),
+    ("a public tint is accepted",            may_tint(None, None, 66) is True),
+    ("an off-list tint is REFUSED",          may_tint(None, None, 200) is False),
+    ("trainer may use that same tint",       may_tint(T, 0, 200) is True),
+    ("public gets 1 tint slot, trainer 3",   slots(None, None) == 1 and slots(T, 0) == 3),
 
     # ── Caps: Config.Caps is a BASELINE, a job REPLACES it ─────────────────
     ("trainer's ruled higher cap = 8",       horses(T, 0) == 8),

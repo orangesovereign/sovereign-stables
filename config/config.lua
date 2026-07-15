@@ -66,6 +66,43 @@ Config.Access = {
 }
 
 --------------------------------------------------------------------------------
+-- CUSTOMIZATION  [S14/S15] — ruled 2026-07-15. Three tiers, all configurable.
+--------------------------------------------------------------------------------
+-- Owner: "Everyone can use the stable to select and purchase tack and maybe a
+--         choice of maybe 4 colors available. But a trainer has access to all of
+--         the customization with the exception of the Horse Maker tool. That's
+--         admin gated."
+--
+--   ANYONE          buy tack · fit it · choose from a SHORT list of colours
+--   `fullCustomization`   the whole palette (a Horse Trainer's perk)
+--   `horseCreator`        the Horse Maker tool — Stable Owner only, and that
+--                         grade is admin-granted, so it is admin-gated by
+--                         construction rather than by a special case.
+--
+-- The same shape as everything else here: the floor is free and useful, the
+-- ceiling is a service. A player is never blocked from dressing their horse —
+-- they just can't get *that* colour without a trainer.
+--
+-- ⚠️ Nothing reads this yet. The customiser is S14/S15 in PHASE 2; the tints
+-- ride on `_SET_META_PED_TAG` (see PHASE1_SPIKE_FINDINGS). The permission model
+-- is settled here so Phase 2 builds the UI, not the rules.
+Config.Customization = {
+    -- Colours offered WITHOUT `fullCustomization`. Indices into the item's own
+    -- palette (RDR2 palettes run 0–255 per tint slot). Keep this list short —
+    -- it is a shop counter, not a restriction, and the point is that the good
+    -- ones are worth going to a trainer for.
+    publicTints = { 0, 10, 66, 138 },
+
+    -- With `fullCustomization`: the entire palette, per tint slot.
+    fullTintRange = { 0, 255 },
+
+    -- Tack items carry three tint slots (TINTA/TINTB/TINTC in the reference
+    -- packs). false = the public may only set the first, so their horse reads as
+    -- "a colour" while a trainer's reads as "a scheme".
+    publicMayUseAllTintSlots = false,
+}
+
+--------------------------------------------------------------------------------
 -- WAGON BLIP  (owner request, 2026-07-15) — follows the wagon while it's out.
 --------------------------------------------------------------------------------
 -- Uses RDR2's OWN player-wagon blip style rather than a hand-rolled one. Its

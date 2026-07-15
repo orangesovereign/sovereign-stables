@@ -41,7 +41,14 @@ Config.JobDefaults = {
     hoofCleaning       = true,   -- horseshoe/hoof cleaning [J16]
     statsVisibility    = true,   -- see detailed horse statistics [J17]
     recall             = true,   -- horse & wagon recall [J18]
-    customization      = true,   -- appearance/component customization [J19]
+    -- CUSTOMIZATION IS TIERED (ruled 2026-07-15) — see Config.Customization.
+    -- `customization` is the counter: buy tack, fit it, and pick from the short
+    -- public colour list. Everyone gets this; nobody is ever blocked from
+    -- dressing their own horse.
+    customization      = true,   -- buy + fit tack, limited colours [J19]
+    -- `fullCustomization` is the whole palette — a Horse Trainer's perk. NOT the
+    -- Wagon Maker's: their trade is wagons, not horses.
+    fullCustomization  = false,  -- the entire tint range [J19+]
     painting           = true,   -- coat painting [J20]
     wagonCrafting      = false,  -- build wagons via crafting [J21]
     wagonCustomizing   = false,  -- wagon livery/colour [WG4]
@@ -78,42 +85,48 @@ Config.Jobs = {
         -- A grade not listed here gets the job's values above + JobDefaults.
         grades = {
             [0] = {
-                title            = 'Horse Trainer',
-                training         = true,
-                storefronts      = false,
-                wagonCrafting    = false,
-                wagonCustomizing = false,
-                wagonFullRepair  = false,   -- field repair only, like everyone
+                title             = 'Horse Trainer',
+                training          = true,
+                fullCustomization = true,   -- the whole palette; the Horse Maker is not theirs
+                storefronts       = false,
+                wagonCrafting     = false,
+                wagonCustomizing  = false,
+                wagonFullRepair   = false,   -- field repair only, like everyone
             },
             [1] = {
-                title            = 'Senior Horse Trainer',
-                training         = true,
-                storefronts      = true,
-                wagonCrafting    = false,
-                wagonCustomizing = false,
-                wagonFullRepair  = false,   -- field repair only, like everyone
+                title             = 'Senior Horse Trainer',
+                training          = true,
+                fullCustomization = true,
+                storefronts       = true,
+                wagonCrafting     = false,
+                wagonCustomizing  = false,
+                wagonFullRepair   = false,   -- field repair only, like everyone
             },
             [2] = {
                 -- "Wagon makers don't get horse training perms. Their only job is
                 --  Wagon Making, wagon customization and wagon repair and
                 --  storefronts." — owner, 2026-07-15
-                title            = 'Wagon Maker',
-                training         = false,   -- ← the whole point. Not a trainer.
-                storefronts      = true,
-                wagonCrafting    = true,
-                wagonCustomizing = true,
-                wagonFullRepair  = true,    -- ← THE TRADE: only they reach 100%
+                title             = 'Wagon Maker',
+                training          = false,  -- ← the whole point. Not a trainer.
+                -- No full HORSE customization either: their trade is wagons.
+                -- They still get the public counter like everyone else.
+                fullCustomization = false,
+                storefronts       = true,
+                wagonCrafting     = true,
+                wagonCustomizing  = true,
+                wagonFullRepair   = true,    -- ← THE TRADE: only they reach 100%
             },
             [3] = {
                 -- The boss. Admin-granted only, and the one grade that legitimately
                 -- has everything — a policy, not an inheritance rule.
-                title            = 'Stable Owner',
-                training         = true,
-                storefronts      = true,
-                wagonCrafting    = true,
-                wagonCustomizing = true,
-                wagonFullRepair  = true,
-                horseCreator     = true,   -- [J22/M2] the Horse Creator is boss-only
+                title             = 'Stable Owner',
+                training          = true,
+                fullCustomization = true,
+                storefronts       = true,
+                wagonCrafting     = true,
+                wagonCustomizing  = true,
+                wagonFullRepair   = true,
+                horseCreator      = true,   -- [J22/M2] the Horse Creator is boss-only
             },
         },
     },

@@ -83,3 +83,51 @@ function Perms.can(job, grade, key)
     local p = Perms.get(job, grade)
     return p[key] == true
 end
+
+--------------------------------------------------------------------------------
+-- CUSTOMIZATION TIERS  [S14/S15] — ruled 2026-07-15
+--------------------------------------------------------------------------------
+-- "Everyone can use the stable to select and purchase tack and maybe a choice of
+--  maybe 4 colors available. But a trainer has access to all of the
+--  customization with the exception of the Horse Maker tool. That's admin gated."
+--
+-- Lives here rather than in the customiser so Phase 2 asks a question instead of
+-- re-deriving a rule. Both the client (to grey out swatches) and the server (to
+-- refuse a spoofed tint) call the same function, which is the only way they stay
+-- honest with each other.
+
+-- Which tint indices may this character actually pick?
+-- Returns a list. With `fullCustomization` that's the whole palette range;
+-- without it, the short public list.
+function Perms.tintsFor(job, grade)
+    local c = Config.Customization or {}
+    if Perms.can(job, grade, 'fullCustomization') then
+        local lo, hi = 0, 255
+        if c.fullTintRange then lo, hi = c.fullTintRange[1] or 0, c.fullTintRange[2] or 255 end
+        local out = {}
+        for i = lo, hi do out[#out + 1] = i end
+        return out
+    end
+    -- Copy, so a caller can't mutate the config table.
+    local out = {}
+    for _, t in ipairs(c.publicTints or {}) do out[#out + 1] = t end
+    return out
+end
+
+-- Server-side gate: is this tint one they were actually offered?
+-- Never trust a tint index off the wire — the client draws the swatches, but
+-- anyone can send a number.
+function Perms.mayUseTint(job, grade, tint)
+    tint = tonumber(tint); if not tint then return false end
+    for _, t in ipairs(Perms.tintsFor(job, grade)) do
+        if t == tint then return true end
+    end
+    return false
+end
+
+-- How many of an item's three tint slots may they set? [TINTA/TINTB/TINTC]
+-- The public gets "a colour"; a trainer gets "a scheme".
+function Perms.tintSlotsFor(job, grade)
+    if Perms.can(job, grade, 'fullCustomization') then return 3 end
+    return (Config.Customization or {}).publicMayUseAllTintSlots and 3 or 1
+end
