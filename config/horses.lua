@@ -34,6 +34,11 @@ Config.HorseDefaults = {
     -- multiplier, so this must never be treated as absolute. See 05-LIFECYCLE.
     scale  = 1.0,
 
+    -- The age at which speed + stamina begin their quiet decline [E8]. 27 for
+    -- everything; 25 for the FAST BREEDS (Arabian, Thoroughbred, Turkoman) —
+    -- they burn brighter and shorter. Death is always 31. See docs/06-BREEDS.md.
+    declineAge = 27,
+
     -- Storefront display card [N1-N4]. `tier` sorts it into the Specialty or
     -- Stock tab. Stats are configured base values now; they go live once the
     -- progression system lands (Phase 3).
@@ -67,6 +72,7 @@ Config.Horses = {
         breed = 'Gold Turkoman',
         price = { cash = 3200.0, gold = 12.0 },
         storage = 40, breedable = true,
+        declineAge = 25,   -- Turkoman: a FAST breed — burns brighter, fades sooner
         sex = 'Stallion', age = 6, hands = 16.2,
         lore = 'A refined warmblood with a willing mind and disciplined heart. Built for stamina, born for the long road ahead.',
         traits = {

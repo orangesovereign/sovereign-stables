@@ -46,14 +46,15 @@ The data cuts itself into three clean bands with **no argument at the edges**:
 | 🐎 **Standard riding** | 5–6 | Kentucky Saddler · Tennessee Walker · American Standardbred · Andalusian · Nokota · Missouri Fox Trotter · Mustang · Kladruber · Morgan · American Paint · Appaloosa · Criollo · Norfolk Roadster |
 | 🐴 **Work / Draft** | 2–4 | Gypsy Cob · Suffolk Punch · Belgian · Dutch Warmblood · Hungarian Halfbred · Ardennes · Breton · Shire · (Mule) |
 
-## ✅ Recommendation — the "faster breeds"
+## ⚖️ RULED — the "faster breeds" (owner, 2026-07-15)
 
-**Arabian, Thoroughbred, Turkoman.** Nothing else comes close: they are the only breeds at speed **9**, and there's a **three-point gap** down to the next tier (6). That gap makes the rule self-evident to players — *the racehorses burn brighter and shorter.* Three breeds also keeps the exception rare enough to feel like a trait rather than a tax.
+### **Arabian · Thoroughbred · Turkoman** — decline begins at **25** instead of 27.
 
-**Awaiting owner ruling.** Options if you want it wider:
-- **+ Missouri Fox Trotter** (6/6/7 — the best all-rounder, arguably "superior" rather than fast)
-- **+ American Paint** (accel 7, turn 7 — sprinter's build, but only speed 5)
-- **+ Mustang** (stamina 8, turn 8, courage 9 — hardy rather than fast; I'd argue *against*)
+They are the only breeds at speed **9**, with a **three-point gap** down to the next tier. That makes the rule self-evident to players — *the racehorses burn brighter and shorter* — and keeps the exception rare enough to read as a trait rather than a tax.
+
+**Config:** `declineAge` on each horse — `27` by default (in `Config.HorseDefaults`), overridden to `25` on these three breeds. Death is always 31 regardless.
+
+*Considered and rejected: Missouri Fox Trotter (best all-rounder, but "superior" ≠ fast), American Paint (sprinter's accel/turn, only speed 5), Mustang (hardy, not fast).*
 
 ## Caveats worth knowing
 
