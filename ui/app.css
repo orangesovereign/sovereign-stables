@@ -121,6 +121,24 @@ html, body { width: 100%; height: 100%; background: transparent; overflow: hidde
 .lock { color: var(--brass-dim); font-size: 15px; }
 .cat__foot { margin-top: 12px; font-family: var(--f-disp); font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--parch-dim); text-align: center; }
 .empty { color: var(--parch-dim); font-family: var(--f-fell); font-style: italic; font-size: 13.5px; text-align: center; padding: 26px 10px; }
+
+/* ---------- 1.4: wagons + tack ---------- */
+/* Section heading inside the list column ("Yours" / "For sale"). */
+.list__label { font-family: var(--f-disp); font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--brass); padding: 6px 2px 2px; border-bottom: 1px solid var(--line); margin-top: 4px; }
+.list__label:first-child { margin-top: 0; }
+
+/* Tack category strip. Scrolls sideways rather than wrapping — there are up to
+   nine categories and the column is narrow. */
+.catstrip { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 4px;
+  border-bottom: 1px solid var(--line); scrollbar-width: none; }
+.catstrip::-webkit-scrollbar { display: none; }
+.catstrip__b { flex: 0 0 auto; font-family: var(--f-disp); font-size: 10px; letter-spacing: 1.2px;
+  text-transform: uppercase; color: var(--parch-dim); background: rgba(0,0,0,.2);
+  border: 1px solid var(--brass-dim); padding: 7px 10px; cursor: pointer; white-space: nowrap; }
+.catstrip__b:hover { color: var(--parch); }
+.catstrip__b.is-active { color: var(--parch); background: linear-gradient(180deg, var(--oxblood), var(--oxblood-2));
+  border-color: var(--oxblood-2); }
 .buy[disabled] { opacity: .55; cursor: default; filter: none; }
 .buy.ghost { margin-top: 8px; background: none; color: var(--brass); border-color: var(--brass-dim); font-size: 13px; padding: 10px; }
 .buy.ghost:hover { color: var(--parch); border-color: var(--brass); filter: none; }

@@ -63,6 +63,22 @@ Config.Access = {
 }
 
 --------------------------------------------------------------------------------
+-- TRANSFER  — handing a horse or wagon to another player [milestone 1.4]
+--   Identified by SERVER SESSION ID ("hat size" in RP). Ownership genuinely
+--   moves; there is no lending flag. The Horse Trainer's custody transfer in
+--   Phase 3 reuses this same system, so anything changed here changes that.
+--------------------------------------------------------------------------------
+Config.Transfer = {
+    enabled     = true,
+    allowWagons = true,
+    -- Both players must be standing together — stops "hat size" transfers across
+    -- the map, and keeps the handover an actual scene. 0 disables the check.
+    maxDistance = 5.0,
+    -- How long the other player has to answer before the offer lapses.
+    offerTimeoutSeconds = 30,
+}
+
+--------------------------------------------------------------------------------
 -- ECONOMY  (VORP has two currencies: 0 = cash, 1 = gold)
 --------------------------------------------------------------------------------
 Config.Economy = {

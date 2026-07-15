@@ -28,11 +28,35 @@ Events.RequestBringOut   = e('requestBringOut')  -- fetch a specific horse at a 
 Events.ReportDismiss     = e('reportDismiss')    -- horse sent away
 Events.ReportDeath       = e('reportDeath')      -- horse died (hard-death bookkeeping)
 
+-- wagons [WG1/WG2/WG13] — milestone 1.4
+Events.RequestOwnedWagons     = e('requestOwnedWagons')
+Events.RequestSetDefaultWagon = e('requestSetDefaultWagon')
+Events.RequestCallWagon       = e('requestCallWagon')     -- bring out a wagon
+Events.ReportWagonDismiss     = e('reportWagonDismiss')   -- wagon sent away
+Events.ReportWagonHealth      = e('reportWagonHealth')    -- persist damage [WG9]
+
+-- tack [F1/F5] — milestone 1.4
+Events.RequestOwnedTack  = e('requestOwnedTack')   -- what tack do I own + what's on this horse
+Events.RequestBuyTack    = e('requestBuyTack')
+Events.RequestApplyTack  = e('requestApplyTack')   -- put an owned piece on an owned horse
+Events.RequestRemoveTack = e('requestRemoveTack')  -- clear a slot
+
+-- transfer [F3 / ride transfer] — milestone 1.4.
+-- Phase 3's trainer custody transfer reuses this exact system.
+Events.RequestTransfer   = e('requestTransfer')    -- offer a horse/wagon to a server id
+Events.RespondTransfer   = e('respondTransfer')    -- target accepts/declines
+
 -- client-bound
 Events.OpenStorefront    = e('openStorefront')
 Events.HeaderData        = e('headerData')
 Events.PurchaseResult    = e('purchaseResult')
 Events.OwnedData         = e('ownedData')
+Events.OwnedWagonData    = e('ownedWagonData')
+Events.OwnedTackData     = e('ownedTackData')
+Events.TackResult        = e('tackResult')
 Events.SummonResult      = e('summonResult')
+Events.CallWagonResult   = e('callWagonResult')
+Events.TransferOffer     = e('transferOffer')      -- "X wants to give you Y"
+Events.TransferResult    = e('transferResult')
 Events.SyncOwnedRides    = e('syncOwnedRides')
 Events.DiagResult        = e('diagResult')

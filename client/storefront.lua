@@ -196,6 +196,146 @@ RegisterNetEvent(Events.OwnedData, function(data)
     SendNUIMessage({ action = 'owned', owned = ownedList, cap = data.cap or 0 })
 end)
 
+--------------------------------------------------------------------------------
+-- WAGONS  [WG1/WG13] — milestone 1.4
+--------------------------------------------------------------------------------
+local function wagonCatalogRows(stableId)
+    local rows = {}
+    for _, w in ipairs(Catalog.wagonsFor(stableId)) do
+        rows[#rows + 1] = {
+            model = w.model, name = w.name, storage = w.storage,
+            cash = w.price.cash or 0, gold = w.price.gold or 0, locked = false,
+        }
+    end
+    return rows
+end
+
+RegisterNUICallback('requestWagons', function(_, cb)
+    if currentStable then
+        SendNUIMessage({ action = 'wagons', catalog = wagonCatalogRows(currentStable) })
+    end
+    TriggerServerEvent(Events.RequestOwnedWagons)
+    cb({ ok = true })
+end)
+
+-- A wagon for sale: show it on the stage like a horse, so the preview column
+-- isn't dead air while you're shopping for one.
+RegisterNUICallback('selectWagonModel', function(data, cb)
+    local w = data and data.model and Catalog.wagon(data.model)
+    if w then
+        SendNUIMessage({ action = 'detail', detail = {
+            model = w.model, name = w.name, breed = 'Wagon',
+            lore = w.lore, stats = {}, traits = {},
+            cash = w.price.cash or 0, gold = w.price.gold or 0,
+            isWagon = true,
+        }})
+    end
+    cb({ ok = true })
+end)
+
+RegisterNUICallback('selectWagon', function(data, cb)
+    if data and data.id then
+        SendNUIMessage({ action = 'detail', detail = { ownedWagonId = data.id, isWagon = true } })
+    end
+    cb({ ok = true })
+end)
+
+RegisterNUICallback('purchaseWagon', function(data, cb)
+    if data and data.model and currentStable then
+        TriggerServerEvent(Events.RequestBuyWagon, currentStable, data.model, { name = data.name })
+    end
+    cb({ ok = true })
+end)
+
+RegisterNUICallback('setDefaultWagon', function(data, cb)
+    if data and data.id then TriggerServerEvent(Events.RequestSetDefaultWagon, data.id) end
+    cb({ ok = true })
+end)
+
+-- Bring a wagon round: close the shop first, same as collecting a horse — you
+-- can't stand in a menu and watch a wagon arrive.
+RegisterNUICallback('callWagon', function(data, cb)
+    if data and data.id then
+        Storefront.close()
+        TriggerServerEvent(Events.RequestCallWagon, data.id)
+    end
+    cb({ ok = true })
+end)
+
+RegisterNetEvent(Events.OwnedWagonData, function(data)
+    data = data or {}
+    SendNUIMessage({ action = 'wagons', owned = data.owned or {}, cap = data.cap or 0 })
+end)
+
+--------------------------------------------------------------------------------
+-- TACK  [F1/F5] — milestone 1.4
+--   Tack is PLAYER-owned: bought once, worn by whichever horse you choose. The
+--   catalog is built client-side from config (both sides share it), but every
+--   purchase and every fitting is decided by the server.
+--------------------------------------------------------------------------------
+local function tackCatalogPayload()
+    local out = {}
+    for _, cat in ipairs(Catalog.tackCategories()) do
+        local items = {}
+        for _, t in ipairs(Catalog.tackIn(cat.id)) do
+            items[#items + 1] = {
+                id = t.id, label = t.label, slot = t.slot,
+                cash = t.price.cash or 0, gold = t.price.gold or 0,
+            }
+        end
+        out[cat.id] = items
+    end
+    return out
+end
+
+RegisterNUICallback('requestTack', function(data, cb)
+    SendNUIMessage({ action = 'tack', catalog = tackCatalogPayload(),
+                     categories = Catalog.tackCategories() })
+    TriggerServerEvent(Events.RequestOwnedTack, data and data.horseId or nil)
+    cb({ ok = true })
+end)
+
+RegisterNUICallback('buyTack', function(data, cb)
+    if data and data.item then TriggerServerEvent(Events.RequestBuyTack, data.item) end
+    cb({ ok = true })
+end)
+
+RegisterNUICallback('applyTack', function(data, cb)
+    if data and data.item and data.horseId then
+        TriggerServerEvent(Events.RequestApplyTack, data.horseId, data.item)
+    end
+    cb({ ok = true })
+end)
+
+RegisterNUICallback('removeTack', function(data, cb)
+    if data and data.slot and data.horseId then
+        TriggerServerEvent(Events.RequestRemoveTack, data.horseId, data.slot)
+    end
+    cb({ ok = true })
+end)
+
+RegisterNetEvent(Events.OwnedTackData, function(data)
+    data = data or {}
+    SendNUIMessage({ action = 'tack', owned = data.owned or {},
+                     categories = data.categories, horseId = data.horseId,
+                     components = data.components })
+    -- Show the fitting on the preview horse immediately — the whole point of a
+    -- tack room is seeing it on the animal before you commit.
+    if data.components and Preview.ped() then
+        pcall(function() Components.applySet(Preview.ped(), data.components) end)
+    end
+end)
+
+RegisterNetEvent(Events.TackResult, function(res)
+    res = res or {}
+    if res.message then
+        Bridge.notifyCard(res.ok and 'complete' or 'failed', 'Stables', res.message)
+    end
+    if res.cash or res.gold then
+        SendNUIMessage({ action = 'wallet', cash = res.cash or 0, gold = res.gold or 0 })
+    end
+end)
+
 RegisterNUICallback('close', function(_, cb)
     Storefront.close()
     cb({ ok = true })

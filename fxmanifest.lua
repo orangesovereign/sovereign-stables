@@ -30,17 +30,25 @@ shared_scripts {
 client_scripts {
     'client/preview.lua',
     'client/camera.lua',
+    'client/components.lua',   -- tack apply pipeline; horse.lua + preview.lua use it
     'client/horse.lua',
+    'client/wagon.lua',
+    'client/transfer.lua',
     'client/storefront.lua',
     'client/stables.lua',
     'client/core.lua',
 }
 
+-- Load order matters here: transfer.lua calls Horses.countOwned and
+-- Wagons.countOwned, so both must be defined before it.
 server_scripts {
     'server/db.lua',
     'server/core.lua',
     'server/horses.lua',
+    'server/wagons.lua',
+    'server/tack.lua',
     'server/summon.lua',
+    'server/transfer.lua',
 }
 
 -- Custom branded NUI shell (storefront / customizer / codex / horse creator).

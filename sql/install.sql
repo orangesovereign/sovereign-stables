@@ -61,6 +61,30 @@ CREATE TABLE IF NOT EXISTS `sovereign_wagons` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 -- ---------------------------------------------------------------------
+-- Owned TACK. [F1/F5 · owner ruling 2026-07-15]
+--   Tack belongs to the PLAYER, not the horse: buy once, use it on any horse
+--   you own. So this table keys on `charid` — never on a horse id.
+--   `sovereign_horses.components` is the separate question of what is currently
+--   APPLIED to a given horse; this is what you OWN and may apply.
+--
+--   The UNIQUE key enforces the ruling "never re-buy what you own" in the
+--   database itself, so no code path can charge twice for the same piece.
+--   It is also why a dead horse's tack survives: the horse row goes, this
+--   doesn't. (Cargo is lost with the horse — that lives in the inventory.)
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `sovereign_tack` (
+  `id`          INT(11) NOT NULL AUTO_INCREMENT,
+  `identifier`  VARCHAR(64)  NULL,
+  `charid`      INT(11)      NOT NULL,
+  `category`    VARCHAR(32)  NOT NULL,   -- saddle/saddlebags/mane/tail... (Config.TackCategories)
+  `item`        VARCHAR(64)  NOT NULL,   -- catalog item id (Config.Tack[category][item])
+  `acquired_at` TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uniq_char_item` (`charid`, `item`),
+  KEY `idx_charid` (`charid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
+
+-- ---------------------------------------------------------------------
 -- Breeding lineage (parentage) for the genetics system. [G]
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `sovereign_lineage` (

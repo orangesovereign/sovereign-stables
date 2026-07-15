@@ -73,6 +73,14 @@ function Horse.spawn(data)
     active = { ent = horse, id = data.id, name = data.name, model = data.model }
     following = false
 
+    -- Put its tack on [F1/F5]. The server hands us the stored components with
+    -- the horse; the pieces are the player's, not the horse's, but what a given
+    -- horse is WEARING is stored per horse.
+    if data.components then
+        local n = Components.applySet(horse, data.components)
+        if n > 0 then Util.log(('applied %d tack piece(s) to horse #%s'):format(n, tostring(data.id))) end
+    end
+
     -- Trot over to the player rather than appearing on top of them.
     TaskGoToEntity(horse, ped, -1, 3.0, 3.0, 1073741824, 0)
     Bridge.notify(('%s answers your whistle.'):format(data.name or 'Your horse'))
@@ -161,6 +169,18 @@ RegisterNetEvent(Events.SummonResult, function(res)
         return
     end
     Horse.spawn(res.horse)
+end)
+
+-- A ride we no longer own — sold, or handed to someone else. It must leave our
+-- world or the old owner keeps riding a horse that is now legally theirs.
+RegisterNetEvent(Events.SyncOwnedRides, function(data)
+    local rel = data and data.released
+    if not rel then return end
+    if rel.kind == 'horse' and active and active.id == rel.id then
+        local ent = active.ent
+        active, following = nil, false
+        Horse.fleeAndDespawn(ent)
+    end
 end)
 
 --------------------------------------------------------------------------------
