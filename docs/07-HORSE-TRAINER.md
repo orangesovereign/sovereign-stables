@@ -8,15 +8,52 @@
 
 That makes the trainer a **service business** rather than a gatekeeper — the healthy version.
 
-### Grades (ruled — exactly three)
+### Grades — ⚠️ REVISED 2026-07-15: FOUR grades, and they are ROLES, not ranks
 
-| Grade | Title | Tend & train | Manage stable storefronts |
-|---|---|---|---|
-| **0** | Horse Trainer | ✅ fully | ❌ |
-| **1** | Senior Horse Trainer | ✅ fully | ✅ |
-| **2** | Stable Owner *(boss — admin-granted only)* | ✅ fully | ✅ |
+> **This supersedes the earlier "exactly three grades" ruling.** The owner added a
+> **Wagon Maker**: *"Wagon makers don't get horse training perms. Their only job is
+> Wagon Making, wagon customization and wagon repair and storefronts."*
 
-Every grade can tend horses and **train them fully** — grade is not a training ladder. What grade buys is **commercial control**: 1 and 2 manage the stables' **storefronts** (not yet built — see the architecture note below). Grade 2 is the boss and is only ever given by an admin.
+| Grade | Title | Train horses | Wagons (make · customise · repair) | Storefronts |
+|---|---|---|---|---|
+| **0** | Horse Trainer | ✅ | ❌ | ❌ |
+| **1** | Senior Horse Trainer | ✅ | ❌ | ✅ |
+| **2** | **Wagon Maker** | ❌ | ✅ | ✅ |
+| **3** | Stable Owner *(boss — admin-granted only)* | ✅ | ✅ | ✅ |
+
+#### 🔑 The rule that makes this work: permissions are PER-GRADE AND EXPLICIT. Nothing is inherited.
+
+This is the important part, and it is a real change of model.
+
+**VORP grades are integers, and every framework convention treats them as a
+ladder** — grade 2 outranks 1 outranks 0, and perks accumulate upward. That
+cannot express what was just ruled. Read the table again: a **Wagon Maker (2) has
+storefronts but cannot train**, while a **Horse Trainer (0) can train but has no
+storefronts**. Neither role contains the other. They are **peers with different
+trades**, and no linear order ranks peers.
+
+So we stop pretending. **A grade is a role slot, not a rung.** `Perms` resolves a
+grade to an *explicit set* of permissions and never rolls up from the grades
+below it. The numbers are identifiers — 2 is not "more than" 1.
+
+The one place hierarchy survives is **Stable Owner (3)**, which is the boss, gets
+everything, and is only ever set by an admin. That's a policy, not an inheritance
+rule.
+
+**Why this matters beyond tidiness:** if grades inherited, a Wagon Maker would
+silently gain horse training the moment anyone re-ordered the list — the exact
+bug the owner's ruling exists to prevent. Explicit sets make "who may do what" a
+thing you read, not a thing you compute.
+
+#### ⚠️ Grades are configured but NOT ENFORCED (as of 2026-07-15)
+
+`Perms.get(job)` takes **only the job**. There is no grade parameter anywhere in
+the codebase; every `Bridge.getJob()` caller discards the grade it returns, and
+`horseCreatorMinGrade = 2` sits in `config/jobs.lua` read by **nothing**.
+
+**Today a Grade 0 Horse Trainer can do everything a Stable Owner can.** That is a
+security hole wearing a config option's clothes, and it must be closed before any
+of the above means anything.
 
 ### Revenue lines (emergent from rulings already made)
 

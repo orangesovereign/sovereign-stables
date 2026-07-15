@@ -70,12 +70,12 @@ function Wagons.buy(src, stableId, model, wanted)
     if not card or card.buyable == false then return false, 'That wagon is not for sale.' end
 
     -- Job / stable permission (same gate as horses)
-    local job = Bridge.getJob(src)
+    local job, grade = Bridge.getJob(src)
     local allowed, why = Catalog.canBuy(card, stableId, job)
     if not allowed then return false, why or 'You may not buy that here.' end
 
     -- Ownership cap (global vs job cap, whichever is stricter)
-    local cap   = Perms.maxWagons(job)
+    local cap   = Perms.maxWagons(job, grade)
     local owned = Wagons.countOwned(charid)
     if owned >= cap then
         return false, ('You already keep %d wagon(s) — your limit.'):format(cap)

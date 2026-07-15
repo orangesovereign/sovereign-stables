@@ -76,12 +76,12 @@ function Horses.buy(src, stableId, model, wanted)
     if not card or card.buyable == false then return false, 'That horse is not for sale.' end
 
     -- Job / stable permission
-    local job = Bridge.getJob(src)
+    local job, grade = Bridge.getJob(src)
     local allowed, why = Catalog.canBuy(card, stableId, job)
     if not allowed then return false, why or 'You may not buy that here.' end
 
     -- Ownership cap (global cap vs job cap, whichever is stricter)
-    local cap   = Perms.maxHorses(job)
+    local cap   = Perms.maxHorses(job, grade)
     local owned = Horses.countOwned(charid)
     if owned >= cap then
         return false, ('You already keep %d horse(s) — your limit.'):format(cap)

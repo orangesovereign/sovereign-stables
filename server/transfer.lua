@@ -49,14 +49,14 @@ local KINDS = {
     horse = {
         table   = 'sovereign_horses',
         label   = 'horse',
-        cap     = function(job) return Perms.maxHorses(job) end,
+        cap     = function(job, grade) return Perms.maxHorses(job, grade) end,
         count   = function(charid) return Horses.countOwned(charid) end,
         ledger  = 'transfer_horse',
     },
     wagon = {
         table   = 'sovereign_wagons',
         label   = 'wagon',
-        cap     = function(job) return Perms.maxWagons(job) end,
+        cap     = function(job, grade) return Perms.maxWagons(job, grade) end,
         count   = function(charid) return Wagons.countOwned(charid) end,
         ledger  = 'transfer_wagon',
     },
@@ -119,8 +119,8 @@ function Transfer.offer(src, kind, assetId, targetSrc, opts)
     -- Cap check on the RECEIVING side. A trainer taking work is the documented
     -- exception (Config.Training.heldHorsesIgnoreCap) — Phase 3 passes ignoreCap.
     if not opts.ignoreCap then
-        local tJob = Bridge.getJob(targetSrc)
-        if k.count(targetChar) >= k.cap(tJob) then
+        local tJob, tGrade = Bridge.getJob(targetSrc)
+        if k.count(targetChar) >= k.cap(tJob, tGrade) then
             return false, ('They have no room for another %s.'):format(k.label)
         end
     end
