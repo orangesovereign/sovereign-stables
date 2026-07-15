@@ -56,8 +56,17 @@ function Camera.start(centre, fov)
 end
 
 -- Retarget/reposition when the selected horse changes.
-function Camera.retarget(centre)
+-- `radius` is optional: a wagon needs the camera further back than a horse or
+-- it fills the frame. Omit it to keep whatever distance the player has zoomed
+-- to — retargeting between horses must not yank their zoom back.
+function Camera.retarget(centre, radius)
     target.x, target.y, target.z = centre[1], centre[2], centre[3]
+    if radius then
+        -- Widen the zoom-out limit if this subject needs it, or the clamp below
+        -- would quietly refuse the very distance we just asked for.
+        if radius > limits.radius[2] then limits.radius[2] = radius end
+        orbit.radius = clamp(radius, limits.radius[1], limits.radius[2])
+    end
     place()
 end
 

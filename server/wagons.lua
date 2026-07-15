@@ -176,12 +176,29 @@ local function defaultWagon(charid)
     return rows and rows[1]
 end
 
-RegisterNetEvent(Events.RequestCallWagon, function(wagonId)
+-- A wagon is collected AT A STABLE (owner ruling Q2 — there is no summon).
+-- `stableId` is where the player is standing; the wagon arrives in that
+-- stable's yard, not wherever the player happens to be.
+RegisterNetEvent(Events.RequestCallWagon, function(wagonId, stableId)
     local src = source
     CreateThread(function()
         local charid = Bridge.getCharId(src)
         if not charid then
             TriggerClientEvent(Events.CallWagonResult, src, { ok = false, message = 'No active character.' })
+            return
+        end
+
+        -- Validate the stable server-side rather than trusting the id, and
+        -- refuse one with no yard configured — that's how a wagon ended up
+        -- inside the building.
+        local stable = stableId and Config.Stables[stableId]
+        if not stable then
+            TriggerClientEvent(Events.CallWagonResult, src, { ok = false, message = 'Collect it at a stable.' })
+            return
+        end
+        if not (stable.retrieve and stable.retrieve.wagonPos) then
+            Util.err(('stable "%s" has no retrieve.wagonPos — cannot bring a wagon out here'):format(tostring(stableId)))
+            TriggerClientEvent(Events.CallWagonResult, src, { ok = false, message = 'This stable has nowhere to bring a wagon out.' })
             return
         end
 
@@ -197,9 +214,10 @@ RegisterNetEvent(Events.RequestCallWagon, function(wagonId)
             return
         end
 
-        Util.log(('wagon call granted: #%s (char %s)'):format(tostring(row.id), tostring(charid)))
+        Util.log(('wagon call granted: #%s (char %s) at %s'):format(tostring(row.id), tostring(charid), tostring(stableId)))
         TriggerClientEvent(Events.CallWagonResult, src, { ok = true, wagon = {
             id = row.id, name = row.name, model = row.model, health = row.health, tint = row.tint,
+            stableId = stableId,
         }})
     end)
 end)

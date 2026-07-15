@@ -49,6 +49,26 @@ local function showPreview(model)
     if not ok then Util.err('preview swap failed: ' .. tostring(err)) end
 end
 
+-- Put a WAGON on the stand instead [1.4 G2]. The horse preview is removed by
+-- Preview.showWagon, and the camera moves to the wagon's own spot — both are
+-- per-stable config (preview.wagonPos), because where a cart looks good is not
+-- where a horse looks good.
+local function showWagonPreview(model)
+    local stable = Config.Stables[currentStable]; if not stable then return end
+    local pos = stable.preview and stable.preview.wagonPos
+    if not pos then
+        Util.warn(('stable "%s" has no preview.wagonPos — leaving the stand empty'):format(tostring(currentStable)))
+        pcall(Preview.hide)
+        return
+    end
+    local ok, err = pcall(function()
+        Preview.showWagon(model, pos)
+        -- A wagon is bigger than a horse: pull the camera back or it fills the frame.
+        Camera.retarget({ pos[1], pos[2], pos[3] + 0.9 }, 6.4)
+    end)
+    if not ok then Util.err('wagon preview swap failed: ' .. tostring(err)) end
+end
+
 -- Swap the previewed horse and refresh the detail panel.
 local function selectModel(model)
     currentModel = model
@@ -212,7 +232,12 @@ end
 
 RegisterNUICallback('requestWagons', function(_, cb)
     if currentStable then
-        SendNUIMessage({ action = 'wagons', catalog = wagonCatalogRows(currentStable) })
+        local rows = wagonCatalogRows(currentStable)
+        SendNUIMessage({ action = 'wagons', catalog = rows })
+        -- Swap the stand to a wagon the moment they open the view, rather than
+        -- waiting for a click — otherwise a horse stands there looking like the
+        -- thing you're about to buy.
+        if rows[1] then showWagonPreview(rows[1].model) end
     end
     TriggerServerEvent(Events.RequestOwnedWagons)
     cb({ ok = true })
@@ -223,6 +248,7 @@ end)
 RegisterNUICallback('selectWagonModel', function(data, cb)
     local w = data and data.model and Catalog.wagon(data.model)
     if w then
+        showWagonPreview(w.model)
         SendNUIMessage({ action = 'detail', detail = {
             model = w.model, name = w.name, breed = 'Wagon',
             lore = w.lore, stats = {}, traits = {},
@@ -253,11 +279,13 @@ RegisterNUICallback('setDefaultWagon', function(data, cb)
 end)
 
 -- Bring a wagon round: close the shop first, same as collecting a horse — you
--- can't stand in a menu and watch a wagon arrive.
+-- can't stand in a menu and watch a wagon arrive. The stable id goes with it:
+-- the wagon appears in THIS stable's yard (owner ruling Q2 — stable only).
 RegisterNUICallback('callWagon', function(data, cb)
-    if data and data.id then
+    if data and data.id and currentStable then
+        local stableId = currentStable
         Storefront.close()
-        TriggerServerEvent(Events.RequestCallWagon, data.id)
+        TriggerServerEvent(Events.RequestCallWagon, data.id, stableId)
     end
     cb({ ok = true })
 end)
@@ -291,7 +319,29 @@ end
 RegisterNUICallback('requestTack', function(data, cb)
     SendNUIMessage({ action = 'tack', catalog = tackCatalogPayload(),
                      categories = Catalog.tackCategories() })
-    TriggerServerEvent(Events.RequestOwnedTack, data and data.horseId or nil)
+
+    -- [1.4 T2] The tack room fits YOUR horse, so YOUR horse goes on the stand —
+    -- not whatever was last being sold. Prefer the one they picked in My Horses,
+    -- else their default ride.
+    local horseId = data and data.horseId or nil
+    local row
+    for _, r in ipairs(ownedList) do
+        if horseId and tostring(r.id) == tostring(horseId) then row = r break end
+        if not horseId and tonumber(r.is_default) == 1 then row = r break end
+    end
+    row = row or ownedList[1]
+    if row then
+        currentModel = row.model
+        showPreview(row.model)
+    end
+
+    TriggerServerEvent(Events.RequestOwnedTack, horseId or (row and row.id) or nil)
+    cb({ ok = true })
+end)
+
+-- Leaving the wagon view: put a horse back on the stand [1.4 G2].
+RegisterNUICallback('restoreHorsePreview', function(_, cb)
+    if currentModel then showPreview(currentModel) end
     cb({ ok = true })
 end)
 

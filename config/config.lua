@@ -24,8 +24,11 @@ Config.Debug = true
 --------------------------------------------------------------------------------
 Config.Caps = {
     maxHorses      = 3,   -- most horses one character may own
-    maxWagons      = 1,   -- most wagons one character may own
-    maxStableSlots = 3,   -- most horses + wagons combined kept stored at once
+    maxWagons      = 5,   -- most wagons one character may own  [owner ruling, 1.4 G3]
+    -- Horses + wagons combined. Raised to match maxWagons 5 + maxHorses 3;
+    -- a lower number here would silently make one of those two caps a lie.
+    -- (Not yet enforced anywhere — Perms.maxSlots() exists and is unused.)
+    maxStableSlots = 8,
 }
 
 --------------------------------------------------------------------------------

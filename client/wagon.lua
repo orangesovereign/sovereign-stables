@@ -9,12 +9,16 @@
   spawn. Different natives, different ownership calls. The ground-snap gotcha
   still applies though: RDR3 will happily place a vehicle in the air.
 
-  ⚠️ NOTE ON KEYS: RDR2 gives us INPUT_WHISTLE for horses, which is why the
-  whistle needs no keybind. There is NO native equivalent for wagons. Rather
-  than invent a binding (RegisterKeyMapping only takes effect after a full
-  CLIENT restart — see PHASE1_SPIKE_FINDINGS gotcha #2), a wagon is called
-  with a command or from the stable, which is also what vorp_stables does.
-  `Config.Keys.callWagon` is therefore not bound yet — see the 1.4 ledger.
+  ⚠️ OWNER RULING (1.4 ledger Q2): "No binding for wagon call. You must get
+  your wagon from the STABLE ONLY." So there is deliberately no keybind AND
+  no /sovwagon command — a wagon is collected in person, at a stable, full
+  stop. `Config.Keys.callWagon` stays unbound. Do not add a summon command
+  back; it was ruled out, not overlooked.
+
+  ⚠️ AND IT ARRIVES AT THE STABLE'S YARD, not in front of you (1.4 V1/V2:
+  a wagon spawned where the player stood appeared inside the building, in
+  the air, wedged in the scenery). Each stable configures its own
+  `retrieve.wagonPos` — outside, clear of the building.
 =====================================================================]]--
 
 Wagon = Wagon or {}
@@ -56,14 +60,24 @@ local function place(model, x, y, z, heading, name)
     return veh
 end
 
--- Bring the wagon out in front of the player, same as the owner asked for horses.
+-- Bring the wagon out to the STABLE YARD. `data.stableId` says which stable it
+-- was collected from; that stable's `retrieve.wagonPos` is where it appears.
 function Wagon.spawn(data)
     if not data or not data.model then return end
     Wagon.despawn(true)
 
-    local ped = PlayerPedId()
-    local infront = GetOffsetFromEntityInWorldCoords(ped, 0.0, 8.0, 0.0)
-    local veh = place(data.model, infront.x, infront.y, infront.z, GetEntityHeading(ped) + 90.0, data.name)
+    local stable = data.stableId and Config.Stables[data.stableId]
+    local spot = stable and stable.retrieve and stable.retrieve.wagonPos
+    if not spot then
+        -- Never fall back to spawning on the player: that is exactly what put a
+        -- wagon inside the building. Refuse loudly so the config gets fixed.
+        Util.err(('stable "%s" has no retrieve.wagonPos configured — refusing to spawn a wagon on top of the player')
+            :format(tostring(data.stableId)))
+        Bridge.notify('This stable has nowhere to bring a wagon out. Tell an admin.')
+        return
+    end
+
+    local veh = place(data.model, spot[1], spot[2], spot[3], spot[4] or 0.0, data.name)
     if not veh then
         Util.err(('wagon spawn FAILED for model %s'):format(tostring(data.model)))
         Bridge.notify('Your wagon could not be brought round.')
@@ -109,13 +123,14 @@ end
 
 function Wagon.active() return active end
 
--- Ask for your default wagon. Server decides if it may come.
-function Wagon.call(wagonId)
+-- Collect a wagon at a stable. Called only from the storefront (owner ruling
+-- Q2: stable only). `stableId` is the stable you are standing in.
+function Wagon.call(wagonId, stableId)
     if active and DoesEntityExist(active.ent) then
         Bridge.notify(('%s is already out.'):format(active.name or 'Your wagon'))
         return
     end
-    TriggerServerEvent(Events.RequestCallWagon, wagonId)
+    TriggerServerEvent(Events.RequestCallWagon, wagonId, stableId)
 end
 
 function Wagon.dismiss()
@@ -173,9 +188,8 @@ CreateThread(function()
     end
 end)
 
-RegisterCommand('sovwagon', function(_, args)
-    Wagon.call(args and args[1] and tonumber(args[1]) or nil)
-end, false)
+-- NO /sovwagon command — ruled out (Q2): a wagon is collected at a stable.
+-- Putting it away is still a field action, so that one stays.
 RegisterCommand('sovwagonaway', function() Wagon.dismiss() end, false)
 
 AddEventHandler('onResourceStop', function(res)

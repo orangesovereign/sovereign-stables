@@ -182,10 +182,15 @@
             b.classList.toggle('is-active', b.dataset.view === view);
         });
         selected = null;
-        if (view === 'wagons') post('requestWagons', {});
-        if (view === 'tack') {
+        if (view === 'wagons') {
+            post('requestWagons', {});
+        } else if (view === 'tack') {
             if (!tackCat && tackCats.length) tackCat = tackCats[0].id;
             post('requestTack', { horseId: tackHorseId });
+        } else {
+            // Leaving wagons: the stand still has a cart on it. Tell Lua to put
+            // a horse back — otherwise you browse horses while a wagon sits there.
+            post('restoreHorsePreview', {});
         }
         renderList();
     }

@@ -43,12 +43,26 @@ Config.Stables = {
         -- INTERACTION prompt point + radius (on the stablehand)
         prompt = { coords = { -367.61, 787.17, 116.16 }, distance = 1.0 },
 
-        -- PREVIEW positions & cameras used by the storefront/customizer
+        -- PREVIEW positions & cameras used by the storefront/customizer.
+        --   horsePos — where the previewed horse stands while you browse horses
+        --              AND while you fit tack to your own horse in Components.
+        --   wagonPos — where the previewed WAGON stands while you browse wagons.
+        --              The horse preview is removed while you're looking at wagons.
         preview = {
             horsePos = { -398.02, 773.43, 115.79, 86.77 },
             wagonPos = { -370.11, 786.99, 115.16, 274.18 },
             camHorse = { -367.92, 783.02, 117.77, -36.42, 0.0, -100.98, 50.0 },
             camWagon = { -363.58, 792.11, 118.04, -16.35, 0.0, 143.97, 50.0 },
+        },
+
+        -- WHERE YOUR RIDE ACTUALLY ARRIVES when you collect it here.
+        -- This is NOT the preview position — the preview is a showroom model
+        -- standing where the camera can see it; this is the real vehicle you
+        -- drive away. It MUST be outside, clear of the building and of the
+        -- preview spots: a wagon brought out indoors collides with everything
+        -- in the stable (1.4 ledger V1/V2).
+        retrieve = {
+            wagonPos = { -361.88, 805.78, 116.027, 0.0 },   -- x, y, z, heading
         },
 
         -- ACCESS RULES

@@ -60,9 +60,11 @@ function Horse.spawn(data)
     Horse.despawn(true)
 
     local ped = PlayerPedId()
-    -- In FRONT of the player, facing them, so it's obviously arrived — then it
-    -- trots the last few metres to you.
-    local infront = GetOffsetFromEntityInWorldCoords(ped, 0.0, 8.0, 0.0)
+    -- 4m in front, facing you, and it STAYS THERE. It used to spawn at 8m and
+    -- trot over, which meant it walked into you (1.4 ledger C1) — the horse
+    -- arriving is the moment, not the approach. Owner: "maybe just have the
+    -- horse spawn 4m in front of you stationary."
+    local infront = GetOffsetFromEntityInWorldCoords(ped, 0.0, 4.0, 0.0)
     local horse = place(data.model, infront.x, infront.y, infront.z, GetEntityHeading(ped) + 180.0, data.name)
     if not horse then
         Util.err(('horse spawn FAILED for model %s'):format(tostring(data.model)))
@@ -81,8 +83,7 @@ function Horse.spawn(data)
         if n > 0 then Util.log(('applied %d tack piece(s) to horse #%s'):format(n, tostring(data.id))) end
     end
 
-    -- Trot over to the player rather than appearing on top of them.
-    TaskGoToEntity(horse, ped, -1, 3.0, 3.0, 1073741824, 0)
+    -- It waits. No approach task — see above.
     Bridge.notify(('%s answers your whistle.'):format(data.name or 'Your horse'))
     local hc = GetEntityCoords(horse)
     Util.log(('horse #%s (%s) spawned at %.1f, %.1f, %.1f (entity %s)'):format(
@@ -127,19 +128,28 @@ function Horse.toggleFollow()
     end
 end
 
--- Send a horse trotting off and only then take it out of the world. Used by
--- dismiss, and by the flee-home command (D13) when that lands.
-function Horse.fleeAndDespawn(ent)
+-- Send a horse WALKING off, and only then take it out of the world.
+--
+-- Speed matters here: at 3.0 it sprinted away like it had been startled (1.4
+-- ledger C2), which reads as fleeing, not as being dismissed. A dismissed
+-- horse is not frightened of you — it just wanders off. 1.0 is a walk.
+--
+-- D13 (flee-home, F on lock-on) is the OPPOSITE case and will want the fast
+-- version, so the speed is a parameter rather than baked in.
+local WALK_AWAY, BOLT_AWAY = 1.0, 3.0
+
+function Horse.fleeAndDespawn(ent, speed)
     if not (ent and DoesEntityExist(ent)) then return end
     FreezeEntityPosition(ent, false)
     ClearPedTasks(ent)
     local away = GetOffsetFromEntityInWorldCoords(ent, 0.0, 40.0, 0.0)
-    TaskGoStraightToCoord(ent, away.x, away.y, away.z, 3.0, -1, 0.0, 0.0)
+    TaskGoStraightToCoord(ent, away.x, away.y, away.z, speed or WALK_AWAY, -1, 0.0, 0.0)
     CreateThread(function()
-        Wait(4500)                       -- let it get clear before it vanishes
+        Wait(4000)                       -- long enough to turn and get clear
         if DoesEntityExist(ent) then DeleteEntity(ent) end
     end)
 end
+Horse.WALK_AWAY, Horse.BOLT_AWAY = WALK_AWAY, BOLT_AWAY
 
 function Horse.dismiss()
     if not (active and DoesEntityExist(active.ent)) then
