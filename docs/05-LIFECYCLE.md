@@ -107,19 +107,19 @@ At **2.3 real days per horse-year**:
 | **Max health** | **100** — *revised down from 150* |
 | **Courage** | *Separate*, trainable (E4) — and the one thing a foal may **not** train |
 | **Configured value** | the **fully trained ceiling** |
-| **At birth/purchase** | ceiling **− the untrained gap** (see the open question below) |
+| **At birth/purchase** | ceiling **− 10 to 20 points** *(owner ruling, 2026-07-15 — supersedes the earlier "1.5–2", which was said on a 1–10 scale)* |
 | **Training** | closes the gap up to the ceiling; never past it |
 | **Age** | only late decline (27 / 25 fast), **speed + stamina only** |
 
 ✅ Keeping 0–100 means **the storefront stat bars need no rescaling** — they already render 0–100. The only config change is **adding `turn`**.
 
-### ❓ Open: how big is the untrained gap on a 0–100 scale?
+### The untrained gap — settled
 
-The ruling was *"a stock horse may read as a 6 — that's the fully trained stat; untrained it's lowered by 1.5 to 2."* That was said while we were looking at a **1–10** scale (sirevlc's), where 6 → ~4–4.5 is a **25–33% haircut** — a big, meaningful gap that training visibly closes.
+**Untrained horses sit 10–20 points below their trained ceiling.** So a horse configured at `70` speed leaves the stable somewhere around **50–60**, and training walks it up to 70 — never past it.
 
-On a **0–100** scale, taken literally, "−1.5 to 2" means a trained **60 → untrained 58**. That's invisible, and training would be pointless.
+It's a **range, not a constant**, which is the nice part: two horses of the same breed aren't identical off the shelf. One arrives greener than the other, and a buyer can't tell by looking — only by riding. That gives the **Horse Trainer** something real to sell: a horse trained to its ceiling is measurably better than the same horse bought raw.
 
-**Almost certainly the intent is the proportional equivalent: −15 to −20 points** (trained 60 → untrained 40–45). Needs confirming before the catalog fill — get it wrong and 60 breeds carry the wrong numbers.
+Implementation note: the gap is rolled per horse (and plausibly per stat) at birth/purchase, stored, and closed by training (E1). Expose the band as config (`min = 10, max = 20`) so it's tunable.
 
 ## Damage model (ruling, 2026-07-15)
 

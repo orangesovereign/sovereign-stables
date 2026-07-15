@@ -51,10 +51,10 @@ Config.HorseDefaults = {
 
     -- The five stats, 0-100. These are PREDETERMINED at birth and fixed for life
     -- (a foal is not weaker than its adult self). Each number here is the FULLY
-    -- TRAINED ceiling — an untrained horse starts below it and training closes
-    -- the gap, never past it. Only speed + stamina decline with old age (27, or
-    -- 25 for the faster breeds). Courage is separate and trainable. Max health
-    -- is 100. See docs/05-LIFECYCLE.md.
+    -- TRAINED ceiling — an untrained horse starts 10-20 points BELOW it, and
+    -- training walks it up to the ceiling but never past. Only speed + stamina
+    -- decline with old age (27, or 25 for the faster breeds). Courage is separate
+    -- and trainable. Max health is 100. See docs/05-LIFECYCLE.md.
     stats  = { health = 70, stamina = 70, speed = 70, acceleration = 70, turn = 70 },
 }
 
