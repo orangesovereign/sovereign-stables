@@ -29,7 +29,10 @@ Nothing in this file overrides the [death rules](02-FEATURES.md#️-death-rules-
 4. **A foal becomes an adult at 5.**
 5. **Death at 31** — or downed too long (H11). Nothing else.
 6. **Stats quietly decline with age.** Horses get old; horses slow down. No announcement — the numbers just drift.
-7. **A foal is the same horse, scaled down, and unmountable.** At 5 it auto-scales to the breed's default size. No special foal ped — one model, two sizes.
+7. **A foal is the same horse, scaled down, and unmountable.** At 5 it auto-scales to the breed's default size. No special foal ped — one model, grown in stages.
+   - **✅ Feasibility CONFIRMED** (owner, 2026-07-15): ped scaling is proven — the owner runs servers that scale horses, and the owned `sirevlc_horses` config does exactly this (`BREEDING_SCALE_MULTIPLIER_PHASE_1/2/3 = 0.75 / 0.80 / 0.90`, described as *"Ped scale multiplier applied when the foal is in phase 1"*, plus a per-breed `SCALE` of `0.90`–`1.0`). No spike needed; only the exact native remains to be named at build time.
+   - **Grow in phases, not one jump** — the foal visibly steps up in size over its 2.3–4.6 days rather than popping to full size at 5.
+   - **Scale is a MULTIPLIER of the breed's base scale, never absolute.** A mule's base is `0.90`; a flat foal scale would be wrong for every breed that isn't `1.0`. → `foal size = breed.scale × phase multiplier`. Our catalog therefore needs a per-breed `scale` field.
 8. **Foals may be trained, fed and watered.** The *only* thing they can't do is **fear/courage training** (E4).
 9. **Decline is speed + stamina, and it starts at 27** — **25 for the faster breeds**. Not before.
 10. **Stables only sell horses aged 5–7.** Anything older exists **only in the wild**. Stock horses are **moderately priced**.
@@ -95,7 +98,7 @@ At **2.3 real days per horse-year**:
 
 | Spike | Why | Before |
 |---|---|---|
-| **Ped scaling** — can we scale a horse ped down and back up at runtime? | The foal ruling depends on it entirely. **Not present in the local `rdr3_discoveries` reference**, so it must be confirmed, not assumed. If scaling proves impossible we need a fallback (a genuinely smaller model, or foals stay full-size and are simply unmountable). | Phase 3 |
+| ~~**Ped scaling**~~ — **CLOSED ✅, no spike needed.** Proven by the owner's own servers and the owned `sirevlc_horses` config (foal phase scale multipliers + per-breed base `SCALE`). Only the exact native needs naming at build time; it is no longer a design risk. | — | — |
 | **Horse blip modifiers** — `BLIP_MODIFIER_PLAYER_HORSE_IN_RANGE_WHISTLE`, `BLIP_MODIFIER_HORSE_REVIVE`, `BLIP_MODIFIER_MP_DOWNED` / `BLIP_AMBIENT_PED_DOWNED` | Found in the RPF reference — the base game **already has** a horse blip that pulses in whistle range, a horse-revive blip, and downed-state blips. These map directly onto D10/D11 (blip + whistle) and H11/H12 (downed + reviver). Use Rockstar's, don't invent ours. | 1.3 / Phase 2 |
 
 ## Why it's worth doing properly

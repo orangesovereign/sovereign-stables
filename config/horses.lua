@@ -29,6 +29,11 @@ Config.HorseDefaults = {
     sizeOptions  = {},       -- allowed body-size presets [I9] (filled after appearance spike)
     coatOptions  = {},       -- allowed mane/tail/coat preset ids [I10]
 
+    -- This breed's base ped scale at full size (1.0 = the model's natural size;
+    -- a mule sits nearer 0.90). Foals render at breed.scale x a growth-phase
+    -- multiplier, so this must never be treated as absolute. See 05-LIFECYCLE.
+    scale  = 1.0,
+
     -- Storefront display card [N1-N4]. `tier` sorts it into the Specialty or
     -- Stock tab. Stats are configured base values now; they go live once the
     -- progression system lands (Phase 3).
@@ -84,6 +89,7 @@ Config.Horses = {
         label = 'Mule', tier = 'stock', breed = 'Working Mule',
         price = { cash = 60.0, gold = 0.0 },
         breedable = false, maxHides = 5,
+        scale = 0.90,   -- a mule is smaller than a horse at "full size"
         -- Stables only sell horses aged 5-7; anything older is wild-only (see docs/05-LIFECYCLE.md).
         sex = 'Gelding', age = 7, hands = 14.3,
         lore = 'Stubborn, sure-footed, and worth its weight on a long haul.',
