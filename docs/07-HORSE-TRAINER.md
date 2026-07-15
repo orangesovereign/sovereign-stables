@@ -143,6 +143,42 @@ Claude flagged that mirroring is the highest XP **and** grants travel, so it mec
 
 **This is a project-wide principle, not a one-off** — see the design principle below.
 
+## 🎓 The repertoire — a horse only knows what you taught it (ruled, 2026-07-15)
+
+> *"Yeah my horse might be good and following me better and comes to me quicker and listens… but because I didn't do any of the other things, the horse won't be able to dance while horseback, won't clear obstacles on the ground very well, won't be able to rear."*
+
+**Training moves don't just pour XP into a bucket — each one teaches the horse that specific ability.** A move must be worked **a number of times during training** before the horse actually learns it. Skip a move, and the horse simply never learns it.
+
+So mirroring keeps its XP crown *and* acquires a real cost: a mirrored horse is **statistically excellent and behaviourally illiterate**.
+
+### Move → what it teaches
+
+| Move | What the owner gets |
+|---|---|
+| **Mirroring** | Responsiveness — follows better, comes quicker, listens. *(Which is exactly, and only, what mirroring is.)* |
+| **Dance** | Dance under saddle (hold **SPACE**) |
+| **Jump** | Clears ground obstacles cleanly |
+| **Rear** | Rears on command |
+| **Foot Scratch** | *(ability TBD)* |
+| **Longeing** | *(ability TBD — gait control? works on command at distance?)* |
+
+### Why this is the right shape
+
+- **It keeps the ruling intact.** No XP nerf, no cap. Mirroring is still the fastest. The choice stands — it just *costs* something.
+- **It's a consequence, not a punishment.** Nothing is taken away. The horse is fine. It's simply *ignorant*, because its trainer was.
+- **It's quiet.** Nothing announces it. The owner finds out the first time they hold SPACE and the horse does nothing.
+- **Reputation becomes mechanical without a stat.** "Who trained this?" is now a question with a discoverable answer. A trainer known for mirroring everything will be known for it — because their horses can't do anything.
+- **It makes the longeing sub-menu worth building.** It teaches something no other move does.
+- **It creates a remediation market.** A half-trained horse can be sent back to a *better* trainer to learn the gaps — another revenue line, and a second chance for the horse.
+- **It makes appraisal (J17) genuinely valuable.** Repertoire is invisible from the outside, so someone who can *read* a horse can tell a buyer "this one's never seen an obstacle." That's the appraisal business, justified.
+
+### Open
+
+1. **What do Foot Scratch and Longeing teach?** Longeing feels like it should teach something meaty — gait control, working at distance, turning under command — given it's the deliberate, craft-heavy option.
+2. **Reps per move.** How many times must a move be worked before it sticks? First pass in `Config.Training.repertoire.repsToLearn`, tunable.
+3. **Is the repertoire visible to the owner?** *"Secretly and quietly"* suggests **no** — you discover it by asking the horse and getting nothing. **Recommend: hidden by default, revealed by a trainer's appraisal (J17).** That turns "what can this horse actually do?" into a service worth paying for.
+4. **Schema:** Phase 3 needs a `training` JSON blob on `sovereign_horses` — level, xp, per-move rep counts, and learned abilities.
+
 ### 📐 Design principle: mechanical dominance of a *playstyle* is not a problem
 
 Sovereign County doesn't force optimal play or punish suboptimal-but-enjoyable play. When one option is mathematically better than another, that is **only** worth fixing if it damages something real — the economy (dupes, infinite money), server health, or another player's experience. **A player choosing the dull-but-efficient route harms nobody but their own evening.**

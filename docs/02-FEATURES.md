@@ -106,6 +106,7 @@ Everything else only **downs** it: a horse drops to a downed state (instantly on
 |----|---------|-----|-------------|------|-------|--------|
 | E1 | Leveling from activities: riding, leading, commands, obstacles, lunging | EXCEED | ⚠️ | stats loop | 3 | ⬜ |
 | E9 | **The training session** — trainer-only. Lead the horse → Right-Click Hold + ENTER → training mode; on-screen moves (Mirror L-ALT · Dance ↑ · Jump ↓ · Rear ← · Foot Scratch → · Longeing ENTER · End ESC) each earn XP toward level 4. Ceilings: **1,450 XP** low/mid stats, **2,460 XP** high. See [07-HORSE-TRAINER](07-HORSE-TRAINER.md) | NEW | 🧪 | horse trick anims, lead state | 3 | ⬜ |
+| E10 | **The repertoire** — a horse only learns the abilities it was actually *taught*. Each move must be worked N times or the horse never learns it: mirror all night and you get a level-4 horse that follows beautifully but **cannot dance, rear, or clear an obstacle**. Silent (no announcement) — the owner discovers it, and a trainer's appraisal (J17) can reveal it | NEW | 🧪 | E9, `training` JSON col | 3 | ⬜ |
 | E2 | XP modifiers by horse size & activity (config) | EXCEED | ✅ | E1 | 3 | ⬜ |
 | E3 | Bonding system that reduces spooking | EXCEED | ⚠️ | native bonding | 3 | ⬜ |
 | E4 | Courage training — improves fear resistance | EXCEED | ⚠️ | E3 | 3 | ⬜ |

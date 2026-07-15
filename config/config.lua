@@ -134,6 +134,23 @@ Config.Training = {
     },
     longeJumpBonus = 25,   -- one-off XP for pressing Jump during a longe
 
+    -- THE REPERTOIRE [E10]: a horse only knows what you actually taught it.
+    -- Each move must be worked this many times during training before the horse
+    -- learns the matching ability. Nothing is announced — the owner finds out the
+    -- first time they ask for it and get nothing. Mirror all night and you get a
+    -- level-4 horse that follows beautifully and can't rear, dance or jump.
+    repertoire = {
+        enabled = true,
+        repsToLearn = {
+            mirroring   = 20,   -- responsiveness: follows, comes quicker, listens
+            dance       = 15,   -- dance under saddle (hold SPACE)
+            jump        = 15,   -- clears ground obstacles cleanly
+            rear        = 15,   -- rears on command
+            footScratch = 15,   -- ability TBD
+            longeing    = 20,   -- ability TBD (gait control / works at distance?)
+        },
+    },
+
     -- The longeing sub-menu (its own panel, bottom-right).
     longeing = {
         radiusStep = 10.0,          -- metres per "Change Radius" press
