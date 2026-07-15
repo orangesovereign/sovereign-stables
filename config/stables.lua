@@ -43,16 +43,27 @@ Config.Stables = {
         -- INTERACTION prompt point + radius (on the stablehand)
         prompt = { coords = { -367.61, 787.17, 116.16 }, distance = 1.0 },
 
-        -- PREVIEW positions & cameras used by the storefront/customizer.
+        -- PREVIEW positions used by the storefront/customizer. {x, y, z, heading}
         --   horsePos — where the previewed horse stands while you browse horses
         --              AND while you fit tack to your own horse in Components.
         --   wagonPos — where the previewed WAGON stands while you browse wagons.
         --              The horse preview is removed while you're looking at wagons.
+        --
+        -- Both need CLEAR GROUND of their own. These are showroom models, not the
+        -- thing you drive away (that's `retrieve` below) — but they are still real
+        -- entities that collide with real scenery and real NPCs.
+        --
+        -- There are no camera entries here: the storefront camera ORBITS whatever
+        -- is on the stand, aiming at the position above, so moving a preview moves
+        -- its camera automatically. (Dead `camHorse`/`camWagon` keys were removed
+        -- 2026-07-15 — nothing ever read them, and they still held coords from an
+        -- older layout, which is worse than having none.)
         preview = {
             horsePos = { -398.02, 773.43, 115.79, 86.77 },
-            wagonPos = { -370.11, 786.99, 115.16, 274.18 },
-            camHorse = { -367.92, 783.02, 117.77, -36.42, 0.0, -100.98, 50.0 },
-            camWagon = { -363.58, 792.11, 118.04, -16.35, 0.0, 143.97, 50.0 },
+            -- Moved 2026-07-15: the old spot (-370.11, 786.99) was inside the
+            -- stable and the previewed wagon collided with the NPCs standing
+            -- there. A wagon is a big entity and the yard is busy.
+            wagonPos = { -394.64, 802.39, 115.80, 274.18 },
         },
 
         -- WHERE YOUR RIDE ACTUALLY ARRIVES when you collect it here.
