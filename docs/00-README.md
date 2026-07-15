@@ -8,6 +8,7 @@ Replacement for `vorp_stables` on the Sovereign County RP RedM server (VorpCore)
 | [02-FEATURES.md](02-FEATURES.md) | **Living** master feature list w/ feasibility + phases |
 | [03-CODING-PLAN.md](03-CODING-PLAN.md) | Phased build plan + architecture + resource layout |
 | [04-UI-DESIGN.md](04-UI-DESIGN.md) | Storefront visual + IA spec (from approved concept art) |
+| [05-LIFECYCLE.md](05-LIFECYCLE.md) | **Design pillar** — the horse arc, Foal → Death, and how every feature hangs off it |
 
 **Ground rules:** original code only (the owned `sirevlc_horses` pack is escrow-locked — its open config files are a *reference* only). Server-authoritative. Config-driven so a non-dev owner can tune everything.
 
