@@ -171,6 +171,79 @@ Config.Training = {
 }
 
 --------------------------------------------------------------------------------
+-- COURAGE TRAINING  [E3/E4 · 07-HORSE-TRAINER]
+--   NOT the Training Menu. Courage is its own 0-9 ladder, trained by walking a
+--   horse at something that wants to eat it. Horse Trainers only (J9). Foals
+--   may never train it. Once earned it is NEVER lost — the horse keeps it for
+--   life. Unlike the repertoire, courage IS visible: the owner stands at the
+--   horse, right-clicks, and reads it on the horse info panel.
+--------------------------------------------------------------------------------
+Config.Courage = {
+    enabled  = true,
+    maxLevel = 9,        -- the ceiling. Always earned, never bought.
+
+    -- XP to reach each level. Escalating, so 9 is an achievement.
+    -- FIRST PASS — tune against real sessions in the Phase 3 spike.
+    levelXp = { [0] = 0, [1] = 120, [2] = 280, [3] = 500, [4] = 800,
+                [5] = 1200, [6] = 1750, [7] = 2500, [8] = 3500, [9] = 5000 },
+
+    -- Starting floor by breed. Set per-horse in config/horses.lua via
+    -- `courageFloor`; this is the fallback. Breed gives a FLOOR, not a head
+    -- start — see docs/06-BREEDS.md. Racers start at 0 on purpose: the fastest
+    -- horse in the county is also the one most likely to throw you at a wolf.
+    defaultFloor = 1,
+
+    -- THE FEAR ANIMALS. We spawn NOTHING — these are the world's own animals.
+    -- The trainer finds them, leads the horse to them, or pens their own.
+    --   radius  = how close the horse must be to earn XP (metres)
+    --   xpPerSecond = paid for TIME IN RADIUS, scaled to the animal's real danger
+    -- The gator is safe because gators are lazy; the bear is fast because bears
+    -- are bears. The world already priced this trade — we just pay it out.
+    fearAnimals = {
+        { models = { 'a_c_alligator_01', 'a_c_alligator_02', 'a_c_alligator_03' },
+          name = 'Alligator', radius = 18.0, xpPerSecond = 1.0 },   -- the swamp method
+        { models = { 'a_c_snake_01', 'a_c_snakeblacktailrattle_01', 'a_c_snakeferdelance_01',
+                     'a_c_snakewater_01', 'a_c_snakeredboa_01' },
+          name = 'Snake',     radius = 10.0, xpPerSecond = 1.2 },
+        { models = { 'a_c_wolf', 'a_c_wolf_01', 'a_c_wolf_medium', 'a_c_wolf_small' },
+          name = 'Wolf',      radius = 25.0, xpPerSecond = 2.5 },
+        { models = { 'a_c_cougar_01' },
+          name = 'Cougar',    radius = 25.0, xpPerSecond = 3.0 },
+        { models = { 'a_c_bear_01', 'a_c_bearblack_01' },
+          name = 'Bear',      radius = 30.0, xpPerSecond = 4.0 },   -- if you live
+    },
+
+    -- One-off bonus when a pat/calm actually lands (EVENT_CALM_PED idx 3,
+    -- isFullyCalmed). The pat is the TOOL that buys time in the radius — it is
+    -- not the wage. Time is the wage. Keep this small.
+    fullyCalmedBonus = 5,
+
+    -- The horse must actually be frightened to be learning anything. If false,
+    -- proximity alone pays (easier, but a courage-9 horse would farm itself).
+    requireSpooked = true,
+
+    -- THE LADDER: what each courage rung writes to the animal tuning natives.
+    --   bravery         -> ATF_BraveryMin (6) / ATF_BraveryMax (5)
+    --   spookedRange    -> ATF_SpookedRangeOverride (146)  — lower = calmer
+    --   fearRange       -> ATF_FearRange (10)              — lower = calmer
+    -- These are re-applied on EVERY spawn from the DB, so "persists for life"
+    -- holds through despawn, restart and crash. FIRST PASS — the spike measures
+    -- what these actually feel like and replaces these numbers.
+    ladder = {
+        [0] = { bravery = 0.0, spookedRange = 40.0, fearRange = 40.0 },
+        [1] = { bravery = 0.1, spookedRange = 36.0, fearRange = 36.0 },
+        [2] = { bravery = 0.2, spookedRange = 32.0, fearRange = 32.0 },
+        [3] = { bravery = 0.3, spookedRange = 28.0, fearRange = 28.0 },
+        [4] = { bravery = 0.4, spookedRange = 24.0, fearRange = 24.0 },
+        [5] = { bravery = 0.5, spookedRange = 20.0, fearRange = 20.0 },
+        [6] = { bravery = 0.6, spookedRange = 16.0, fearRange = 16.0 },
+        [7] = { bravery = 0.7, spookedRange = 12.0, fearRange = 12.0 },
+        [8] = { bravery = 0.85, spookedRange = 8.0, fearRange = 8.0 },
+        [9] = { bravery = 1.0, spookedRange = 4.0, fearRange = 4.0, neverThrowsRider = true },
+    },
+}
+
+--------------------------------------------------------------------------------
 -- INTEGRATION HOOKS  (built now, switched on when the partner scripts arrive)
 --------------------------------------------------------------------------------
 Config.Integrations = {

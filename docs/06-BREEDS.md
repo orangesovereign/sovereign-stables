@@ -17,7 +17,7 @@
 | Andalusian | 6 | 5 | 6 | 7 | Standard / war |
 | Nokota | 6 | 5 | 6 | 6 | Standard |
 | Missouri Fox Trotter | 6 | 6 | 7 | 6 | Superior all-rounder |
-| Mustang | 6 | 5 | 8 | 8 | Hardy, brave (courage 9) |
+| Mustang | 6 | 5 | 8 | 8 | Hardy, brave (**starting courage 3** — the bravest floor) |
 | Kladruber | 6 | 4 | 5 | 3 | Standard |
 | Morgan | 6 | 2 | 5 | 5 | Quick but no launch |
 | American Paint | 5 | 7 | 5 | 7 | Nimble, punchy |
@@ -55,6 +55,27 @@ They are the only breeds at speed **9**, with a **three-point gap** down to the 
 **Config:** `declineAge` on each horse — `27` by default (in `Config.HorseDefaults`), overridden to `25` on these three breeds. Death is always 31 regardless.
 
 *Considered and rejected: Missouri Fox Trotter (best all-rounder, but "superior" ≠ fast), American Paint (sprinter's accel/turn, only speed 5), Mustang (hardy, not fast).*
+
+## ⚖️ RULED — starting courage per breed (owner, 2026-07-15: *"Reduce the breed courage"*)
+
+Courage is a **0–9 leveled number** trained by Horse Trainers only (see [07-HORSE-TRAINER](07-HORSE-TRAINER.md#-courage-training-e3e4--ruled-2026-07-15)). The old note "Mustang — courage 9" was written before the ladder existed and would have shipped a Mustang **born maxed and untrainable**. Reduced.
+
+**Breed sets a low floor, never a head start. 9 is always earned.**
+
+| Group | Floor | Why |
+|---|---|---|
+| **Mustang** | **3** | Wild-caught and hardy — the bravest thing you can buy, still 6 rungs short |
+| Drafts & work (Belgian · Suffolk Punch · Ardennes · Shire · Gypsy Cob) | **2** | Placid by trade. Slow, dull, unbothered. |
+| Standard riding (Kentucky Saddler · Tennessee Walker · Nokota · Appaloosa …) | **1** | The default |
+| **Racers (Arabian · Thoroughbred · Turkoman)** | **0** | **Hot-blooded and flighty** |
+
+### 🐎 The racers are cowards — deliberately
+
+The three breeds that decline at 25 instead of 27 are also the three that start at courage **0**. The best horse money can buy is the one most likely to **throw you at a wolf** — and it's the one whose prime ends soonest.
+
+That isn't a tax, it's the same sentence the lifecycle already says: **stamina and nerve beat speed in the West.** A Thoroughbred is a magnificent instrument for going fast in a straight line on a road, and a liability in the swamp at night. A Mustang will still be walking, still be calm, and still be alive. **Nothing here is balanced away** — the racer is genuinely the fastest horse in the county. It's just not the horse you take hunting, and now the numbers say so without anyone being told.
+
+A trainer can close it. That's the job — and a courage-9 Thoroughbred is a real trophy, because it started at zero.
 
 ## Caveats worth knowing
 

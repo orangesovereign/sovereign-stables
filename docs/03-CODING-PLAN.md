@@ -104,7 +104,7 @@ K8 (vorp_stables data migration), K9 (version check), full locale pass, load/str
 | Horse appearance natives (mane/tail/coat/body/furs at runtime + persist) | S14, F1, F2, H7 | 1→2 |
 | Golden vs normal core-attribute mapping | H1, H3 | 2 |
 | Crash/disconnect recovery pattern | D5, WG5 | 2 |
-| Native bonding/courage read/write vs simulate | E3, E4 | 3 |
+| ~~Native bonding/courage read/write vs simulate~~ → **Courage ladder tuning** (0–9 → `ATF_BraveryMin/Max`, `ATF_SpookedRangeOverride`, `ATF_FearRange`) + `EVENT_CALM_PED` harness + `ATB_RagdollEasily` stumble odds. *Feasibility is settled — this spike tunes, it no longer proves* | E3, E4, D8 | 3 |
 | Mounted anim dicts (side-sit, head-strike) | D6, D7 | 3 |
 | Wild ped spawn/persist at custom nodes + cleanup | S18, W1 | 4 |
 | Horse dirt/cleanliness native — read + force clean | H5, H10, L9, L6 | 2 |

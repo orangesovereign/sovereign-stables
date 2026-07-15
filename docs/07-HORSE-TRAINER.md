@@ -208,39 +208,54 @@ That reframes E10. These behaviours are **probabilistic in the base game** (the 
 
 That's softer, more natural, and almost certainly easier to implement (nudge an existing chance rather than intercept an input). It also *reads* better: your horse isn't broken, it's **green**.
 
-#### The native bond ladder — a big find
+#### ❌ CORRECTION: the "native bond ladder" was a misread (2026-07-15)
 
-`rdr3_discoveries` shows RDR2 already gates horse abilities behind a **1–4 bond ladder**:
+An earlier draft of this doc claimed RDR2 gates horse abilities behind a readable **1–4 bond ladder**, citing `TF_HORSE_BONDLVL_2_PERKS` (`0x151A0091`), `_3_` (`0x916DC0D8`), `_4_` (`0x54B66C3C`) and `TF_HORSE_BOND_LOCK_ACTION` (`0x1101AD0C`).
 
-| Flag | Hash |
-|---|---|
-| `TF_HORSE_BONDLVL_2_PERKS` | `0x151A0091` |
-| `TF_HORSE_BONDLVL_3_PERKS` | `0x916DC0D8` |
-| `TF_HORSE_BONDLVL_4_PERKS` | `0x54B66C3C` |
-| `TF_HORSE_BOND_LOCK_ACTION` | `0x1101AD0C` |
+**That was wrong.** Those live in [`AI/EVENTS/tutorial_flags.lua`](../../_reference/rdr3_discoveries/AI/EVENTS/tutorial_flags.lua) — **`TF_` means *tutorial flag***. They control **hint popups**, nothing else. `TF_HORSE_BOND_LOCK_ACTION` is the *tooltip* that says an action is bond-locked; it is not the lock. A full search of `rdr3_discoveries` finds **no bond read/write native at all**.
 
-Perks unlock at bond **2/3/4**, and there is a flag literally named **"bond lock action"**. The game already does *"this horse can't do that yet."* **And our training tiers are also 1–4** — the ladders line up.
+So the option "drive the native bond level from our training tier and get R★'s perks for free" **never existed**. Do not resurrect it.
 
-#### The design question this creates
+**Still useful:** `tutorial_flags.lua` is an *inventory of every state RDR2's horse system tracks*, because there's a hint for each — `TF_HORSE_DIRTY`/`FILTHY` (**two dirt tiers** — feeds the Phase 2 dirt spike, H5/H10/L9), `HUNGRY`/`STARVING`, `CORE_HEALTH_50`/`EMPTY`, `SPOOKED`, `BUCK_OVERSPURRED`, and the full taming state machine. Read it as a map, never as an API.
 
-| Approach | Gets us | Costs us |
+#### ✅ What's actually there — the animal tuning surface
+
+RDR2 exposes a **per-ped, get/set tuning surface** on any animal. Not one scalar — dozens of named knobs:
+
+```lua
+Citizen.InvokeNative(0xCBDA22C87977244F, horse, paramId, value)  -- SET_ANIMAL_TUNING_FLOAT_PARAM
+Citizen.InvokeNative(0x4BC3ECFDA0297E27, horse, paramId)         -- GET_ANIMAL_TUNING_FLOAT_PARAM
+Citizen.InvokeNative(0x9FF1E042FA597187, horse, paramId, bool)   -- SET_ANIMAL_TUNING_BOOL_PARAM
+Citizen.InvokeNative(0x1C1993824A396603, horse, paramId)         -- GET_ANIMAL_TUNING_BOOL_PARAM
+```
+
+| Param | Id | Why we care |
 |---|---|---|
-| **(a) Drive the native bond level from our training level** | RDR2's own perks unlock for free — rear, dance, skid, drift — with no ability system to build | Bond is **one scalar**: it can't express "mirrored-only", so the repertoire's whole point is lost |
-| **(b) Gate every ability ourselves, per move** | Full granularity | Fighting the game; re-implementing what it already does |
-| **(c) Hybrid — native bond level from training tier, our per-move record on top as a *chance modifier*** | Native perks unlock by tier **and** an untaught move stays clumsy | Most design work, but it's the only one that keeps both halves |
+| `ATF_BraveryMin` / `ATF_BraveryMax` | 6 / 5 | **Courage, literally** — E4 |
+| `ATF_SpookedRangeOverride` | 146 | **Spooking, literally** — E3 |
+| `ATF_FearRange` | 10 | How far out fear triggers |
+| `ATF_ThreatResponseNoise{Small,Medium,Big}CaliberFleeOrCombatRange` | 115 / 117 / 119 | Spook radius **per gun caliber** |
+| `ATF_ThreatResponsePlayerAlertRange` | 87 | Spook distance from people |
+| `ATB_RagdollEasily` | 71 | **Moves stumble odds** — D8 *(owner-confirmed)* |
+| `ATB_EnableFleeOwner` | 67 | Whether it bolts from its own owner |
 
-**Leaning (c)**, and it fits the owner's instinct exactly: the tier opens the door, the reps decide how well the horse walks through it.
+This is **better than the bond ladder would have been**. The reason (a) was tempting was free perks; the reason it was flawed was that one scalar can't express "mirrored-only". The tuning surface has no such problem — it's multi-dimensional and per-horse, which is exactly what the repertoire needed.
 
-**Needs a spike before Phase 3:** can bond level be read/written from script, do the perk flags fire off it, and are the underlying success chances (rear, obstacle, stumble) reachable? This also touches **E3** (bonding reduces spooking) and **D8** (track stumble) — they may all be the same native system.
+It also delivers the owner's instinct directly: these are **ranges and probabilities**, so the repertoire nudges odds rather than intercepting inputs. A green horse gets a wide `SpookedRangeOverride` and low `Bravery`; a worked one gets tightened.
+
+**Blackboards** expose readable state — `Spooked` (bool), `Fear`, `Agitation`, `Fatigue`, `SurfaceIncline` (floats). Reference warns writes only visibly land on `script`-section blackboards and these sit outside it, so **treat them as read-only sensors**. That's what we want anyway: detect a spook, don't cause one. **Owner confirms `Spooked` reads on demand.**
+
+#### The design question, revised
+
+Option (a) is dead — see above. The live choice is between **(b)** gating every ability ourselves and **(c)** the hybrid. **Still (c)**, and the tuning surface makes it cheaper than when it was written: *the tier opens the door, the reps decide how well the horse walks through it* — where "how well" is now a **tuning param**, not an ability flag we invent.
 
 ### Open
 
-**Settled:** ~~what Foot Scratch teaches~~ (nothing — it just scratches *less*) · ~~is the repertoire visible~~ (**no — never**, see below).
+**Settled:** ~~what Foot Scratch teaches~~ (nothing — it just scratches *less*) · ~~is the repertoire visible~~ (**no — never**) · ~~Longeing: stamina or recall~~ (**stamina**, per trick otherwise) · ~~native vs ours~~ (**(c)**; (a) was a misread).
 
-1. **Longeing: stamina or recall?** Recommend **stamina** (recall overlaps Mirroring). And if stamina — mechanism **(a)** extra progress toward the stamina gap, or **(b)** a per-stat repertoire?
-2. **Reps per move.** How many times must a move be worked before it sticks? First pass in `Config.Training.repertoire.repsToLearn`, tunable.
-3. **Schema:** Phase 3 needs a `training` JSON blob on `sovereign_horses` — level, xp, per-move rep counts, and learned abilities/odds.
-4. **Native vs ours** — see the table above. Decide (a)/(b)/(c) after the bonding spike.
+1. **Reps per move.** How many times must a move be worked before it sticks? First pass in `Config.Training.repertoire.repsToLearn`, tunable.
+2. **Schema:** Phase 3 needs a `training` JSON blob on `sovereign_horses` — level, xp, per-move rep counts, learned abilities/odds, **and courage level + courage XP**.
+3. **Ladder tuning:** what `BraveryMin/Max`, `SpookedRangeOverride` and `FearRange` read at each courage rung. Measured in the spike, not guessed.
 
 ## 🔒 The repertoire is never shown. Anywhere. (ruled, 2026-07-15)
 
@@ -272,6 +287,83 @@ So a trainer can do the work in one evening but still can't hand back a tier-4 h
 ### Trainer caps (ruled)
 
 Trainers get a **higher horse cap** (per-job, already supported by `Perms.maxHorses` over `config/jobs.lua`). Additionally `Config.Training.heldHorsesIgnoreCap = true` — horses held **in custody for training** don't consume the trainer's own slots, so a busy trainer can't be locked out of taking work.
+
+---
+
+## 🐊 Courage training (E3/E4) — ruled 2026-07-15
+
+**This is not the Training Menu.** Courage is its own system, its own ladder, its own place in the world. The tier system (1–4) is done in a paddock with a menu. Courage is done by **walking a horse at something that wants to eat it.**
+
+### The rules (all owner-ruled)
+
+| | |
+|---|---|
+| **Scale** | **0–9**, a **leveled number** — XP accrues, levels tick over |
+| **Who may train it** | **Horse Trainers only** (J9). Not the owner, not a friend. |
+| **Foals** | **Cannot.** *(Already ruled in [05-LIFECYCLE](05-LIFECYCLE.md) — the one training a foal may not do.)* |
+| **Visibility** | **Visible — to the owner only.** Stand at the horse, **right-click → horse info**. Courage is a real, readable number. |
+| **Persistence** | **For the horse's life.** Once earned, never lost. |
+| **At 9** | Considerably less spooked by everything · higher tolerance for close range · **won't throw the rider** at the sign of fear or danger |
+| **Starting value** | Set by **breed + personality** (E5) — a low floor, not a head start |
+
+> ⚠️ **Courage is the deliberate opposite of the repertoire.** The repertoire is *never shown, anywhere*. Courage is *shown, to the owner, on demand.* That is not an inconsistency — the repertoire is knowledge the trainer owes you and can lie about; courage is a number you paid for and can verify. One is reputation, the other is receipt.
+
+### The loop
+
+**Owner, describing how it actually plays:** *"I typically take my horses to the swamp and do the Courage Training with gators… they don't really move unless you get too close. I've seen it where people have trapped cougars and bears in pens on their property."*
+
+1. The trainer brings the horse within the **fear animal's training radius**.
+2. The horse **spooks** — read live off the `Spooked` blackboard.
+3. The trainer **pats** it (on foot) or **calms** it (mounted) to stop it bolting.
+4. **XP accrues per second the horse stays in radius.** Time in the radius is the whole product; the pat is only how you buy that time.
+5. At 9, the tuning params are written and the horse is done. For good.
+
+### 🎁 The engine hands us this loop
+
+`EVENT_CALM_PED` — fully documented, 4-element payload:
+
+| Idx | Field |
+|---|---|
+| 0 | calmer ped id → **the trainer** |
+| 1 | mount ped id → **the horse** |
+| 2 | `CalmTypeId` → **how** they did it |
+| 3 | `isFullyCalmed` → **whether it landed** |
+
+…and the calm types are the owner's mechanic verbatim: `CT_CALM` (0, the mounted calm) · `CT_SHORT_PAT` (1) / `_START` (2) · `CT_LONG_PAT` (3) / `_START` (4) · `CT_VERBAL_AFFIRMATION_ONLY` (5).
+
+**We do not build the pat.** The game fires an event naming who calmed which horse, how, and whether it worked. On-foot pat and mounted calm arrive through **one event**, told apart by the type id — so both halves of the design are one code path. `PP_HORSE_CALM` (prompt priority 27) confirms R★'s own Calm prompt; anims are `mood_calmhorse` and `horse_patting_neck_loop_left` / `horse_patting_crouch_loop_left`.
+
+*Free for Phase 4:* `EVENT_HORSE_BROKEN` carries `HBET_STARTED/FAILED/SUCCESS/CANCELLED` — the taming minigame (S17) delivered the same way.
+
+### Risk is the balancing lever — and it balanced itself
+
+The owner's swamp technique tells us the design is **already self-balancing**, and we should not touch it:
+
+| Animal | Danger | XP/sec | Why |
+|---|---|---|---|
+| 🐊 **Gator** | Low — static unless you close | **Lowest** | The swamp method. Safe, slow, boring, *reliable*. |
+| 🐍 Snake | Low | Low | Small, near-static |
+| 🐺 Wolf | High — packs | High | You will be fighting |
+| 🐆 Cougar | High — fast, ambushes | High | It picks the moment |
+| 🐻 **Bear** | Highest | **Highest** | Fastest courage in the game, if you live |
+
+**Nobody had to design this trade.** The gator is safe *because gators are lazy*, and the bear is fast *because bears are bears* — the world already priced it. We just pay XP proportional to what the animal already does. Nothing is nerfed; the patient trainer takes the swamp, the bold one takes the bear, and both are playing correctly.
+
+### 📐 Penned animals are a feature, not an exploit
+
+*"I've seen it where people have trapped cougars and bears in pens on their property."*
+
+**Do not add an anti-pen check.** A trapped bear is not a loophole — it is a player who **caught a bear**, which is a harder day than any training session. It is exactly [design principle #8](03-CODING-PLAN.md): *don't balance away choices — balance away exploits.* It costs the economy nothing, costs the server nothing, and costs no other player anything.
+
+It also *builds* something: a courage pen is **player infrastructure**, a reason to own land, and a service a trainer can sell access to. It should fold naturally into Sovereign Ranching (X5) later. This falls out for free — if we detect "fear animal within radius," a penned gator satisfies it with **zero extra code**.
+
+### Implementation shape
+
+- **Fear animals are world animals.** We spawn nothing. The trainer finds, leads to, or pens their own. We only ask *"is a fear-animal model within radius of this horse?"*
+- **Radius is per-animal** (config) — a gator you may stand nearer than a bear.
+- **XP is per-second-in-radius**, per-animal rate. `isFullyCalmed` pays a small one-off bonus — the pat is the tool, not the wage.
+- **Courage → params is a config ladder.** Each rung 0–9 maps to `ATF_BraveryMin/Max`, `ATF_SpookedRangeOverride`, `ATF_FearRange`. Rung 9 additionally sets the won't-throw-the-rider behavior.
+- **Persistence is ours, not the engine's.** Store `courage` + `courage_xp` in the DB and **re-apply the params on every spawn**. The owner's rule ("persists for life") then holds through despawn, restart and crash *regardless* of whether the ped retains them — which we have not measured and now don't need to.
 
 ## Open questions
 
