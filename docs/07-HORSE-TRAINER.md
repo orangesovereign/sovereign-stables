@@ -89,22 +89,53 @@ The moves are listed **bottom-right of the screen**:
 | Longeing | **ENTER** |
 | **End Training** | **ESC** |
 
-Each move **gradually increases the horse's XP**, climbing toward level 4.
+### XP rates by move (ruled)
 
-### XP ceilings — by stat tier
+| Move | Rate | Notes |
+|---|---|---|
+| **Mirroring** | **highest** | The horse mirrors you, so **you can walk while you train** — it's how you bring an **unmountable foal** home. Widely regarded as *the lazy way out*. Tate uses it only to top off the last ~200 XP on the way back to the stable. |
+| **Longeing** | **middle** | Working the horse on the circle. **Pressing Jump mid-longe gives an extra XP boost.** |
+| Dance · Foot Scratch · Jump · Rear | **lowest** | The flourishes. All have native animations. |
 
-| Horse | XP to level 4 |
+### The longeing sub-menu
+
+Selecting **Longeing** opens its **own panel, bottom-right**:
+
+| Option | Behaviour |
 |---|---|
-| **Low / mid-tier stats** | **1,450 XP** |
-| **High-tier stats** | **2,460 XP** |
+| **Switch Direction** | reverse the circle |
+| **Adjust Speed Up** | steps up through the gaits; **past the fastest it wraps back to the slowest** |
+| **Change Radius** | **±10 m** per press |
+| **Jump** | the horse jumps — **bonus XP** |
 
-**A better horse takes ~70% longer to finish.** That's a quietly elegant balance: the expensive breeds aren't just costlier to buy, they're costlier to *make good* — so a finished Turkoman is genuinely rare, and a trainer prices accordingly.
+### XP ceilings — by stat tier (ruled)
 
-### Open — needs numbers
+| Horse | XP to level 4 | Which |
+|---|---|---|
+| **Low / mid-tier stats** | **1,450 XP** | everything else |
+| **High-tier stats** | **2,460 XP** | **the fast breeds** — Arabian, Thoroughbred, Turkoman |
 
-1. **XP per move.** This sets the session length. If ~30 minutes is the target for a low/mid horse, 1,450 XP works out around **~48 XP/min** — so a move worth ~10 XP fired every ~12s. Do the moves differ (is Longeing worth more than a Foot Scratch)? Should repeats decay, so a trainer can't spam one key?
-2. **XP thresholds per level.** The ceiling is level 4; where do 2 and 3 sit? **Proposed: even thirds** — low/mid `L2 = 483, L3 = 966, L4 = 1450`; high `L2 = 820, L3 = 1640, L4 = 2460`. And a horse bought at level 2 presumably starts with that level's XP already banked.
-3. **Which stat tier is a horse in?** "High-tier stats" needs a definition — the fast breeds (Arabian/Thoroughbred/Turkoman)? Or any horse above some stat total? A per-horse config flag is safest.
+**A better horse takes ~70% longer to finish.** The expensive breeds cost more to buy **and** more to make good, so a finished Turkoman is genuinely rare and a trainer prices accordingly.
+
+Set **per breed** via `xpTier = 'lowMid' | 'high'` in `config/horses.lua` — the fast breeds are `'high'` by default, but it's a flag, not a formula, so any breed can be moved.
+
+### Session length
+
+**Not capped at 30 minutes** — that was an illustration, not a target. Training shouldn't eat a trainer's whole evening; they have a game to play. First-pass rates (`Config.Training.xpPerSecond`, all tunable):
+
+| Method | Low/mid (1,450) | High (2,460) |
+|---|---|---|
+| Mirroring @ 3/s | **~8 min** | ~14 min |
+| Longeing @ 2/s | ~12 min | ~20 min |
+| Flourishes @ 1/s | ~24 min | ~41 min |
+
+**These are a starting guess and need real sessions to calibrate.** ⚠️ See the balance note below.
+
+### ⚠️ Balance note — mirroring may dominate
+
+Mirroring is **the highest XP *and* lets you travel**. Mechanically it strictly dominates every other move: there is no reason to longe a horse except taste. Right now the only thing holding it back is **culture** — "the lazy way out" is a social norm, not a rule.
+
+That may be exactly what you want (the boring-but-optimal path exists; good trainers choose craft). But if you'd rather longeing were the *real* way and mirroring a convenience, the cheapest fixes are: make mirroring **lower** XP/sec than longeing (it keeps its travel utility), or cap how much of a horse's total XP mirroring may contribute (e.g. the last 20%, which is exactly how Tate already plays it). **Worth a ruling before E9 is built.**
 
 ### How the session and the day-timer fit together
 

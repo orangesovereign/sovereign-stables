@@ -108,6 +108,40 @@ Config.Training = {
 
     -- Horses a trainer is holding for training don't count against their cap.
     heldHorsesIgnoreCap = true,
+
+    -- XP needed to reach each level, by the horse's xpTier (config/horses.lua).
+    -- A horse bought at level 2 starts with that level's XP already banked.
+    levelXp = {
+        lowMid = { [1] = 0, [2] = 483,  [3] = 966,  [4] = 1450 },
+        high   = { [1] = 0, [2] = 820,  [3] = 1640, [4] = 2460 },
+    },
+
+    -- XP PER SECOND while performing a move [E9].
+    --   Mirroring is the fastest — and you can walk while doing it, so it's how
+    --     you bring an unmountable foal home. Widely seen as the lazy way out.
+    --   Longeing is the middle ground, with a bonus for jumping mid-longe.
+    --   The flourishes are the slowest.
+    -- FIRST PASS — tune these against real sessions. At these rates a low/mid
+    -- horse (1450) finishes in ~8 min mirrored, ~12 longeing, ~24 on flourishes;
+    -- a high-tier horse (2460) takes ~70% longer.
+    xpPerSecond = {
+        mirroring   = 3.0,
+        longeing    = 2.0,
+        dance       = 1.0,
+        footScratch = 1.0,
+        jump        = 1.0,
+        rear        = 1.0,
+    },
+    longeJumpBonus = 25,   -- one-off XP for pressing Jump during a longe
+
+    -- The longeing sub-menu (its own panel, bottom-right).
+    longeing = {
+        radiusStep = 10.0,          -- metres per "Change Radius" press
+        radiusMin  = 10.0,
+        radiusMax  = 40.0,
+        -- "Adjust Speed Up" cycles through these; past the last it wraps to the first.
+        speeds     = { 'walk', 'trot', 'canter', 'gallop' },
+    },
 }
 
 --------------------------------------------------------------------------------

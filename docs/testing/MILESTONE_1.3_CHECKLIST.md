@@ -86,6 +86,19 @@ Milestone 1.3 passes when your default horse answers a whistle, rides, follows/s
 
 ## Test log
 
+### Round 1 — 2026-07-14 (owner)
+- Whistle produced nothing while Bring Out worked — isolated the fault to the whistle branch. Objective notifications flagged as wrong (reserved for Storyworks missions). Breadcrumbs added.
+
+### Round 2 — 2026-07-15 (owner)
+- Naming/gender (1.2b) **6/6 PASS**. Whistle command worked; **H did not** — cause: `RegisterKeyMapping` only binds after a full client restart. `/sovfollow` + `/sovdismiss` reported not working.
+- **Fixes:** switched to RDR2's own whistle control (`INPUT_WHISTLE` 0x24978A28 — H is already the game's whistle key), implementing **D11** short-tap = follow / long-hold = come. Dropped `RegisterKeyMapping` (also freed E, which is the mount key). `Bridge.notify` rewired from Objective → **Tick**.
+
+### Round 3 — 2026-07-15 (owner)
+- **H works for both short and long whistle — D11 confirmed.** `/sovdismiss` works.
+- Two refinements requested: horse should **spawn in front** of the player (was 12m behind), and dismiss should **walk off before despawning** (it vanished instantly).
+- **Both fixed and pushed** — 8m in front facing the player, and `Horse.fleeAndDespawn` (trots off, removed ~4.5s later; also serves D13 flee-home).
+- ⏭️ **Owner: skip the redeploy — carry these into the next phase test.** So 1.3 is **not gate-passed**; the front-spawn and walk-off dismiss remain **unverified** and must be checked in the next round, along with the still-unexercised X1 (F8 console).
+
 _(Owner convention: a ledger line ticked without notes = confirmed working.)_
 
 ### Round 1 — (pending owner test)

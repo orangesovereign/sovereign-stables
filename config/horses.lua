@@ -68,6 +68,11 @@ Config.HorseDefaults = {
     -- The shop never generates a 4 — that tier is trainer-only.
     storeLevel = { 1, 2 },
 
+    -- Which XP ladder this breed trains on [E9]: 'lowMid' (1,450 XP to level 4)
+    -- or 'high' (2,460). The fast breeds are 'high' — they cost more to buy AND
+    -- ~70% more work to finish. Set per breed; see Config.Training.levelXp.
+    xpTier = 'lowMid',
+
     -- Storefront display card [N1-N4]. `tier` sorts it into the Specialty or
     -- Stock tab. Stats are configured base values now; they go live once the
     -- progression system lands (Phase 3).
@@ -103,6 +108,7 @@ Config.Horses = {
         storage = 40, breedable = true,
         declineAge = 25,          -- Turkoman: a FAST breed — burns brighter, fades sooner
         storeLevel = { 2, 3 },    -- high-stat stock: the shop may roll 2-3
+        xpTier     = 'high',      -- 2,460 XP to finish — the good ones take real work
         sex = 'Stallion', age = 6, hands = 16.2,
         lore = 'A refined warmblood with a willing mind and disciplined heart. Built for stamina, born for the long road ahead.',
         traits = {
