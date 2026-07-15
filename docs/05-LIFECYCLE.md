@@ -39,7 +39,7 @@ Nothing in this file overrides the [death rules](02-FEATURES.md#️-death-rules-
 11. **Age-reset items: once per horse, per lifetime.** Hard to obtain by design. So a horse can be rewound *once* — it is a reprieve, not immortality.
 12. **Breeding window: 5 → 28.** A horse can breed from the day it's an adult until three years before it dies.
 13. **Stats are predetermined from birth to death** — **Acceleration, Speed, Stamina, Turn**. A foal is *not* statistically weaker than its adult self; the numbers are set at birth and don't grow with age. (Late-life decline at 27/25 is the one exception, and only touches speed + stamina.)
-14. **The configured stat is the FULLY TRAINED value.** A stock horse reading `6` is a 6 *when trained*. **Untrained it sits 1.5–2 lower** (~4–4.5), and training closes the gap up to its ceiling. The ceiling never moves.
+14. **The configured stat is the FULLY TRAINED value.** **Untrained it sits 10–20 points lower** (0–100 scale), and training closes the gap up to its ceiling. The ceiling never moves. **Only a Horse Trainer can train** — see [07-HORSE-TRAINER](07-HORSE-TRAINER.md).
 
 ## Stages
 
@@ -82,7 +82,7 @@ At **2.3 real days per horse-year**:
 | **Born** | G1–G6 breeding + genetics (inherits from sire/dam) · N10/J23 buy a foal (Horse Trainer only) |
 | **Grows** | G6 foal → adult growth |
 | **Works** | E1/E2 activity levelling · E3/E4 bonding & courage · E5 personality · C-series metabolism (hunger/thirst/clean) · F-series tack · S12 horseshoes |
-| **Suffers** | H11 downed (headshot = instant) · H12 Horse Reviver items · H13 max health 150 · *future: illness, disease, treatment* |
+| **Suffers** | H11 downed (headshot = instant) · H12 Horse Reviver items · H13 max health **100** · H14 locational damage · *future: illness, disease, treatment* |
 | **Ages** | E6 ageing speed · age-reset items · S8 selling old horses |
 | **Ends** | Age 31, or downed past the timer. Nothing else. |
 
@@ -93,8 +93,8 @@ At **2.3 real days per horse-year**:
 **Also settled:** ~~foal stats~~ (full from birth, #13) · ~~aged breeding~~ (5→28, #12) · ~~age-reset immortality~~ (once per lifetime, #11).
 
 1. **Which breeds are "faster breeds"** (decline at 25)? → **[06-BREEDS](06-BREEDS.md) recommends Arabian, Thoroughbred, Turkoman** — the only speed-9 breeds, with a three-point gap to the next tier. Awaiting ruling.
-2. **Is there a floor to the decline?** A 31-year-old is about to die anyway, but should speed/stamina bottom out at, say, 60% rather than trending toward zero? An ancient horse should be *clearly past it*, not unusable.
-3. **What happens to a dead horse's tack and inventory?** Lost, or returned to the stable?
+2. ~~**Is there a floor to the decline?**~~ **RULED: yes — floor at ~70% of ceiling.** Over 27→31 (~9 real days) speed + stamina drift from 100% to 70%. A 31-year-old is clearly past it but still rideable — sad, not useless.
+3. ~~**Dead horse's tack and inventory?**~~ **RULED: tack returns to the stable; cargo is lost with the horse.** And tack is **player-owned, not horse-owned** — buy it once, use it on any horse you own; adjust a piece and you pay only the difference. See [07-HORSE-TRAINER](07-HORSE-TRAINER.md).
 4. **"Moderately priced" stock** — needs a number when the 60+ breed catalog (M1) gets filled. Current placeholders: Kentucky $130, Ardennes $180, Mule $60, vs the Vesper specialty at $3,200.
 5. **Training curve** — how long does closing the 1.5–2 untrained gap take, and via which activities (E1)?
 

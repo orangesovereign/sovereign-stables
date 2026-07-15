@@ -10,6 +10,7 @@ Replacement for `vorp_stables` on the Sovereign County RP RedM server (VorpCore)
 | [04-UI-DESIGN.md](04-UI-DESIGN.md) | Storefront visual + IA spec (from approved concept art) |
 | [05-LIFECYCLE.md](05-LIFECYCLE.md) | **Design pillar** — the horse arc, Foal → Death, and how every feature hangs off it |
 | [06-BREEDS.md](06-BREEDS.md) | Breed roster + speed tiers — the data behind the "faster breeds" ruling |
+| [07-HORSE-TRAINER.md](07-HORSE-TRAINER.md) | The Horse Trainer job, grades, and the tiered training system |
 
 **Ground rules:** original code only (the owned `sirevlc_horses` pack is escrow-locked — its open config files are a *reference* only). Server-authoritative. Config-driven so a non-dev owner can tune everything.
 
