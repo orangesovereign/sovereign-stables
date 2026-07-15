@@ -45,6 +45,51 @@ silently gain horse training the moment anyone re-ordered the list — the exact
 bug the owner's ruling exists to prevent. Explicit sets make "who may do what" a
 thing you read, not a thing you compute.
 
+### 🔧 The Wagon Maker's trade — ruled 2026-07-15
+
+> *"Everyone can repair their wagon to the lowest wagon health to get your wagon
+> going. **Wagon makers are the only people who can repair a wagon to 100%.**"*
+
+| | Who | To what |
+|---|---|---|
+| **Field repair** | **anyone** | `fieldRepairTo` (150) — enough to move, not enough to enjoy |
+| **Full repair** | **Wagon Maker (2) + boss** | `proRepairTo` (1000) — whole |
+
+#### 📐 This is the training ruling again, word for word
+
+Put them side by side:
+
+> *"A horse is **good enough untrained** — the 10–20 point gap is an **upgrade
+> path**, not a handicap."*
+>
+> *"A wagon is **good enough field-repaired** — the gap to 100% is an **upgrade
+> path**, not a handicap."*
+
+Same sentence, different trade. And it produces the same three things it did for
+the trainer:
+
+1. **No dead-server failure.** You are never stranded because no Wagon Maker is
+   online — you patch it up and limp home. The service is never a gate.
+2. **The last stretch is the biggest, and it's the product.** 150 → 1000 is the
+   whole of the difference, and only one grade can close it. Exactly like tier 4
+   being the largest single jump and trainer-only.
+3. **It makes a business, not a bottleneck.** The Wagon Maker sells something
+   real that you genuinely want and can genuinely live without.
+
+**Permissions:** `wagonRepair` (field, default true for everyone) and
+`wagonFullRepair` (Wagon-Maker-only). Both are asserted in `tests/perms_spec.py`
+— the gap between the two numbers *is* the trade, so the spec checks that
+`fieldRepairTo < proRepairTo` and that the floor is above zero.
+
+**This also re-opens Q3 in a good way.** "A wrecked wagon can't leave the stable
+until repaired" was unviable when no repair system existed — it would have
+bricked wagons forever. Now there is one: field-repair the wreck at the stable to
+limp it home, or hand it to a Wagon Maker to be made whole. That's a real loop,
+so the harsher rule is now genuinely available. *(Owner's call — see the ledger.)*
+
+**Still open:** where a field repair happens (a kit item? a prompt at the wagon?
+at a stable only?), and whether it costs anything.
+
 #### ⚠️ Grades are configured but NOT ENFORCED (as of 2026-07-15)
 
 `Perms.get(job)` takes **only the job**. There is no grade parameter anywhere in

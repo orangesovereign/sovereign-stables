@@ -84,7 +84,10 @@ local function applyHealth(veh, hp)
     if hp >= HEALTH_MAX then return end          -- nothing to restore
 
     local cfg = Config.WagonDamage or {}
-    if hp <= 0 then hp = cfg.wreckedHealth or 150 end   -- don't hand back a 0-hp wagon
+    -- A wrecked wagon comes out at the field-repair floor rather than at 0 —
+    -- a 0-hp wagon explodes the moment you look at it. Whether it should come
+    -- out at all is Q3, and the owner hasn't ruled.
+    if hp <= 0 then hp = cfg.fieldRepairTo or 150 end
 
     if SetVehicleBodyHealth   then SetVehicleBodyHealth(veh, hp + 0.0) end
     if SetVehicleEngineHealth then SetVehicleEngineHealth(veh, hp + 0.0) end

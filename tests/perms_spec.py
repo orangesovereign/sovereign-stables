@@ -60,6 +60,20 @@ CHECKS = [
     ("the grades table never leaks",         get(T, 2)["grades"] is None),
     ("titles resolve",                       title(T, 2) == "Wagon Maker" and title(T, 3) == "Stable Owner"),
 
+    # ── Wagon repair: floor is free, ceiling is a service (ruled 2026-07-15) ──
+    # "Everyone can repair their wagon to the lowest wagon health to get your
+    #  wagon going. Wagon makers are the only people who can repair to 100%."
+    ("everyone gets field repair",           can(None, None, "wagonRepair") is True),
+    ("a plain player CANNOT full-repair",    can(None, None, "wagonFullRepair") is False),
+    ("Horse Trainer(0) CANNOT full-repair",  can(T, 0, "wagonFullRepair") is False),
+    ("Senior(1) CANNOT full-repair",         can(T, 1, "wagonFullRepair") is False),
+    ("Wagon Maker(2) CAN full-repair",       can(T, 2, "wagonFullRepair") is True),
+    ("Boss(3) CAN full-repair",              can(T, 3, "wagonFullRepair") is True),
+    # The trade only exists because of the gap between these two numbers.
+    ("field floor < pro ceiling",            L.eval("Config.WagonDamage.fieldRepairTo") <
+                                             L.eval("Config.WagonDamage.proRepairTo")),
+    ("field floor > 0 (never stranded)",     L.eval("Config.WagonDamage.fieldRepairTo") > 0),
+
     # ── Caps: Config.Caps is a BASELINE, a job REPLACES it ─────────────────
     ("trainer's ruled higher cap = 8",       horses(T, 0) == 8),
     ("owner's wagon limit of 5 applies",     wagons(None, None) == 5),

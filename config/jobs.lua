@@ -29,13 +29,14 @@ Config.JobDefaults = {
     breeding           = true,   -- [J11]
     horseshoeInstall   = true,   -- [J12]
     accessOthersHorses = false,  -- open other players' horse inventories [J13]
-    -- ⚠️ NEEDS A RULING. This says EVERY player can repair a wagon, which would
-    -- leave the new Wagon Maker grade with nothing to sell. Compare horse
-    -- training: it is trainer-EXCLUSIVE, and that exclusivity is exactly what
-    -- makes the trainer a service business rather than a hobby. If wagon repair
-    -- should work the same way, this becomes `false` and only grade 2 (and the
-    -- boss) may repair. Left `true` pending the owner's call — see 07-HORSE-TRAINER.
-    wagonRepair        = true,   -- wagon & wheel repairs [J14]
+    -- ⚖️ RULED 2026-07-15. TRUE for everyone, and that is deliberate.
+    -- `wagonRepair` is the FIELD repair: anyone can patch a wagon up to
+    -- Config.WagonDamage.fieldRepairTo — enough to get going, no more. Nobody is
+    -- ever stranded because no Wagon Maker is online.
+    -- Taking a wagon to 100% is `wagonFullRepair`, and that is Wagon-Maker-only.
+    -- Same shape as horse training: the floor is free, the ceiling is a service.
+    wagonRepair        = true,   -- field repair, to the floor [J14]
+    wagonFullRepair    = false,  -- restore to 100% — Wagon Maker (grade 2) + boss
     horseHealing       = true,   -- [J15]
     hoofCleaning       = true,   -- horseshoe/hoof cleaning [J16]
     statsVisibility    = true,   -- see detailed horse statistics [J17]
@@ -82,7 +83,7 @@ Config.Jobs = {
                 storefronts      = false,
                 wagonCrafting    = false,
                 wagonCustomizing = false,
-                wagonRepair      = false,
+                wagonFullRepair  = false,   -- field repair only, like everyone
             },
             [1] = {
                 title            = 'Senior Horse Trainer',
@@ -90,7 +91,7 @@ Config.Jobs = {
                 storefronts      = true,
                 wagonCrafting    = false,
                 wagonCustomizing = false,
-                wagonRepair      = false,
+                wagonFullRepair  = false,   -- field repair only, like everyone
             },
             [2] = {
                 -- "Wagon makers don't get horse training perms. Their only job is
@@ -101,7 +102,7 @@ Config.Jobs = {
                 storefronts      = true,
                 wagonCrafting    = true,
                 wagonCustomizing = true,
-                wagonRepair      = true,
+                wagonFullRepair  = true,    -- ← THE TRADE: only they reach 100%
             },
             [3] = {
                 -- The boss. Admin-granted only, and the one grade that legitimately
@@ -111,7 +112,7 @@ Config.Jobs = {
                 storefronts      = true,
                 wagonCrafting    = true,
                 wagonCustomizing = true,
-                wagonRepair      = true,
+                wagonFullRepair  = true,
                 horseCreator     = true,   -- [J22/M2] the Horse Creator is boss-only
             },
         },

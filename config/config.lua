@@ -86,15 +86,37 @@ Config.WagonDamage = {
     persist   = true,
     maxHealth = 1000,       -- matches the `health` column default in sql/install.sql
 
-    -- ⚠️ NEEDS A RULING — see the 1.4 ledger.
-    -- What happens when a wagon is destroyed OUTRIGHT (health hits 0)?
-    --   false = it comes back at `wreckedHealth` — battered but driveable.
-    --   true  = it cannot be brought out at all until repaired.
-    -- `true` is the honest, harsher rule and probably where this ends up — but
-    -- THERE IS NO REPAIR SYSTEM YET, so turning it on today permanently bricks
-    -- any wagon a player destroys. Left false until repair exists.
+    --==========================================================================
+    -- ⚖️ REPAIR — RULED 2026-07-15. This is the Horse Trainer's shape, exactly.
+    --==========================================================================
+    -- Owner: "Everyone can repair their wagon to the lowest wagon health to get
+    --         your wagon going. Wagon makers are the only people who can repair
+    --         a wagon to 100%."
+    --
+    -- Read that against the training ruling and it's the same sentence: *a horse
+    -- is good enough untrained*, and a wagon is good enough field-repaired. The
+    -- gap to 100% is an UPGRADE PATH, not a handicap.
+    --
+    -- Why it's the right shape (both times): nobody is ever stranded because no
+    -- Wagon Maker happens to be online, so there's no dead-server failure — and
+    -- the last stretch, which is the biggest, is the professional's product. It
+    -- makes the Wagon Maker a service business rather than a gatekeeper.
+    fieldRepairTo = 150,    -- ANYONE. Enough to get moving, not enough to enjoy.
+    proRepairTo   = 1000,   -- WAGON MAKER ONLY (grade 2 + the boss). The lot.
+
+    -- Field repair only ever lifts a wagon UP to the floor. It is not a heal:
+    -- a wagon sitting at 400 gains nothing from it. You limp, or you pay.
+    -- (Permissions: `wagonRepair` = field, `wagonFullRepair` = to 100%.)
+
+    -- ⚠️ STILL NEEDS A RULING (1.4 ledger Q3) — but the ruling above changes it.
+    -- What happens when a wagon is destroyed OUTRIGHT (health 0)?
+    --   false = it comes back at `fieldRepairTo` — battered but driveable.
+    --   true  = it cannot leave the stable until someone repairs it.
+    -- `true` was unviable when there was no repair system at all. NOW THERE IS:
+    -- a wrecked wagon could be field-repaired at the stable to limp home, and
+    -- taken to a Wagon Maker to be made whole. That's a real loop, so `true` is
+    -- now a live option rather than a way to brick someone's wagon forever.
     wreckedNeedsRepair = false,
-    wreckedHealth      = 150,
 }
 
 --------------------------------------------------------------------------------
