@@ -131,11 +131,23 @@ Set **per breed** via `xpTier = 'lowMid' | 'high'` in `config/horses.lua` — th
 
 **These are a starting guess and need real sessions to calibrate.** ⚠️ See the balance note below.
 
-### ⚠️ Balance note — mirroring may dominate
+### ⚖️ Mirroring stays dominant — ruled, deliberately
 
-Mirroring is **the highest XP *and* lets you travel**. Mechanically it strictly dominates every other move: there is no reason to longe a horse except taste. Right now the only thing holding it back is **culture** — "the lazy way out" is a social norm, not a rule.
+Claude flagged that mirroring is the highest XP **and** grants travel, so it mechanically dominates every other move — only culture ("the lazy way out") restrains it, and the longeing sub-menu is strictly the *worse* choice.
 
-That may be exactly what you want (the boring-but-optimal path exists; good trainers choose craft). But if you'd rather longeing were the *real* way and mirroring a convenience, the cheapest fixes are: make mirroring **lower** XP/sec than longeing (it keeps its travel utility), or cap how much of a horse's total XP mirroring may contribute (e.g. the last 20%, which is exactly how Tate already plays it). **Worth a ruling before E9 is built.**
+**Owner ruling: leave it.**
+
+> *"It's all about choices. If a trainer wants to be a lazy, sleazy trainer, that's on them. Those who enjoy the RP and interacting with the horses will enjoy the other options."*
+
+**Do not "fix" this.** No XP nerf, no cap on mirroring's share. The optimal path is allowed to be the boring one — the reward for longeing *is* the longeing. A lazy trainer is a **character**, not a bug, and the county can form its own opinion of them.
+
+**This is a project-wide principle, not a one-off** — see the design principle below.
+
+### 📐 Design principle: mechanical dominance of a *playstyle* is not a problem
+
+Sovereign County doesn't force optimal play or punish suboptimal-but-enjoyable play. When one option is mathematically better than another, that is **only** worth fixing if it damages something real — the economy (dupes, infinite money), server health, or another player's experience. **A player choosing the dull-but-efficient route harms nobody but their own evening.**
+
+So: don't balance away choices. Balance away *exploits*.
 
 ### How the session and the day-timer fit together
 

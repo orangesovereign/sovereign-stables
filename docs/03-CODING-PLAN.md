@@ -11,6 +11,7 @@
 5. **Persistence-first.** Any stat that matters survives restart/crash. Server is authoritative; client never decides money, ownership, or stats.
 6. **Prototype the risky.** Every 🧪/❓ feature gets a throwaway spike proving the natives work before it enters a build phase.
 7. **Model/coat-agnostic catalog.** Code never hardcodes the stock breed roster; the catalog references any installed model/coat (stock or community add-on) by name/hash. See Assets & coats policy in `00-README.md`.
+8. **Don't balance away choices — balance away exploits.** *(Owner ruling, 2026-07-15.)* One option being mathematically better than another is **not** a bug. It only warrants a fix if it damages the **economy** (dupes, infinite money), **server health**, or **another player's experience**. A player taking the dull-but-efficient route harms nobody but their own evening — that's a character, not a defect. This server is about choices; the reward for the scenic route *is* the scenic route.
 
 ## Proposed resource layout
 
