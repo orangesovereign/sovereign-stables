@@ -64,9 +64,22 @@
 | H8 | Rename horse via configurable item | EXCEED | ✅ | inventory | 2 | ⬜ |
 | H9 | Tether horse using configurable item | EXCEED | ⚠️ | native rope/anim | 3 | ⬜ |
 | H10 | **Stabled horses auto-clean after a configurable timer (minutes)** — a dirty horse left at a stable is groomed clean by the stablehand over time | EXCEED | ⚠️ | metabolism, db | 2 | ⬜ |
-| H11 | **Horses are DOWNED, not killed** — same state model as players. Configurable max minutes in the downed state; exceed it and the horse actually dies. **Supersedes the instant hard-death model** | NEW | 🧪 | death rework, db | 2 | ⬜ |
+| H11 | **Horses are DOWNED, not killed** — the same state model as players, including **instant down on a headshot**. Configurable max minutes downed; exceed it and the horse is permanently dead. **Supersedes the instant hard-death / long_term_hp toll shipped in 1.3** | NEW | 🧪 | death rework, db | 2 | ⬜ |
 | H12 | **Horse Reviver items** — a downed horse can only be brought back with a reviver item | NEW | ✅ | H11, inventory | 2 | ⬜ |
 | H13 | **Max horse health 150** (configurable) | NEW | ⚠️ | native health cap | 2 | ⬜ |
+
+### ⚖️ Death rules — owner ruling, 2026-07-15
+
+A horse dies **permanently** in exactly **two** ways. Nothing else kills a horse for good:
+
+1. **Old age** — it reaches **age 31** (E6).
+2. **Left downed too long** — beyond the configurable downed timer (H11).
+
+Everything else only **downs** it: a horse drops to a downed state (instantly on a headshot), stays there, and is brought back **only** with a **Horse Reviver item** (H12). Max health **150** (H13).
+
+**This retires the `long_term_hp` cumulative-toll model shipped in 1.3** — no "dies after N deaths". The column stays in the schema for now but stops being the death mechanic; Phase 2 replaces it.
+
+> **Future versions:** horse **illness, disease and treatment** expand on this state model (not V1 — noted so the downed/health design leaves room for it).
 
 ## D. Horse — Movement, Commands & Recovery
 
@@ -83,7 +96,8 @@
 | D9 | Horse inventory access: everyone vs selected players (config) | MATCH+ | ✅ | inventory | 2 | ⬜ |
 | D10 | **Horse map blip that follows your horse** (map + minimap). Losing the blip = the horse is out of range | NEW | ✅ | — | 1.3 | ⬜ |
 | D11 | **Short whistle = follow / unfollow toggle · Long whistle (hold) = come to me from wherever** (within a configurable reasonable distance). Supersedes the separate follow key | NEW | ⚠️ | key hold detect | 1.3 | ⬜ |
-| D12 | **Strayed horses return to the stable instead of teleporting to you.** If the horse's blip drops off the minimap it goes home and must be whistled/collected again — **replaces** the auto-recall teleport | NEW | ✅ | D10 | 1.3 | ⬜ |
+| D12 | **Blip off the minimap → the horse despawns straight back to its stable.** It does **not** walk anywhere — it simply vanishes and is stabled again; whistle/collect it next time. **Replaces** the auto-recall teleport | NEW | ✅ | D10 | 1.3 | ⬜ |
+| D13 | **Flee your horse home** — look at the horse in range, right-click (focus) + the assigned key: it bolts off a short way and despawns, back to its stable | NEW | ⚠️ | focus/prompt | 1.3 | ⬜ |
 
 ## E. Horse — Progression & Behavior
 
@@ -94,7 +108,7 @@
 | E3 | Bonding system that reduces spooking | EXCEED | ⚠️ | native bonding | 3 | ⬜ |
 | E4 | Courage training — improves fear resistance | EXCEED | ⚠️ | E3 | 3 | ⬜ |
 | E5 | Personality & behavior system (traits) | EXCEED | 🧪 | db | 4 | ⬜ |
-| E6 | Ageing: aging speed, max age, death chance when old, age-reset items | EXCEED | ⚠️ | db, loop | 3 | ⬜ |
+| E6 | Ageing: aging speed, age-reset items, and **max age 31 = permanent death** (one of only two ways a horse dies for good — see the death rules below) | EXCEED | ⚠️ | db, loop | 3 | ⬜ |
 | E7 | Horse EXP loss on restart (see S9) | EXCEED | ✅ | db | 2 | ⬜ |
 
 ## F. Tack & Components
