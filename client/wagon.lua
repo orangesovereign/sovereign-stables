@@ -53,29 +53,56 @@ end
 -- actually moves when you shoot a wagon — then this collapses to one call.
 local HEALTH_MAX = 1000.0
 
+-- Read every candidate health native. Some may not exist or may return a
+-- constant on RDR3 wagons — that's the whole open question, so we gather them
+-- all and let the diagnostic tell us which one actually moves.
 local function probeHealth(veh)
-    if not (veh and DoesEntityExist(veh)) then return nil end
-    local body   = GetVehicleBodyHealth   and GetVehicleBodyHealth(veh)   or nil
-    local engine = GetVehicleEngineHealth and GetVehicleEngineHealth(veh) or nil
-    local ent    = GetEntityHealth(veh)
-    return body, engine, ent
+    if not (veh and DoesEntityExist(veh)) then return {} end
+    local function try(fn, ...) if type(fn) ~= 'function' then return nil end
+        local ok, v = pcall(fn, ...); return ok and v or nil end
+    return {
+        body      = try(GetVehicleBodyHealth, veh),
+        engine    = try(GetVehicleEngineHealth, veh),
+        petrol    = try(GetVehiclePetrolTankHealth, veh),
+        entity    = try(GetEntityHealth, veh),
+        entityMax = try(GetEntityMaxHealth, veh),
+    }
+end
+
+-- Which reading do we actually trust for a wagon? Body first (a horse-drawn
+-- wagon has no engine), then entity. Isolated so the diagnostic and the save
+-- path agree on the answer, and so it's ONE line to change once we know.
+local function pickHealth(p)
+    local v = p.body or p.entity or p.engine
+    if not v then return nil end
+    return math.max(0, math.min(HEALTH_MAX, math.floor(v + 0.5)))
 end
 
 -- Returns a 0..HEALTH_MAX integer, or nil if nothing readable.
 local function readHealth(veh)
-    local body, engine, ent = probeHealth(veh)
-    if body == nil and engine == nil and ent == nil then return nil end
-    if Config.Debug then
-        Util.log(('wagon health probe -> body=%s engine=%s entity=%s max=%s')
-            :format(tostring(body), tostring(engine), tostring(ent),
-                    tostring(veh and GetEntityMaxHealth and GetEntityMaxHealth(veh))))
-    end
-    -- Prefer BODY: a horse-drawn wagon has no engine, and body is what takes the
-    -- damage when you drive it off a cliff or shoot it.
-    local v = body or engine or ent
-    if not v then return nil end
-    return math.max(0, math.min(HEALTH_MAX, math.floor(v + 0.5)))
+    local p = probeHealth(veh)
+    if p.body == nil and p.engine == nil and p.entity == nil then return nil end
+    return pickHealth(p)
 end
+
+-- ⚠️ DIAGNOSTIC [1.4 V5/V6/V7] — `/sovwagonhp`, run while sitting in a damaged
+-- wagon BEFORE it's destroyed. Prints every native's reading so we can see which
+-- one drops when you shoot the cart. Delete once the native is confirmed.
+RegisterCommand('sovwagonhp', function()
+    local veh = active and active.ent
+    if not (veh and DoesEntityExist(veh)) then
+        print('^3[sov_wagon]^7 no wagon out — bring one round first'); return
+    end
+    local p = probeHealth(veh)
+    print('^2[sov_wagon] HEALTH PROBE ^7(shoot the wagon, run this again, see what moved):')
+    print(('    body   = %s'):format(tostring(p.body)))
+    print(('    engine = %s'):format(tostring(p.engine)))
+    print(('    petrol = %s'):format(tostring(p.petrol)))
+    print(('    entity = %s  (max %s)'):format(tostring(p.entity), tostring(p.entityMax)))
+    print(('    -> we would save: %s'):format(tostring(pickHealth(p))))
+    Bridge.notify(('Wagon HP — body %s · entity %s (F8 for all)')
+        :format(tostring(p.body), tostring(p.entity)))
+end, false)
 
 local function applyHealth(veh, hp)
     hp = tonumber(hp)
@@ -185,7 +212,10 @@ function Wagon.spawn(data)
 
     -- Restore remembered damage [WG9]. Health is stored server-side, so a wagon
     -- you wrecked yesterday is still wrecked today.
-    if data.health then applyHealth(veh, data.health) end
+    -- NOTE `~= nil`, not `if data.health`: a wrecked wagon's health is 0, which
+    -- is falsy, so `if data.health` skipped the restore and spawned a pristine
+    -- cart every time — half of "it keeps giving me a brand new wagon".
+    if data.health ~= nil then applyHealth(veh, data.health) end
 
     -- Livery / colour [WG4], when the tint table lands.
     if data.tint and SetVehicleTint then

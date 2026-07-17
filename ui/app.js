@@ -40,6 +40,18 @@
     }
 
     function money(n) { return '$' + (n || 0).toLocaleString('en-US'); }
+
+    // Wagon soundness as a 0-100 percent. `health` is 0..1000.
+    // CRITICAL: 0 is a real value, not "missing". `Number(h) || 1000` reads a
+    // wrecked wagon (0) as a pristine one (100) — the exact bug that had the
+    // catalog list saying 0% while the detail panel said 100% for the same cart.
+    // Only null/undefined means "we don't know", and that assumes full.
+    function soundPct(health) {
+        if (health === null || health === undefined || health === '') return 100;
+        var h = Number(health);
+        if (isNaN(h)) return 100;
+        return Math.max(0, Math.min(100, Math.round(h / 10)));
+    }
     function el(tag, cls, html) { var e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
 
     /* ---------- catalog list ---------- */
@@ -80,7 +92,7 @@
             list.appendChild(el('div', 'list__label', 'Yours'));
             wagons.forEach(function (w) {
                 var row = el('button', 'row' + (String(w.id) === String(selected) ? ' is-active' : ''));
-                var hp = Math.max(0, Math.min(100, Math.round((Number(w.health) || 0) / 10)));
+                var hp = soundPct(w.health);
                 row.innerHTML =
                     '<span class="row__portrait">&#9881;</span>' +
                     '<span class="row__t"><span class="row__name">' + (w.name || w.model) + '</span>' +
@@ -242,7 +254,7 @@
         var wrap = document.getElementById('detail');
         var mine = !!d.ownedWagonId;
         var w = mine ? (wagons.filter(function (x) { return String(x.id) === String(d.ownedWagonId); })[0] || {}) : d;
-        var hp = Math.max(0, Math.min(100, Math.round((Number(w.health) || 1000) / 10)));
+        var hp = soundPct(w.health);
         wrap.innerHTML =
             (mine ? '<div class="ribbon">&#9733; Yours &#9733;</div>' : '') +
             '<div class="detail__breed">Wagons &amp; Carriages</div>' +
