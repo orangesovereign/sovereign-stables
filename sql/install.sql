@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS `sovereign_wagons` (
   `model`          VARCHAR(96)  NOT NULL,
   `is_default`     TINYINT(1)   NOT NULL DEFAULT 0,
   `stable_origin`  VARCHAR(64)  NULL,
-  `health`         INT(11)      NOT NULL DEFAULT 1000, -- persistent health [WG9]
+  `health`         INT(11)      NOT NULL DEFAULT 100,  -- persistent health, 0-100 [WG9]
   `tint`           VARCHAR(32)  NULL,                  -- livery/color [WG4]
   `wheels`         LONGTEXT     NULL,                  -- wheel-damage state (JSON) [WG11]
   `components`     LONGTEXT     NULL,

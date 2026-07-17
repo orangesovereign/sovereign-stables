@@ -41,16 +41,17 @@
 
     function money(n) { return '$' + (n || 0).toLocaleString('en-US'); }
 
-    // Wagon soundness as a 0-100 percent. `health` is 0..1000.
-    // CRITICAL: 0 is a real value, not "missing". `Number(h) || 1000` reads a
-    // wrecked wagon (0) as a pristine one (100) — the exact bug that had the
-    // catalog list saying 0% while the detail panel said 100% for the same cart.
-    // Only null/undefined means "we don't know", and that assumes full.
+    // Wagon soundness as a 0-100 percent. `health` is already 0..100 (our scale,
+    // matching horses) — so this is the value itself, not a division.
+    // CRITICAL: 0 is a real value, not "missing". Reading a wrecked wagon (0) as
+    // full was the bug that had the catalog list saying 0% while the detail panel
+    // said 100% for the same cart. Only null/undefined means "we don't know", and
+    // that assumes full.
     function soundPct(health) {
         if (health === null || health === undefined || health === '') return 100;
         var h = Number(health);
         if (isNaN(h)) return 100;
-        return Math.max(0, Math.min(100, Math.round(h / 10)));
+        return Math.max(0, Math.min(100, Math.round(h)));
     }
     function el(tag, cls, html) { var e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
 

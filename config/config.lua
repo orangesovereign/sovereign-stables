@@ -121,7 +121,19 @@ Config.WagonBlip = {
 --------------------------------------------------------------------------------
 Config.WagonDamage = {
     persist   = true,
-    maxHealth = 1000,       -- matches the `health` column default in sql/install.sql
+
+    -- OUR scale: stored in the DB and shown in the UI as 0-100, matching horse
+    -- health (H13, revised to 100). A wagon at 100 is sound; at 0 it's wrecked.
+    -- (Owner ruling 2026-07-15: "Wagon health should be 100.")
+    maxHealth = 100,
+
+    -- THE GAME'S scale, which is NOT ours. RDR3's vehicle-health native reports
+    -- on a 0-1000 range, so we normalise at the single read/write boundary:
+    --     stored (0-100)  =  round( native / gameMaxHealth * 100 )
+    -- Confirm the real figure with /sovwagonhp once the native is settled; if the
+    -- probe shows GetEntityMaxHealth returns something else, put it here. This
+    -- value is used ONLY to translate to/from the game — nothing else sees it.
+    gameMaxHealth = 1000,
 
     --==========================================================================
     -- ⚖️ REPAIR — RULED 2026-07-15. This is the Horse Trainer's shape, exactly.
@@ -138,8 +150,8 @@ Config.WagonDamage = {
     -- Wagon Maker happens to be online, so there's no dead-server failure — and
     -- the last stretch, which is the biggest, is the professional's product. It
     -- makes the Wagon Maker a service business rather than a gatekeeper.
-    fieldRepairTo = 150,    -- ANYONE. Enough to get moving, not enough to enjoy.
-    proRepairTo   = 1000,   -- WAGON MAKER ONLY (grade 2 + the boss). The lot.
+    fieldRepairTo = 15,     -- ANYONE. Enough to get moving, not enough to enjoy.
+    proRepairTo   = 100,    -- WAGON MAKER ONLY (grade 2 + the boss). The lot.
 
     -- Field repair only ever lifts a wagon UP to the floor. It is not a heal:
     -- a wagon sitting at 400 gains nothing from it. You limp, or you pay.

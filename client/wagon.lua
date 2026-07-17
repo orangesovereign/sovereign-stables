@@ -51,7 +51,10 @@ end
 -- So rather than guess a second time: read EVERY candidate, log them all, and
 -- use the first that exists. The next test round's F8 capture tells us which one
 -- actually moves when you shoot a wagon — then this collapses to one call.
-local HEALTH_MAX = 1000.0
+-- OUR health is 0-100 (matches horses). The game's native is 0-gameMax; we
+-- translate at this one boundary and nowhere else.
+local function ourMax()  return (Config.WagonDamage and Config.WagonDamage.maxHealth) or 100 end
+local function gameMax() return (Config.WagonDamage and Config.WagonDamage.gameMaxHealth) or 1000 end
 
 -- Read every candidate health native. Some may not exist or may return a
 -- constant on RDR3 wagons — that's the whole open question, so we gather them
@@ -69,20 +72,34 @@ local function probeHealth(veh)
     }
 end
 
--- Which reading do we actually trust for a wagon? Body first (a horse-drawn
+-- Which raw native reading do we trust for a wagon? Body first (a horse-drawn
 -- wagon has no engine), then entity. Isolated so the diagnostic and the save
--- path agree on the answer, and so it's ONE line to change once we know.
-local function pickHealth(p)
-    local v = p.body or p.entity or p.engine
-    if not v then return nil end
-    return math.max(0, math.min(HEALTH_MAX, math.floor(v + 0.5)))
+-- path agree, and so it's ONE line to change once the probe settles it.
+local function pickRaw(p)
+    return p.body or p.entity or p.engine
 end
 
--- Returns a 0..HEALTH_MAX integer, or nil if nothing readable.
+-- Native raw (0-gameMax) -> our stored 0-100. Uses the ped's own reported max
+-- when it has one, else the configured gameMax.
+local function toStored(raw, entityMax)
+    if not raw then return nil end
+    local gm = (entityMax and entityMax > 0) and entityMax or gameMax()
+    local pct = raw / gm * ourMax()
+    return math.max(0, math.min(ourMax(), math.floor(pct + 0.5)))
+end
+
+-- Our stored 0-100 -> native raw (0-gameMax), for writing damage back.
+local function toGame(stored, entityMax)
+    local gm = (entityMax and entityMax > 0) and entityMax or gameMax()
+    return (stored / ourMax()) * gm
+end
+
+-- Returns a 0..ourMax integer, or nil if nothing readable.
 local function readHealth(veh)
     local p = probeHealth(veh)
-    if p.body == nil and p.engine == nil and p.entity == nil then return nil end
-    return pickHealth(p)
+    local raw = pickRaw(p)
+    if raw == nil then return nil end
+    return toStored(raw, p.entityMax)
 end
 
 -- ⚠️ DIAGNOSTIC [1.4 V5/V6/V7] — `/sovwagonhp`, run while sitting in a damaged
@@ -99,26 +116,30 @@ RegisterCommand('sovwagonhp', function()
     print(('    engine = %s'):format(tostring(p.engine)))
     print(('    petrol = %s'):format(tostring(p.petrol)))
     print(('    entity = %s  (max %s)'):format(tostring(p.entity), tostring(p.entityMax)))
-    print(('    -> we would save: %s'):format(tostring(pickHealth(p))))
+    print(('    raw picked = %s  ->  we would save (0-%d): %s')
+        :format(tostring(pickRaw(p)), ourMax(), tostring(toStored(pickRaw(p), p.entityMax))))
     Bridge.notify(('Wagon HP — body %s · entity %s (F8 for all)')
         :format(tostring(p.body), tostring(p.entity)))
 end, false)
 
+-- `hp` is OUR stored scale (0-ourMax). Translated to the game's scale here.
 local function applyHealth(veh, hp)
     hp = tonumber(hp)
     if not hp then return end
-    hp = math.max(0, math.min(HEALTH_MAX, hp))
-    if hp >= HEALTH_MAX then return end          -- nothing to restore
+    hp = math.max(0, math.min(ourMax(), hp))
+    if hp >= ourMax() then return end            -- nothing to restore
 
     local cfg = Config.WagonDamage or {}
     -- A wrecked wagon comes out at the field-repair floor rather than at 0 —
     -- a 0-hp wagon explodes the moment you look at it. Whether it should come
     -- out at all is Q3, and the owner hasn't ruled.
-    if hp <= 0 then hp = cfg.fieldRepairTo or 150 end
+    if hp <= 0 then hp = cfg.fieldRepairTo or 15 end
 
-    if SetVehicleBodyHealth   then SetVehicleBodyHealth(veh, hp + 0.0) end
-    if SetVehicleEngineHealth then SetVehicleEngineHealth(veh, hp + 0.0) end
-    SetEntityHealth(veh, math.max(1, math.floor(hp)))
+    local entMax = GetEntityMaxHealth and GetEntityMaxHealth(veh) or nil
+    local game = toGame(hp, entMax)              -- 0-100 -> native scale
+    if SetVehicleBodyHealth   then SetVehicleBodyHealth(veh, game + 0.0) end
+    if SetVehicleEngineHealth then SetVehicleEngineHealth(veh, game + 0.0) end
+    SetEntityHealth(veh, math.max(1, math.floor(game)))
 end
 
 --------------------------------------------------------------------------------

@@ -247,7 +247,8 @@ RegisterNetEvent(Events.ReportWagonHealth, function(wagonId, health)
     if not wagonId then return end
     if (Config.WagonDamage or {}).persist == false then return end
 
-    local maxHp = (Config.WagonDamage or {}).maxHealth or 1000
+    -- Stored on our 0-100 scale; the client already translated from game scale.
+    local maxHp = (Config.WagonDamage or {}).maxHealth or 100
     health = math.max(0, math.min(maxHp, math.floor(tonumber(health) or 0)))
     CreateThread(function()
         local charid = Bridge.getCharId(src)

@@ -51,6 +51,19 @@ SET @sql := IF(@has_sex = 0,
 );
 PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;
 
+-- ---------------------------------------------------------------------
+-- 2026-07-15 · wagon health moves to a 0-100 scale [WG9]
+-- "Wagon health should be 100" — matching horse health. The column used to
+-- store 0-1000. Rescale any existing rows: 1000 -> 100, 640 -> 64, 0 -> 0.
+-- Guarded by a marker column value so re-running does nothing: after the first
+-- run every row is <= 100, so the WHERE matches nothing the second time.
+-- ---------------------------------------------------------------------
+UPDATE `sovereign_wagons`
+   SET `health` = LEAST(100, ROUND(`health` / 10))
+ WHERE `health` > 100;
+ALTER TABLE `sovereign_wagons` ALTER COLUMN `health` SET DEFAULT 100;
+SELECT 'sovereign_wagons.health — rescaled to 0-100' AS `1.4 wagon health`;
+
 -- =====================================================================
 --  VERIFY — the whole point. Read the output of this last query.
 --  Both lines must say YES. If either says NO, tell Claude which one.
