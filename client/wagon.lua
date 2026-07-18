@@ -72,11 +72,16 @@ local function probeHealth(veh)
     }
 end
 
--- Which raw native reading do we trust for a wagon? Body first (a horse-drawn
--- wagon has no engine), then entity. Isolated so the diagnostic and the save
--- path agree, and so it's ONE line to change once the probe settles it.
+-- ✅ SETTLED by the /sovwagonhp capture, 2026-07-15. On a horse-drawn RDR3
+-- wagon the GTA vehicle-component natives return CONSTANTS, not damage:
+--     body = 0.0 (always) · engine = 150.0 · petrol = 1000.0
+-- A wagon has no engine or fuel tank, so those two being flat defaults exposes
+-- the whole family — including body. `GetEntityHealth` is the only reading that
+-- actually tracks damage, and it reports a real max of 1000 via
+-- GetEntityMaxHealth. So: entity is the source; body/engine/petrol stay in the
+-- diagnostic only, as the evidence for this decision.
 local function pickRaw(p)
-    return p.body or p.entity or p.engine
+    return p.entity
 end
 
 -- Native raw (0-gameMax) -> our stored 0-100. Uses the ped's own reported max
@@ -115,11 +120,13 @@ RegisterCommand('sovwagonhp', function()
     print(('    body   = %s'):format(tostring(p.body)))
     print(('    engine = %s'):format(tostring(p.engine)))
     print(('    petrol = %s'):format(tostring(p.petrol)))
-    print(('    entity = %s  (max %s)'):format(tostring(p.entity), tostring(p.entityMax)))
-    print(('    raw picked = %s  ->  we would save (0-%d): %s')
-        :format(tostring(pickRaw(p)), ourMax(), tostring(toStored(pickRaw(p), p.entityMax))))
-    Bridge.notify(('Wagon HP — body %s · entity %s (F8 for all)')
-        :format(tostring(p.body), tostring(p.entity)))
+    print(('    entity = %s  (max %s)  dead=%s')
+        :format(tostring(p.entity), tostring(p.entityMax), tostring(IsEntityDead(veh))))
+    print(('    -> ENTITY is the source; we would save (0-%d): %s')
+        :format(ourMax(), tostring(toStored(pickRaw(p), p.entityMax))))
+    print('    (body/engine/petrol are GTA constants on a wagon — ignore them)')
+    Bridge.notify(('Wagon soundness: %s%% (F8 for detail)')
+        :format(tostring(toStored(pickRaw(p), p.entityMax))))
 end, false)
 
 -- `hp` is OUR stored scale (0-ourMax). Translated to the game's scale here.
