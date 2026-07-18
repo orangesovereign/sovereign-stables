@@ -240,24 +240,21 @@ RegisterNetEvent(Events.ReportWagonDismiss, function(wagonId)
     wagonCooldown[charid][wagonId] = os.time() + ((Config.Summon and Config.Summon.recallCooldownSeconds) or 30)
 end)
 
--- Persist damage [WG9]. Client reports; the server is still the one that writes,
--- and it only ever writes to a row this character owns.
-RegisterNetEvent(Events.ReportWagonHealth, function(wagonId, health)
+-- A wagon was RENDERED UNUSABLE [WG9]. The client can't read a health scalar
+-- (RDR3 exposes none — see client/wagon.lua CONDITION MODEL), but it CAN tell us
+-- the wagon was wrecked. That's the one and only condition write from the field:
+-- it goes to 0. Everything else (repair up) comes from the repair system.
+RegisterNetEvent(Events.ReportWagonWrecked, function(wagonId)
     local src = source
     if not wagonId then return end
     if (Config.WagonDamage or {}).persist == false then return end
-
-    -- Stored on our 0-100 scale; the client already translated from game scale.
-    local maxHp = (Config.WagonDamage or {}).maxHealth or 100
-    health = math.max(0, math.min(maxHp, math.floor(tonumber(health) or 0)))
     CreateThread(function()
         local charid = Bridge.getCharId(src)
         if not charid then return end
-        Db.execute('UPDATE sovereign_wagons SET health = ? WHERE id = ? AND charid = ?', { health, wagonId, charid })
-        -- Logged because 1.4 round 1 silently wrote full health forever (the
-        -- client was reading a ped native on a vehicle). If damage still doesn't
-        -- stick, this line proves whether the server is being told about it.
-        Util.log(('wagon #%s health <- %d (char %s)'):format(tostring(wagonId), health, tostring(charid)))
+        Db.execute('UPDATE sovereign_wagons SET health = 0 WHERE id = ? AND charid = ?', { wagonId, charid })
+        Db.execute('INSERT INTO sovereign_ledger (charid, action, subject, cash, gold, meta) VALUES (?, ?, ?, 0, 0, ?)',
+            { charid, 'wagon_wrecked', tostring(wagonId), json.encode({ wagonId = wagonId }) })
+        Util.log(('wagon #%s WRECKED -> condition 0 (char %s)'):format(tostring(wagonId), tostring(charid)))
     end)
 end)
 

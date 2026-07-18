@@ -33,7 +33,8 @@ Events.RequestOwnedWagons     = e('requestOwnedWagons')
 Events.RequestSetDefaultWagon = e('requestSetDefaultWagon')
 Events.RequestCallWagon       = e('requestCallWagon')     -- bring out a wagon
 Events.ReportWagonDismiss     = e('reportWagonDismiss')   -- wagon sent away
-Events.ReportWagonHealth      = e('reportWagonHealth')    -- persist damage [WG9]
+Events.ReportWagonHealth      = e('reportWagonHealth')    -- persist condition [WG9]
+Events.ReportWagonWrecked     = e('reportWagonWrecked')   -- rendered unusable, stays in place [WG9]
 
 -- tack [F1/F5] — milestone 1.4
 Events.RequestOwnedTack  = e('requestOwnedTack')   -- what tack do I own + what's on this horse

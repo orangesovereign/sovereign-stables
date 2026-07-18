@@ -35,30 +35,40 @@ local function loadModel(hash)
 end
 
 --------------------------------------------------------------------------------
--- HEALTH  [WG9]
+-- CONDITION MODEL  [WG9]  — settled 2026-07-15 after three failed native probes
 --------------------------------------------------------------------------------
--- ⚠️ WHICH NATIVE REPORTS A WAGON'S DAMAGE IN RDR3 IS NOT SETTLED.
+-- ⚠️ RDR3 EXPOSES NO READABLE WAGON HEALTH. We proved it the hard way. On a
+-- horse-drawn wagon, /sovwagonhp reported:
+--     body = 0.0 (constant)   engine = 150.0 (constant)   petrol = 1000.0 (constant)
+--     entity = 0 ON A FRESH WAGON  (so GetEntityHealth is a constant too)
+-- A wagon has no engine or fuel tank, so those defaults expose the whole family;
+-- entity reading 0 on an undamaged wagon finished the case. And RDR3 damage is
+-- VISUAL (holes, missing wheels) — it can be neither read nor written, so a
+-- wagon can never be made to *look* damaged again on recall regardless.
 --
--- None of vorp_stables, bcc-stables or coal_stables persist wagon health, so
--- there is no reference implementation to copy — we are first here.
+-- bcc-wagons (a shipping RDR3 wagon script) confirms the way out: it never reads
+-- the entity at all. Condition is an ABSTRACT number in the database. We do the
+-- same, with one addition the owner asked for — the ONE damage signal RDR3 does
+-- give reliably is IsEntityDead, which is `false` while you drive and `true`
+-- when the wagon is wrecked. So:
 --
--- 1.4 round 1 used `GetEntityHealth`, which is the PED health native, on a
--- VEHICLE. It reported a constant, so every save wrote full health and damage
--- never persisted (ledger V5/V6/V7). The comment at the top of this file even
--- said "a wagon is a VEHICLE, not a ped — different natives", and then the code
--- used the ped one anyway.
+--   • Condition is a stored 0-100 number (Config.WagonDamage.maxHealth). The
+--     client NEVER derives it from the entity.
+--   • Fresh / usable wagon = full. It only drops to 0 when RENDERED UNUSABLE
+--     (IsEntityDead) — owner: "only when unusable should it hit 0%".
+--   • A wrecked wagon STAYS IN PLACE (we stop tracking it; we do NOT delete it)
+--     — owner: "the wagon should remain in place but unusable".
+--   • Gradual bullet-by-bullet damage is NOT modelled, because RDR3 won't let us
+--     read or show it. If wear-over-use is wanted later, it's a server-side
+--     decrement like bcc's, not a native read.
 --
--- So rather than guess a second time: read EVERY candidate, log them all, and
--- use the first that exists. The next test round's F8 capture tells us which one
--- actually moves when you shoot a wagon — then this collapses to one call.
--- OUR health is 0-100 (matches horses). The game's native is 0-gameMax; we
--- translate at this one boundary and nowhere else.
+-- The health scale itself (our 0-100 vs the game's 0-1000) still matters for
+-- applyHealth, which SETS a value so a low-condition wagon drives sluggishly.
 local function ourMax()  return (Config.WagonDamage and Config.WagonDamage.maxHealth) or 100 end
 local function gameMax() return (Config.WagonDamage and Config.WagonDamage.gameMaxHealth) or 1000 end
 
--- Read every candidate health native. Some may not exist or may return a
--- constant on RDR3 wagons — that's the whole open question, so we gather them
--- all and let the diagnostic tell us which one actually moves.
+-- Diagnostic only — kept so the finding above stays reproducible, NOT used for
+-- condition. Reads every candidate so /sovwagonhp can show they're constants.
 local function probeHealth(veh)
     if not (veh and DoesEntityExist(veh)) then return {} end
     local function try(fn, ...) if type(fn) ~= 'function' then return nil end
@@ -238,11 +248,11 @@ function Wagon.spawn(data)
         return
     end
 
-    -- Restore remembered damage [WG9]. Health is stored server-side, so a wagon
-    -- you wrecked yesterday is still wrecked today.
-    -- NOTE `~= nil`, not `if data.health`: a wrecked wagon's health is 0, which
-    -- is falsy, so `if data.health` skipped the restore and spawned a pristine
-    -- cart every time — half of "it keeps giving me a brand new wagon".
+    -- Restore stored condition [WG9]. This is an ABSTRACT number (0-100), not
+    -- visual damage — RDR3 can't re-apply bullet holes or a missing wheel, so a
+    -- repaired-looking-but-low-condition wagon is the honest best we can do, and
+    -- it's exactly what bcc-wagons does. A wrecked wagon (0) is refused earlier
+    -- on the server, so by here `data.health` is a usable value.
     if data.health ~= nil then applyHealth(veh, data.health) end
 
     -- Livery / colour [WG4], when the tint table lands.
@@ -258,21 +268,14 @@ function Wagon.spawn(data)
         tostring(data.id), tostring(data.model), c.x, c.y, c.z, tostring(veh)))
 end
 
--- Save damage before the wagon leaves the world, or a wreck heals itself by
--- being dismissed — which would make WG9 pointless.
-local function reportHealth()
-    if not (active and active.ent and DoesEntityExist(active.ent)) then return end
-    local hp = readHealth(active.ent)
-    if not hp then return end          -- nothing readable: never write a guess
-    TriggerServerEvent(Events.ReportWagonHealth, active.id, hp)
-end
-
--- `keepReported` = we have ALREADY sent a final figure (e.g. 0 for a wreck), so
--- do not re-read and overwrite it. Round 1 reported 0 on destruction and then
--- immediately called despawn(), which read the dead entity and clobbered it.
-function Wagon.despawn(silent, keepReported)
+-- ⚠️ WE DO NOT POLL THE ENTITY FOR CONDITION. See the CONDITION MODEL note near
+-- the top of the file: RDR3 exposes no readable wagon health, so condition is a
+-- stored number the server owns, and the ONLY thing the client reports is the
+-- one binary transition it CAN detect reliably — the wagon being wrecked
+-- (IsEntityDead). There is no per-tick reportHealth any more; it only ever wrote
+-- a constant.
+function Wagon.despawn(silent)
     if active and active.ent and DoesEntityExist(active.ent) then
-        if not keepReported then reportHealth() end
         DeleteEntity(active.ent)
     end
     removeWagonBlip()
@@ -301,7 +304,7 @@ function Wagon.dismiss()
 
     TriggerServerEvent(Events.ReportWagonDismiss, active.id)
     Bridge.notify(('%s is put away.'):format(active.name or 'Your wagon'))
-    Wagon.despawn(true)   -- saves the damage on its way out
+    Wagon.despawn(true)
 end
 
 --------------------------------------------------------------------------------
@@ -326,28 +329,35 @@ RegisterNetEvent(Events.SyncOwnedRides, function(data)
 end)
 
 --------------------------------------------------------------------------------
--- Watchdog: persist damage while it's out, and let go of a destroyed wagon
+-- Watchdog: catch the wagon being WRECKED. That's the one damage signal RDR3
+-- gives us reliably (IsEntityDead), and it's binary — usable or wrecked.
 --------------------------------------------------------------------------------
+local reportedWreck = false   -- so we tell the server once, not every 2s
+
 CreateThread(function()
     while true do
         if active and active.ent then
             if not DoesEntityExist(active.ent) then
-                -- Vanished from under us (streamed out, cleaned up by the engine).
-                -- Drop the blip too, or it hangs on the map pointing at nothing.
+                -- Streamed out / engine-cleaned. Drop the blip or it hangs on the
+                -- map pointing at nothing. The condition is unchanged — a wagon
+                -- that streamed out was not wrecked.
                 removeWagonBlip()
-                active = nil
-            elseif IsEntityDead(active.ent) then
-                Util.log(('wagon #%s destroyed'):format(tostring(active.id)))
-                TriggerServerEvent(Events.ReportWagonHealth, active.id, 0)
-                Wagon.despawn(true, true)   -- keep the 0; don't re-read a corpse
-                Bridge.notify('Your wagon is wrecked.')
-            else
-                reportHealth()   -- cheap, and means a crash never loses the damage
+                active, reportedWreck = nil, false
+            elseif IsEntityDead(active.ent) and not reportedWreck then
+                -- RENDERED UNUSABLE. Owner ruling 2026-07-15:
+                --   • it hits 0% only now, not before
+                --   • it must REMAIN IN PLACE, not despawn
+                -- So we mark it wrecked server-side and STOP TRACKING it, but we
+                -- do NOT delete it — the wreck sits in the world where it died.
+                reportedWreck = true
+                Util.log(('wagon #%s wrecked in place'):format(tostring(active.id)))
+                TriggerServerEvent(Events.ReportWagonWrecked, active.id)
+                Bridge.notify('Your wagon is wrecked — it will need repairs.')
+                removeWagonBlip()
+                active = nil          -- let go of it; the wreck stays put
             end
         end
-        -- 3s, not 10s: the gap between "drove it off a cliff" and "put it away"
-        -- is often shorter than 10 seconds, and an unsaved tick loses the damage.
-        Wait(3000)
+        Wait(2000)
     end
 end)
 
