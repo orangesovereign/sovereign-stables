@@ -214,19 +214,33 @@ RegisterNetEvent(Events.RequestCallWagon, function(wagonId, stableId)
             return
         end
 
-        -- A wrecked wagon [WG9]. Off by default because no repair system exists
-        -- yet — turning it on would brick a destroyed wagon permanently.
-        local dmg = Config.WagonDamage or {}
-        if dmg.wreckedNeedsRepair and (tonumber(row.health) or 0) <= 0 then
-            TriggerClientEvent(Events.CallWagonResult, src, { ok = false,
-                message = ('%s is a wreck — it needs repairing first.'):format(row.name or 'That wagon') })
-            return
+        -- A WRECKED or badly-worn wagon [WG9]. Owner ruling: "everyone can repair
+        -- their wagon to the lowest health to get going." The stable IS that
+        -- patch job — a wagon below the field floor is brought up to it on
+        -- retrieval (for anyone who can field-repair, which is everyone by
+        -- default), and persisted. It limps out; a Wagon Maker takes it to 100%.
+        -- So a wreck is never bricked and never lost, just costly until a pro
+        -- sees it. Set wreckedNeedsRepair = false to skip the auto-patch.
+        local c = Config.WagonCondition or Config.WagonDamage or {}
+        local health = tonumber(row.health) or (c.maxHealth or 100)
+        local floor  = c.fieldRepairTo or 40
+        if c.wreckedNeedsRepair ~= false and health < floor then
+            local job, grade = Bridge.getJob(src)
+            if Perms.can(job, grade, 'wagonRepair') or Perms.can(job, grade, 'wagonFullRepair') then
+                Db.execute('UPDATE sovereign_wagons SET health = ? WHERE id = ? AND charid = ?', { floor, row.id, charid })
+                health = floor
+                Bridge.notify(src, ('Patched up to %d%% to get you moving.'):format(floor))
+            else
+                TriggerClientEvent(Events.CallWagonResult, src, { ok = false,
+                    message = ('%s is wrecked — it needs a repair before it will move.'):format(row.name or 'That wagon') })
+                return
+            end
         end
 
-        Util.log(('wagon call granted: #%s (char %s) at %s — stored health %s')
-            :format(tostring(row.id), tostring(charid), tostring(stableId), tostring(row.health)))
+        Util.log(('wagon call granted: #%s (char %s) at %s — condition %s')
+            :format(tostring(row.id), tostring(charid), tostring(stableId), tostring(health)))
         TriggerClientEvent(Events.CallWagonResult, src, { ok = true, wagon = {
-            id = row.id, name = row.name, model = row.model, health = row.health, tint = row.tint,
+            id = row.id, name = row.name, model = row.model, health = health, tint = row.tint,
             stableId = stableId,
         }})
     end)
@@ -240,10 +254,31 @@ RegisterNetEvent(Events.ReportWagonDismiss, function(wagonId)
     wagonCooldown[charid][wagonId] = os.time() + ((Config.Summon and Config.Summon.recallCooldownSeconds) or 30)
 end)
 
+-- Persist WEAR [WG9]. The client owns the live condition as the wagon is used
+-- (bcc's model) and reports the new value; the server clamps and stores. Never
+-- lets the reported value climb — wear only ever goes down here, so a spoofed
+-- higher number can't repair a wagon for free (repair goes through its own
+-- permission-gated path).
+RegisterNetEvent(Events.ReportWagonHealth, function(wagonId, condition)
+    local src = source
+    if not wagonId then return end
+    if (Config.WagonCondition or Config.WagonDamage or {}).persist == false then return end
+
+    local maxHp = (Config.WagonCondition or Config.WagonDamage or {}).maxHealth or 100
+    condition = math.max(0, math.min(maxHp, math.floor(tonumber(condition) or maxHp)))
+    CreateThread(function()
+        local charid = Bridge.getCharId(src)
+        if not charid then return end
+        -- GREATEST guard: only accept a value that is <= what's stored. Wear
+        -- decreases; anything trying to raise condition must go via repair.
+        Db.execute('UPDATE sovereign_wagons SET health = LEAST(health, ?) WHERE id = ? AND charid = ?',
+            { condition, wagonId, charid })
+    end)
+end)
+
 -- A wagon was RENDERED UNUSABLE [WG9]. The client can't read a health scalar
--- (RDR3 exposes none — see client/wagon.lua CONDITION MODEL), but it CAN tell us
--- the wagon was wrecked. That's the one and only condition write from the field:
--- it goes to 0. Everything else (repair up) comes from the repair system.
+-- (RDR3 exposes none — see client/wagon.lua CONDITION note), but it CAN tell us
+-- the wagon was wrecked. That's a hard write to 0. Repair brings it back.
 RegisterNetEvent(Events.ReportWagonWrecked, function(wagonId)
     local src = source
     if not wagonId then return end
@@ -255,6 +290,56 @@ RegisterNetEvent(Events.ReportWagonWrecked, function(wagonId)
         Db.execute('INSERT INTO sovereign_ledger (charid, action, subject, cash, gold, meta) VALUES (?, ?, ?, 0, 0, ?)',
             { charid, 'wagon_wrecked', tostring(wagonId), json.encode({ wagonId = wagonId }) })
         Util.log(('wagon #%s WRECKED -> condition 0 (char %s)'):format(tostring(wagonId), tostring(charid)))
+    end)
+end)
+
+-- REPAIR [WG9 / J14] — owner ruling: anyone repairs to a floor to get going;
+-- a Wagon Maker (wagonFullRepair) repairs to 100%. Repair sets condition UP to
+-- the permitted target and never lowers it. Server decides the target from the
+-- caller's grade — the client only asks.
+RegisterNetEvent(Events.RequestRepairWagon, function(wagonId)
+    local src = source
+    CreateThread(function()
+        local charid = Bridge.getCharId(src)
+        if not charid or not wagonId then return end
+
+        local c = Config.WagonCondition or Config.WagonDamage or {}
+        local job, grade = Bridge.getJob(src)
+
+        -- What level can THIS person restore to?
+        local target
+        if Perms.can(job, grade, 'wagonFullRepair') then
+            target = c.proRepairTo or 100
+        elseif Perms.can(job, grade, 'wagonRepair') then
+            target = c.fieldRepairTo or 40
+        else
+            TriggerClientEvent(Events.WagonRepaired, src, { ok = false, message = 'You do not know how to repair a wagon.' })
+            return
+        end
+
+        local row = ownedWagon(charid, wagonId)
+        if not row then
+            TriggerClientEvent(Events.WagonRepaired, src, { ok = false, message = 'That is not your wagon.' })
+            return
+        end
+
+        local cur = tonumber(row.health) or 0
+        if cur >= target then
+            local msg = (target >= (c.maxHealth or 100))
+                and 'It is already in perfect order.'
+                or  'You have patched it as well as you can — a Wagon Maker could do more.'
+            TriggerClientEvent(Events.WagonRepaired, src, { ok = false, message = msg })
+            return
+        end
+
+        -- TODO(inventory): consume c.repairItem for a field repair once
+        -- vorp_inventory is wired (Bridge.registerRideInventory is still a stub).
+        Db.execute('UPDATE sovereign_wagons SET health = ? WHERE id = ? AND charid = ?', { target, wagonId, charid })
+        Db.execute('INSERT INTO sovereign_ledger (charid, action, subject, cash, gold, meta) VALUES (?, ?, ?, 0, 0, ?)',
+            { charid, 'wagon_repair', tostring(wagonId), json.encode({ from = cur, to = target, full = (target >= (c.maxHealth or 100)) }) })
+        TriggerClientEvent(Events.WagonRepaired, src, { ok = true, wagonId = wagonId, condition = target,
+            message = ('Repaired to %d%%.'):format(target) })
+        Util.log(('wagon #%s repaired %d -> %d (char %s)'):format(tostring(wagonId), cur, target, tostring(charid)))
     end)
 end)
 

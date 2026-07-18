@@ -53,6 +53,13 @@
         if (isNaN(h)) return 100;
         return Math.max(0, Math.min(100, Math.round(h)));
     }
+    // Condition as words: wrecked at 0, sound at 100, a percent between.
+    function condLabel(health) {
+        var p = soundPct(health);
+        if (p <= 0) return 'Wrecked';
+        if (p >= 100) return 'Sound';
+        return p + '% sound';
+    }
     function el(tag, cls, html) { var e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
 
     /* ---------- catalog list ---------- */
@@ -93,11 +100,10 @@
             list.appendChild(el('div', 'list__label', 'Yours'));
             wagons.forEach(function (w) {
                 var row = el('button', 'row' + (String(w.id) === String(selected) ? ' is-active' : ''));
-                var hp = soundPct(w.health);
                 row.innerHTML =
                     '<span class="row__portrait">&#9881;</span>' +
                     '<span class="row__t"><span class="row__name">' + (w.name || w.model) + '</span>' +
-                    '<span class="row__breed">' + (hp < 100 ? hp + '% sound' : 'Sound') + '</span></span>' +
+                    '<span class="row__breed">' + condLabel(w.health) + '</span></span>' +
                     (Number(w.is_default) === 1 ? '<span class="row__price">&#9733; Default</span>' : '');
                 row.addEventListener('click', function () {
                     selected = w.id;
@@ -255,13 +261,13 @@
         var wrap = document.getElementById('detail');
         var mine = !!d.ownedWagonId;
         var w = mine ? (wagons.filter(function (x) { return String(x.id) === String(d.ownedWagonId); })[0] || {}) : d;
-        var hp = soundPct(w.health);
+        var cond = condLabel(w.health);
         wrap.innerHTML =
             (mine ? '<div class="ribbon">&#9733; Yours &#9733;</div>' : '') +
             '<div class="detail__breed">Wagons &amp; Carriages</div>' +
             '<h2 class="detail__name">' + (w.name || w.model || 'Wagon') + '</h2>' +
             '<div class="attrs">' +
-                '<span><i>&#9881;</i>' + (mine ? hp + '% sound' : 'Holds ' + (w.storage || 0)) + '</span>' +
+                '<span><i>&#9881;</i>' + (mine ? cond : 'Holds ' + (w.storage || 0)) + '</span>' +
             '</div>' +
             (w.lore ? '<p class="detail__lore">' + w.lore + '</p>' : '') +
             (mine ? '' : '<div class="price"><b>' + money(w.cash) + '</b>' +

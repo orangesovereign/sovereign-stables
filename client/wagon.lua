@@ -35,128 +35,60 @@ local function loadModel(hash)
 end
 
 --------------------------------------------------------------------------------
--- CONDITION MODEL  [WG9]  — settled 2026-07-15 after three failed native probes
+-- CONDITION  [WG9]  — modelled on bcc-wagons' Condition feature
 --------------------------------------------------------------------------------
--- ⚠️ RDR3 EXPOSES NO READABLE WAGON HEALTH. We proved it the hard way. On a
--- horse-drawn wagon, /sovwagonhp reported:
---     body = 0.0 (constant)   engine = 150.0 (constant)   petrol = 1000.0 (constant)
---     entity = 0 ON A FRESH WAGON  (so GetEntityHealth is a constant too)
--- A wagon has no engine or fuel tank, so those defaults expose the whole family;
--- entity reading 0 on an undamaged wagon finished the case. And RDR3 damage is
--- VISUAL (holes, missing wheels) — it can be neither read nor written, so a
--- wagon can never be made to *look* damaged again on recall regardless.
+-- ⚠️ WHY THIS IS WEAR, NOT COMBAT DAMAGE. We proved via /sovwagonhp that RDR3
+-- exposes no readable wagon health — every native returns a constant (body 0,
+-- engine 150, petrol 1000, and GetEntityHealth 0 even on a FRESH wagon). Visual
+-- damage (holes, missing wheels) can be neither read nor written. So a wagon can
+-- never be made to look damaged, and "gradual damage from getting shot" is not
+-- buildable in this engine.
 --
--- bcc-wagons (a shipping RDR3 wagon script) confirms the way out: it never reads
--- the entity at all. Condition is an ABSTRACT number in the database. We do the
--- same, with one addition the owner asked for — the ONE damage signal RDR3 does
--- give reliably is IsEntityDead, which is `false` while you drive and `true`
--- when the wagon is wrecked. So:
+-- Every shipping wagon script lives with this the same way, bcc-wagons included:
+-- condition is an ABSTRACT 0-100 number the server owns. It DEGRADES AS THE WAGON
+-- IS USED (bcc: -1 every 60s) and is restored by REPAIRING. Shooting the wagon
+-- does nothing to it — that's the engine, not a design choice. (bcc read for the
+-- MODEL only; it is GPL and no code was copied.)
 --
---   • Condition is a stored 0-100 number (Config.WagonDamage.maxHealth). The
---     client NEVER derives it from the entity.
---   • Fresh / usable wagon = full. It only drops to 0 when RENDERED UNUSABLE
---     (IsEntityDead) — owner: "only when unusable should it hit 0%".
---   • A wrecked wagon STAYS IN PLACE (we stop tracking it; we do NOT delete it)
---     — owner: "the wagon should remain in place but unusable".
---   • Gradual bullet-by-bullet damage is NOT modelled, because RDR3 won't let us
---     read or show it. If wear-over-use is wanted later, it's a server-side
---     decrement like bcc's, not a native read.
+-- The one real-damage signal RDR3 gives is IsEntityDead — false while you drive,
+-- true when the wagon is genuinely destroyed. That's the OTHER path below: a
+-- wrecked wagon drops to 0 and stays in place (owner ruling), needing repair.
 --
--- The health scale itself (our 0-100 vs the game's 0-1000) still matters for
--- applyHealth, which SETS a value so a low-condition wagon drives sluggishly.
-local function ourMax()  return (Config.WagonDamage and Config.WagonDamage.maxHealth) or 100 end
-local function gameMax() return (Config.WagonDamage and Config.WagonDamage.gameMaxHealth) or 1000 end
+-- Condition is never written to the entity: it's a stat + a "needs repairs"
+-- notice, exactly like bcc. It does not affect handling.
+local function cfg()      return Config.WagonCondition or Config.WagonDamage or {} end
+local function condMax()  return cfg().maxHealth or 100 end
 
--- Diagnostic only — kept so the finding above stays reproducible, NOT used for
--- condition. Reads every candidate so /sovwagonhp can show they're constants.
+-- Diagnostic only — kept so the "no readable health" finding stays reproducible.
+-- NOT used for condition. `/sovwagonhp` shows the natives are constants.
 local function probeHealth(veh)
     if not (veh and DoesEntityExist(veh)) then return {} end
     local function try(fn, ...) if type(fn) ~= 'function' then return nil end
         local ok, v = pcall(fn, ...); return ok and v or nil end
     return {
-        body      = try(GetVehicleBodyHealth, veh),
-        engine    = try(GetVehicleEngineHealth, veh),
-        petrol    = try(GetVehiclePetrolTankHealth, veh),
-        entity    = try(GetEntityHealth, veh),
-        entityMax = try(GetEntityMaxHealth, veh),
+        body   = try(GetVehicleBodyHealth, veh),   engine = try(GetVehicleEngineHealth, veh),
+        petrol = try(GetVehiclePetrolTankHealth, veh),
+        entity = try(GetEntityHealth, veh),         entityMax = try(GetEntityMaxHealth, veh),
     }
 end
 
--- ✅ SETTLED by the /sovwagonhp capture, 2026-07-15. On a horse-drawn RDR3
--- wagon the GTA vehicle-component natives return CONSTANTS, not damage:
---     body = 0.0 (always) · engine = 150.0 · petrol = 1000.0
--- A wagon has no engine or fuel tank, so those two being flat defaults exposes
--- the whole family — including body. `GetEntityHealth` is the only reading that
--- actually tracks damage, and it reports a real max of 1000 via
--- GetEntityMaxHealth. So: entity is the source; body/engine/petrol stay in the
--- diagnostic only, as the evidence for this decision.
-local function pickRaw(p)
-    return p.entity
-end
-
--- Native raw (0-gameMax) -> our stored 0-100. Uses the ped's own reported max
--- when it has one, else the configured gameMax.
-local function toStored(raw, entityMax)
-    if not raw then return nil end
-    local gm = (entityMax and entityMax > 0) and entityMax or gameMax()
-    local pct = raw / gm * ourMax()
-    return math.max(0, math.min(ourMax(), math.floor(pct + 0.5)))
-end
-
--- Our stored 0-100 -> native raw (0-gameMax), for writing damage back.
-local function toGame(stored, entityMax)
-    local gm = (entityMax and entityMax > 0) and entityMax or gameMax()
-    return (stored / ourMax()) * gm
-end
-
--- Returns a 0..ourMax integer, or nil if nothing readable.
-local function readHealth(veh)
-    local p = probeHealth(veh)
-    local raw = pickRaw(p)
-    if raw == nil then return nil end
-    return toStored(raw, p.entityMax)
-end
-
--- ⚠️ DIAGNOSTIC [1.4 V5/V6/V7] — `/sovwagonhp`, run while sitting in a damaged
--- wagon BEFORE it's destroyed. Prints every native's reading so we can see which
--- one drops when you shoot the cart. Delete once the native is confirmed.
 RegisterCommand('sovwagonhp', function()
     local veh = active and active.ent
     if not (veh and DoesEntityExist(veh)) then
-        print('^3[sov_wagon]^7 no wagon out — bring one round first'); return
+        print('^3[sov_wagon]^7 no wagon out'); return
     end
     local p = probeHealth(veh)
-    print('^2[sov_wagon] HEALTH PROBE ^7(shoot the wagon, run this again, see what moved):')
-    print(('    body   = %s'):format(tostring(p.body)))
-    print(('    engine = %s'):format(tostring(p.engine)))
-    print(('    petrol = %s'):format(tostring(p.petrol)))
-    print(('    entity = %s  (max %s)  dead=%s')
-        :format(tostring(p.entity), tostring(p.entityMax), tostring(IsEntityDead(veh))))
-    print(('    -> ENTITY is the source; we would save (0-%d): %s')
-        :format(ourMax(), tostring(toStored(pickRaw(p), p.entityMax))))
-    print('    (body/engine/petrol are GTA constants on a wagon — ignore them)')
-    Bridge.notify(('Wagon soundness: %s%% (F8 for detail)')
-        :format(tostring(toStored(pickRaw(p), p.entityMax))))
+    print('^2[sov_wagon]^7 native readings (all constants on a wagon — condition is a stored stat, not these):')
+    print(('    body=%s engine=%s petrol=%s entity=%s (max %s) dead=%s')
+        :format(tostring(p.body), tostring(p.engine), tostring(p.petrol),
+                tostring(p.entity), tostring(p.entityMax), tostring(IsEntityDead(veh))))
+    print(('    stored condition = %s / %d'):format(tostring(active and active.condition), condMax()))
 end, false)
 
--- `hp` is OUR stored scale (0-ourMax). Translated to the game's scale here.
-local function applyHealth(veh, hp)
-    hp = tonumber(hp)
-    if not hp then return end
-    hp = math.max(0, math.min(ourMax(), hp))
-    if hp >= ourMax() then return end            -- nothing to restore
-
-    local cfg = Config.WagonDamage or {}
-    -- A wrecked wagon comes out at the field-repair floor rather than at 0 —
-    -- a 0-hp wagon explodes the moment you look at it. Whether it should come
-    -- out at all is Q3, and the owner hasn't ruled.
-    if hp <= 0 then hp = cfg.fieldRepairTo or 15 end
-
-    local entMax = GetEntityMaxHealth and GetEntityMaxHealth(veh) or nil
-    local game = toGame(hp, entMax)              -- 0-100 -> native scale
-    if SetVehicleBodyHealth   then SetVehicleBodyHealth(veh, game + 0.0) end
-    if SetVehicleEngineHealth then SetVehicleEngineHealth(veh, game + 0.0) end
-    SetEntityHealth(veh, math.max(1, math.floor(game)))
+-- Is the wagon actually moving? Wear only accrues in use (bcc onlyWhileMoving).
+local function isMoving(veh)
+    local spd = Citizen.InvokeNative(0xFB6BA510A533DF81, veh, Citizen.ResultAsFloat()) -- GetEntitySpeed (m/s)
+    return (spd or 0.0) > 0.5
 end
 
 --------------------------------------------------------------------------------
@@ -248,21 +180,23 @@ function Wagon.spawn(data)
         return
     end
 
-    -- Restore stored condition [WG9]. This is an ABSTRACT number (0-100), not
-    -- visual damage — RDR3 can't re-apply bullet holes or a missing wheel, so a
-    -- repaired-looking-but-low-condition wagon is the honest best we can do, and
-    -- it's exactly what bcc-wagons does. A wrecked wagon (0) is refused earlier
-    -- on the server, so by here `data.health` is a usable value.
-    if data.health ~= nil then applyHealth(veh, data.health) end
-
     -- Livery / colour [WG4], when the tint table lands.
     if data.tint and SetVehicleTint then
         pcall(function() SetVehicleTint(veh, data.tint) end)
     end
 
-    active = { ent = veh, id = data.id, name = data.name, model = data.model }
+    -- Condition is an ABSTRACT stat we carry on `active`, seeded from the stored
+    -- value. It is NOT written to the entity (RDR3 has nowhere to put it) — it
+    -- drives the wear loop, the "needs repairs" notice, and what we persist.
+    local cond = tonumber(data.health)
+    if cond == nil then cond = condMax() end
+    active = { ent = veh, id = data.id, name = data.name, model = data.model, condition = cond }
     makeWagonBlip(veh, data.name)
+
     Bridge.notify(('%s is brought round.'):format(data.name or 'Your wagon'))
+    if cond < (cfg().needsRepairBelow or 50) then
+        Bridge.notify(('%s is in poor condition (%d%%) — it needs repairs.'):format(data.name or 'It', cond))
+    end
     local c = GetEntityCoords(veh)
     Util.log(('wagon #%s (%s) spawned at %.1f, %.1f, %.1f (entity %s)'):format(
         tostring(data.id), tostring(data.model), c.x, c.y, c.z, tostring(veh)))
@@ -328,6 +262,20 @@ RegisterNetEvent(Events.SyncOwnedRides, function(data)
     end
 end)
 
+-- Repair result — the server decided the level from our grade. Reflect it on the
+-- live wagon so the wear loop and the "poor condition" notice update at once.
+RegisterNetEvent(Events.WagonRepaired, function(res)
+    res = res or {}
+    if res.ok then
+        if active and active.id == res.wagonId and res.condition then
+            active.condition = res.condition
+        end
+        Bridge.notifyCard('complete', 'Stables', res.message or 'Repaired.')
+    else
+        Bridge.notify(res.message or 'It cannot be repaired.')
+    end
+end)
+
 --------------------------------------------------------------------------------
 -- Watchdog: catch the wagon being WRECKED. That's the one damage signal RDR3
 -- gives us reliably (IsEntityDead), and it's binary — usable or wrecked.
@@ -361,9 +309,52 @@ CreateThread(function()
     end
 end)
 
+--------------------------------------------------------------------------------
+-- WEAR  [WG9] — condition ticks down as the wagon is used (the bcc mechanic).
+--   Every `decreaseSeconds` the wagon is out (and, if onlyWhileMoving, moving),
+--   condition drops by `decreasePerTick`. The client owns the live value and
+--   reports it up; the server clamps and stores. Client-authoritative wear is
+--   low-stakes — worst case a wagon never wears — and the wagon only exists on
+--   the client while it's out, so this is where it has to live.
+--------------------------------------------------------------------------------
+CreateThread(function()
+    while true do
+        local c = cfg()
+        local every = math.max(5, tonumber(c.decreaseSeconds) or 60)
+        Wait(every * 1000)
+
+        if c.enabled ~= false and active and active.ent and DoesEntityExist(active.ent)
+           and not IsEntityDead(active.ent) and active.condition ~= nil then
+            local moving = (c.onlyWhileMoving == false) or isMoving(active.ent)
+            if moving then
+                local before = active.condition
+                active.condition = math.max(0, before - (tonumber(c.decreasePerTick) or 1))
+                if active.condition ~= before then
+                    TriggerServerEvent(Events.ReportWagonHealth, active.id, active.condition)
+                    -- Warn once as it crosses the threshold, not every tick.
+                    local thr = c.needsRepairBelow or 50
+                    if before >= thr and active.condition < thr then
+                        Bridge.notify(('%s is wearing down (%d%%) — see a repair.')
+                            :format(active.name or 'Your wagon', active.condition))
+                    end
+                end
+            end
+        end
+    end
+end)
+
 -- NO /sovwagon command — ruled out (Q2): a wagon is collected at a stable.
 -- Putting it away is still a field action, so that one stays.
 RegisterCommand('sovwagonaway', function() Wagon.dismiss() end, false)
+
+-- Repair the wagon you're standing with. The SERVER decides how far it goes from
+-- your grade (field floor for anyone, 100% for a Wagon Maker). A stopgap command
+-- until the repair item + prompt lands; a Wagon Maker repairing someone else's
+-- wagon is the near-term extension (target a wagon, not just your own).
+RegisterCommand('sovwagonfix', function()
+    if not (active and active.id) then Bridge.notify('Bring your wagon round first.'); return end
+    TriggerServerEvent(Events.RequestRepairWagon, active.id)
+end, false)
 
 AddEventHandler('onResourceStop', function(res)
     if res == GetCurrentResourceName() then Wagon.despawn(true) end

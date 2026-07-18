@@ -117,56 +117,56 @@ Config.WagonBlip = {
 }
 
 --------------------------------------------------------------------------------
--- WAGON DAMAGE  [WG9] — a wagon you wrecked yesterday is still wrecked today.
+-- WAGON CONDITION  [WG9] — modelled on bcc-wagons' Condition feature
 --------------------------------------------------------------------------------
-Config.WagonDamage = {
-    persist   = true,
+-- ⚠️ CONDITION IS WEAR, NOT COMBAT DAMAGE. RDR3 exposes no readable wagon damage
+-- (proved via /sovwagonhp: every health native returns a constant), so — like
+-- every shipping wagon script, bcc included — condition is an abstract 0-100
+-- number the server owns. It DEGRADES AS YOU USE THE WAGON and is restored by
+-- repairing. Shooting a wagon does nothing to its condition; that's a game
+-- limitation, not a choice. (bcc read for its MODEL only — GPL, no code copied.)
+Config.WagonCondition = {
+    persist = true,
+    enabled = true,
 
-    -- OUR scale: stored in the DB and shown in the UI as 0-100, matching horse
-    -- health (H13, revised to 100). A wagon at 100 is sound; at 0 it's wrecked.
-    -- (Owner ruling 2026-07-15: "Wagon health should be 100.")
-    maxHealth = 100,
+    maxHealth = 100,        -- the ceiling; a wagon at 100 is factory-fresh
 
-    -- THE GAME'S scale, which is NOT ours. RDR3's vehicle-health native reports
-    -- on a 0-1000 range, so we normalise at the single read/write boundary:
-    --     stored (0-100)  =  round( native / gameMaxHealth * 100 )
-    -- Confirm the real figure with /sovwagonhp once the native is settled; if the
-    -- probe shows GetEntityMaxHealth returns something else, put it here. This
-    -- value is used ONLY to translate to/from the game — nothing else sees it.
-    gameMaxHealth = 1000,
+    -- WEAR. Lose `decreasePerTick` every `decreaseSeconds` the wagon is out.
+    -- bcc's defaults are -1 / 60s; kept, so a wagon needs attention over an
+    -- evening of use, not every few minutes. Per-model overrides can live in
+    -- config/wagons.lua later.
+    decreasePerTick = 1,
+    decreaseSeconds = 60,
+    onlyWhileMoving = true, -- a parked wagon doesn't wear (uses GetEntitySpeed)
+
+    -- Below this it reads "needs repairs" in the UI and to the driver.
+    needsRepairBelow = 50,
 
     --==========================================================================
-    -- ⚖️ REPAIR — RULED 2026-07-15. This is the Horse Trainer's shape, exactly.
+    -- ⚖️ REPAIR — owner ruling 2026-07-15, kept through the model change.
     --==========================================================================
-    -- Owner: "Everyone can repair their wagon to the lowest wagon health to get
-    --         your wagon going. Wagon makers are the only people who can repair
-    --         a wagon to 100%."
-    --
-    -- Read that against the training ruling and it's the same sentence: *a horse
-    -- is good enough untrained*, and a wagon is good enough field-repaired. The
-    -- gap to 100% is an UPGRADE PATH, not a handicap.
-    --
-    -- Why it's the right shape (both times): nobody is ever stranded because no
-    -- Wagon Maker happens to be online, so there's no dead-server failure — and
-    -- the last stretch, which is the biggest, is the professional's product. It
-    -- makes the Wagon Maker a service business rather than a gatekeeper.
-    fieldRepairTo = 15,     -- ANYONE. Enough to get moving, not enough to enjoy.
-    proRepairTo   = 100,    -- WAGON MAKER ONLY (grade 2 + the boss). The lot.
+    -- "Everyone can repair their wagon to the lowest wagon health to get your
+    --  wagon going. Wagon makers are the only people who can repair a wagon to
+    --  100%." — the Horse Trainer's shape exactly: the floor is free, the
+    --  ceiling is a service, and nobody is ever stranded because no Wagon Maker
+    --  is online.
+    fieldRepairTo = 40,     -- ANYONE with the kit. Enough to work, not to enjoy.
+    proRepairTo   = 100,    -- WAGON MAKER ONLY (grade 2 + boss). The lot.
+    repairPerUse  = 25,     -- condition restored per repair action (bcc: 25)
+    repairItem    = 'wagon_repair_kit',   -- consumed on a field repair
+    -- Permissions already wired: `wagonRepair` = field, `wagonFullRepair` = 100%.
 
-    -- Field repair only ever lifts a wagon UP to the floor. It is not a heal:
-    -- a wagon sitting at 400 gains nothing from it. You limp, or you pay.
-    -- (Permissions: `wagonRepair` = field, `wagonFullRepair` = to 100%.)
-
-    -- ⚠️ STILL NEEDS A RULING (1.4 ledger Q3) — but the ruling above changes it.
-    -- What happens when a wagon is destroyed OUTRIGHT (health 0)?
-    --   false = it comes back at `fieldRepairTo` — battered but driveable.
-    --   true  = it cannot leave the stable until someone repairs it.
-    -- `true` was unviable when there was no repair system at all. NOW THERE IS:
-    -- a wrecked wagon could be field-repaired at the stable to limp home, and
-    -- taken to a Wagon Maker to be made whole. That's a real loop, so `true` is
-    -- now a live option rather than a way to brick someone's wagon forever.
-    wreckedNeedsRepair = false,
+    -- TRUE DESTRUCTION is the one thing RDR3 *does* report (IsEntityDead). A
+    -- wagon actually wrecked (rolled, blown up) drops to 0 and STAYS IN PLACE —
+    -- it doesn't despawn (owner: "remain in place but unusable"). From 0 it needs
+    -- a repair to move again: anyone limps it to `fieldRepairTo`, a Wagon Maker
+    -- makes it whole. So a wreck is never lost, just dead until someone works it.
+    wreckStaysInPlace  = true,
+    wreckedNeedsRepair = true,
 }
+-- Back-compat alias: some code still reads Config.WagonDamage. Point it at the
+-- same table so nothing breaks during the rename.
+Config.WagonDamage = Config.WagonCondition
 
 --------------------------------------------------------------------------------
 -- TRANSFER  — handing a horse or wagon to another player [milestone 1.4]
