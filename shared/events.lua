@@ -38,6 +38,12 @@ Events.ReportWagonWrecked     = e('reportWagonWrecked')   -- rendered unusable, 
 Events.RequestRepairWagon     = e('requestRepairWagon')   -- field/pro repair [WG9/J14]
 Events.WagonRepaired          = e('wagonRepaired')        -- client-bound: new condition
 
+-- metabolism / care [C-series] — milestone 2.1
+Events.RequestCare     = e('requestCare')      -- feed/water/clean a horse
+Events.CareResult      = e('careResult')       -- outcome + fresh status
+Events.SyncCare        = e('syncCare')          -- push current status to the client
+Events.ReportDirt      = e('reportDirt')        -- client tells server how dirty it got
+
 -- tack [F1/F5] — milestone 1.4
 Events.RequestOwnedTack  = e('requestOwnedTack')   -- what tack do I own + what's on this horse
 Events.RequestBuyTack    = e('requestBuyTack')

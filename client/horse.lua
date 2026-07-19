@@ -83,6 +83,12 @@ function Horse.spawn(data)
         if n > 0 then Util.log(('applied %d tack piece(s) to horse #%s'):format(n, tostring(data.id))) end
     end
 
+    -- Care state [C]: dirt on the coat, a warning if it's hungry/thirsty, and the
+    -- penalty if it's critical. The server sent the current card with the horse.
+    if Metabolism and Metabolism.onHorseOut then
+        pcall(Metabolism.onHorseOut, horse, data.id, data.care)
+    end
+
     -- It waits. No approach task — see above.
     Bridge.notify(('%s answers your whistle.'):format(data.name or 'Your horse'))
     local hc = GetEntityCoords(horse)
@@ -91,6 +97,7 @@ function Horse.spawn(data)
 end
 
 function Horse.despawn(silent)
+    if Metabolism and Metabolism.onHorseAway then pcall(Metabolism.onHorseAway) end
     if active and active.ent and DoesEntityExist(active.ent) then
         DeleteEntity(active.ent)
     end

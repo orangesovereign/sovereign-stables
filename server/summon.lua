@@ -67,12 +67,20 @@ local function authorize(src, row, requireWhistle)
     end
     Util.log(('summon granted: horse #%s'):format(tostring(row.id)))
 
-    return true, {
+    local payload = {
         id         = row.id,
         name       = row.name,
         model      = row.model,
         components = row.components,
     }
+    -- Attach current care status [C]. It was resting in the stable, so drift the
+    -- stored interval (cores hold, the stablehand cleans it) before it comes out.
+    -- Metabolism.current returns nil when the system is disabled, so no guard needed.
+    if Metabolism then
+        local m = Metabolism.current(charid, row.id, 'stored')
+        if m then payload.care = Metabolism.card(m) end
+    end
+    return true, payload
 end
 
 --------------------------------------------------------------------------------

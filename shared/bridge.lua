@@ -125,12 +125,48 @@ if not IS_SERVER then
 end
 
 --------------------------------------------------------------------------------
--- INVENTORY (vorp_inventory) — server-side registration hooks come in Phase 1.
--- Stubbed here so the API surface exists and modules can depend on it.
+-- INVENTORY (vorp_inventory) — server only.
 --------------------------------------------------------------------------------
 if IS_SERVER then
     function Bridge.registerRideInventory(id, name, limit)
-        -- TODO(Phase 1): exports.vorp_inventory:registerInventory(...)
+        -- TODO(Phase 2+): exports.vorp_inventory:registerInventory(...) — the
+        -- horse/wagon cargo hold. Not needed for the care loop.
         Util.log(('inventory registration deferred: %s (%s, limit %s)'):format(id, name, tostring(limit)))
+    end
+
+    -- USABLE ITEMS — feed (H3), clean (H5), reviver (H12), etc. Registering an
+    -- item makes "use" from the satchel fire `cb(data)`, where data.source is the
+    -- player. We ALWAYS close the inventory in the handler or the UI hangs open.
+    -- Wrapped in pcall so a missing/renamed export can't stop the resource
+    -- booting — a server without the item just can't use it.
+    function Bridge.registerUsableItem(item, cb)
+        if not item then return end
+        local ok = pcall(function()
+            exports.vorp_inventory:registerUsableItem(item, cb)
+        end)
+        if not ok then Util.warn(('could not register usable item "%s" — is vorp_inventory running?'):format(item)) end
+    end
+
+    function Bridge.closeInventory(src)
+        pcall(function() exports.vorp_inventory:closeInventory(src) end)
+    end
+
+    -- How many of `item` does this player hold? Async in vorp, so we bridge it to
+    -- a synchronous return via a promise for callers already inside a thread.
+    function Bridge.itemCount(src, item)
+        local p = promise.new()
+        local ok = pcall(function()
+            exports.vorp_inventory:getItemCount(src, function(count) p:resolve(count or 0) end, item)
+        end)
+        if not ok then p:resolve(0) end
+        return Citizen.Await(p)
+    end
+
+    -- Consume `amount` of `item`. Returns true if it took them.
+    function Bridge.takeItem(src, item, amount)
+        amount = amount or 1
+        if Bridge.itemCount(src, item) < amount then return false end
+        pcall(function() exports.vorp_inventory:subItem(src, item, amount) end)
+        return true
     end
 end

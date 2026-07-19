@@ -17,6 +17,7 @@ shared_scripts {
     'config/wagons.lua',
     'config/tack.lua',
     'config/jobs.lua',
+    'config/metabolism.lua',
     'config/locales/en.lua',
     'shared/events.lua',
     'shared/util.lua',
@@ -31,6 +32,7 @@ client_scripts {
     'client/preview.lua',
     'client/camera.lua',
     'client/components.lua',   -- tack apply pipeline; horse.lua + preview.lua use it
+    'client/metabolism.lua',   -- care state; horse.lua + preview.lua call into it
     'client/horse.lua',
     'client/wagon.lua',
     'client/transfer.lua',
@@ -47,6 +49,7 @@ server_scripts {
     'server/horses.lua',
     'server/wagons.lua',
     'server/tack.lua',
+    'server/metabolism.lua',   -- Metabolism.current used by summon.lua
     'server/summon.lua',
     'server/transfer.lua',
 }

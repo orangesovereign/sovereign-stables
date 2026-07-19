@@ -50,6 +50,13 @@ function Preview.show(model, pos)
     SetBlockingOfNonTemporaryEvents(current, true)
     SetModelAsNoLongerNeeded(hash)
 
+    -- [L9] A showroom horse is always spotless, whatever the real one's state.
+    if (Config.Metabolism and Config.Metabolism.cleanliness
+        and Config.Metabolism.cleanliness.previewAlwaysClean ~= false)
+        and Metabolism and Metabolism.forceClean then
+        pcall(Metabolism.forceClean, current)
+    end
+
     curModel = model
     return current
 end
