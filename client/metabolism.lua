@@ -125,3 +125,16 @@ RegisterCommand('sovfeed', function(_, args)
     if not item then Bridge.notify('Which feed? e.g. /sovfeed horse_oats'); return end
     TriggerServerEvent(Events.RequestCare, a.id, item)
 end, false)
+
+-- Readout — see the current care values on the horse you have out. Testing aid;
+-- becomes the right-click horse-info panel in Phase 3 (shared with courage).
+RegisterCommand('sovcare', function()
+    local c = current
+    if not c then Bridge.notify('No care data — bring your horse out.'); return end
+    print(('^2[sov_care]^7 hunger=%s thirst=%s dirt=%s golden=%s')
+        :format(tostring(c.hunger), tostring(c.thirst), tostring(c.dirt), tostring(c.golden)))
+    Bridge.notifyCard(c.golden and 'complete' or 'info', 'Your Horse',
+        ('Hunger %s%% · Thirst %s%% · Dirt %s%%%s')
+        :format(tostring(c.hunger), tostring(c.thirst), tostring(c.dirt),
+                c.golden and ' · GOLDEN' or ''))
+end, false)
