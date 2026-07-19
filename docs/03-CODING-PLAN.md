@@ -77,7 +77,7 @@ Extend the baseline `stables` table rather than fight it; add columns/tables for
 ## Phase 0 — Foundation *(no gameplay yet; everything rests on this)*
 Resource skeleton, `fxmanifest`, `bridge.lua` (wired to vorp_core + vorp_inventory + sovereign_notify + sovereign_menus), `registry.lua` lifecycle bus, config loader + validator (K6, K7), `db.lua` + `install.sql`, custom NUI shell + branding baseline (L1), empty public API stubs (K5). **Exit test:** resource starts clean, `/stables_diag` prints loaded config + dependency health, NUI shell opens/closes with focus handling.
 
-## Phase 1 — Core Parity MVP *(matches vorp_stables)*
+## Phase 1 — Core Parity MVP *(matches vorp_stables)* — ✅ **CLOSED 2026-07-15** *(owner decision; carried caveat: two-player transfer VII–VIII built, not yet run in a duo session)*
 S1–S5, S6, S7, D1–D4, F1, F5, WG1, WG2, WG6, WG13, I1–I3 (catalog scaffold), J-scaffold (J1/J2/J18), L1–L5/L7/L8 (branded storefront, ambient ped, toggleable blips, preview + orbital camera), M1 (breed catalog scaffold), hard death + respawn cooldown, ride transfer, default ride, name tags. Storefront/preview in custom NUI; confirmations via sovereign_menus; notifications via sovereign_notify. Optional-but-cheap: X1/X2/X9 if approved. **Exit test:** buy → store → summon → follow → equip tack → transfer a horse and a wagon in the branded UI, fully persisted. *At this point we have already matched vorp_stables.*
 
 ## Phase 2 — Care, Status & Persistence Depth
