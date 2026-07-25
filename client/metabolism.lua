@@ -27,13 +27,30 @@ end
 
 -- Scrub a ped spotless — the full clear-pass. Used for the storefront preview
 -- [L9] and after a grooming brush.
-function Metabolism.forceClean(ped)
-    if not (ped and DoesEntityExist(ped)) then return end
+--
+-- ⚠️ A ONE-SHOT CLEAR DOESN'T STICK. RDR3 re-applies environmental grime over the
+-- next few frames after a horse renders, so a single call cleans it and then it
+-- dirties right back up — which is exactly why the preview still showed dirt
+-- (2.1 ledger S2). coal_stables hit the same thing and solved it by re-running
+-- the clear a handful of times over ~800ms. We do the same.
+local function clearPass(ped)
     Citizen.InvokeNative(0x7A56D66C78D1AAB7, ped, 0.0)   -- SET_PED_DIRT_LEVEL 0
     Citizen.InvokeNative(0x6585D955A68452A5, ped)         -- CLEAR_PED_ENV_DIRT
     Citizen.InvokeNative(0x9C720776DAA43E7E, ped)         -- CLEAR_PED_DAMAGE_DECAL
     Citizen.InvokeNative(0xB63B9178D0F58D82, ped)         -- _CLEAR_PED_TEXTURE
     if ClearPedWetness then ClearPedWetness(ped) end
+end
+
+function Metabolism.forceClean(ped)
+    if not (ped and DoesEntityExist(ped)) then return end
+    clearPass(ped)
+    CreateThread(function()
+        for _ = 1, 8 do
+            Wait(100)
+            if not (ped and DoesEntityExist(ped)) then return end
+            clearPass(ped)
+        end
+    end)
 end
 
 --------------------------------------------------------------------------------
@@ -54,8 +71,11 @@ end
 --------------------------------------------------------------------------------
 -- Called by client/horse.lua when a horse is spawned / dismissed.
 --------------------------------------------------------------------------------
+local activeHorseId = nil
+
 function Metabolism.onHorseOut(ped, horseId, care)
     current = care
+    activeHorseId = horseId
     if care then
         Metabolism.applyDirt(ped, care.dirt)
         applyPenalties(ped, care)
@@ -64,13 +84,55 @@ function Metabolism.onHorseOut(ped, horseId, care)
             Bridge.notify(('Your horse is getting %s.'):format(what))
         end
     end
-    -- Tell the server which horse is out, so a fed item knows its target.
-    if horseId then TriggerServerEvent(Events.SyncCare, horseId) end
+    -- Tell the server which horse is out + whether we're on it, so a used item
+    -- knows its target and can enforce horseback-only tools.
+    if horseId then
+        TriggerServerEvent(Events.SyncCare, horseId, IsPedOnMount(PlayerPedId()))
+    end
 end
 
 function Metabolism.onHorseAway()
-    current = nil
-    TriggerServerEvent(Events.SyncCare, nil)
+    current, activeHorseId = nil, nil
+    TriggerServerEvent(Events.SyncCare, nil, false)
+end
+
+-- Keep the server's idea of "am I mounted" fresh, so horseback-only tools and
+-- the on-foot animation choice are correct without spamming.
+CreateThread(function()
+    local wasMounted = nil
+    while true do
+        Wait(1000)
+        if activeHorseId then
+            local m = IsPedOnMount(PlayerPedId())
+            if m ~= wasMounted then
+                wasMounted = m
+                TriggerServerEvent(Events.SyncCare, activeHorseId, m)
+            end
+        else
+            wasMounted = nil
+        end
+    end
+end)
+
+--------------------------------------------------------------------------------
+-- Care animations  [H3/H5] — the real RDR2 directed interactions, on foot.
+--   Interaction_Brush + p_brushHorse02x  →  grooming
+--   Interaction_Food                     →  feeding
+-- Both are ON-FOOT (TASK_ANIMAL_INTERACTION). Skipped while mounted — RDR3 has
+-- no mounted equivalent — but the care effect still applied server-side.
+--------------------------------------------------------------------------------
+local function playCareAnim(kind)
+    local ped = PlayerPedId()
+    if IsPedOnMount(ped) then return end          -- no directed anim from the saddle
+    local a = Horse and Horse.active and Horse.active()
+    if not (a and a.ent and DoesEntityExist(a.ent)) then return end
+    if kind == 'brush' then
+        Citizen.InvokeNative(0xCD181A959CFDD7F4, ped, a.ent,
+            GetHashKey('Interaction_Brush'), GetHashKey('p_brushHorse02x'), 1)  -- _TASK_ITEM_INTERACTION
+    elseif kind == 'feed' then
+        Citizen.InvokeNative(0xCD181A959CFDD7F4, ped, a.ent,
+            GetHashKey('Interaction_Food'), 0, 1)
+    end
 end
 
 function Metabolism.card() return current end
@@ -101,15 +163,16 @@ end)
 --------------------------------------------------------------------------------
 RegisterNetEvent(Events.CareResult, function(res)
     res = res or {}
-    if res.message then
-        if res.ok then Bridge.notify(res.message) else Bridge.notify(res.message) end
-    end
-    if res.ok and res.card then
-        current = res.card
-        local a = Horse and Horse.active and Horse.active()
-        if a and a.ent and DoesEntityExist(a.ent) then
-            Metabolism.applyDirt(a.ent, res.card.dirt)
-            applyPenalties(a.ent, res.card)
+    if res.message then Bridge.notify(res.message) end
+    if res.ok then
+        if res.animate then playCareAnim(res.animate) end
+        if res.card then
+            current = res.card
+            local a = Horse and Horse.active and Horse.active()
+            if a and a.ent and DoesEntityExist(a.ent) then
+                Metabolism.applyDirt(a.ent, res.card.dirt)
+                applyPenalties(a.ent, res.card)
+            end
         end
     end
 end)

@@ -45,15 +45,15 @@ Config.Metabolism = {
         max            = 100,
         start          = 100,
         drainPerMinute = 0.7,   -- ~2.4 hours from full to empty while out
-        warnBelow      = 35,    -- a Tick warning to the rider
-        criticalBelow  = 15,    -- penalties bite (see `penalties`)
+        warnBelow      = 1,    -- a Tick warning to the rider
+        criticalBelow  = 5,    -- penalties bite (see `penalties`)
     },
     thirst = {
         max            = 100,
         start          = 100,
         drainPerMinute = 1.0,   -- thirst outpaces hunger, as in life
-        warnBelow      = 35,
-        criticalBelow  = 15,
+        warnBelow      = 1,
+        criticalBelow  = 5,
     },
 
     ----------------------------------------------------------------------------
@@ -63,8 +63,8 @@ Config.Metabolism = {
     -- the moment you feed/water it.
     ----------------------------------------------------------------------------
     penalties = {
-        speedMult   = 0.7,
-        staminaMult = 0.6,
+        speedMult   = 0.8,
+        staminaMult = 0.7,
         -- Below this combined (hunger+thirst)/2, the horse may stumble/refuse —
         -- wired in Phase 3 with the tuning surface; noted so the number exists.
         collapseBelow = 3,
@@ -109,23 +109,39 @@ Config.Metabolism = {
 
     ----------------------------------------------------------------------------
     -- FEED / WATER / CLEAN ITEMS  [H3 · H5]. Map an inventory item name to what
-    -- using it does. The item must exist in your vorp_inventory database; these
-    -- names are placeholders — rename them to match your items.
+    -- using it does. The item must exist in your vorp_inventory database.
     --   hunger/thirst — points restored (capped at max)
-    --   dirt          — points of dirt removed (a brush)
+    --   dirt          — points of dirt removed (a brush) [H5]
     --   golden        — if true, this feed also counts toward golden condition
+    --   uses          — DURABILITY. A tool with `uses` isn't consumed each time;
+    --                   it loses one use and only breaks at zero (stored in the
+    --                   item's own metadata, so each brush tracks its own count).
+    --                   Omit for one-shot consumables like feed.
+    --   horsebackOnly — the item can only be used while MOUNTED.
+    -- Animation is chosen automatically: dirt items play the brushing anim, food
+    -- items the feeding anim (both work mounted or on foot unless horsebackOnly).
     ----------------------------------------------------------------------------
     items = {
-        ['horse_feed']    = { label = 'Horse Feed',    hunger = 45 },
-        ['horse_oats']    = { label = 'Oats',          hunger = 70, golden = true },
-        ['horse_apple']   = { label = 'Apple',         hunger = 20, golden = true },
-        ['horse_carrot']  = { label = 'Carrot',        hunger = 20, thirst = 10 },
-        ['water_canteen'] = { label = 'Canteen',       thirst = 60 },
-        ['horse_brush']   = { label = 'Grooming Brush', dirt = 100 },   -- a full brush-down
+        ['horsemeal']    = { label = 'Horse Meal',    hunger = 45 },
+        ['horse_oats']   = { label = 'Oats',          hunger = 70, golden = false },
+        ['apple']        = { label = 'Apple',         hunger = 20, golden = false },
+        ['wild_carrot']  = { label = 'Wild Carrot',   hunger = 20, thirst = 10 },
+        -- The grooming brush: the ONLY thing that cleans a horse [H5]. A TOOL —
+        -- 20 uses before it wears out.
+        --
+        -- ⚠️ You asked for the brush to be horseback-only. The REAL brushing
+        -- animation (Interaction_Brush, verified in the game files) is an ON-FOOT
+        -- directed interaction — there is no proper mounted brush animation. So
+        -- to keep the "appropriate animation" you also asked for, the brush is an
+        -- on-foot action near your horse. If you'd rather force horseback and
+        -- accept NO animation, set `horsebackOnly = true` here.
+        ['horsebrush']   = { label = 'Grooming Brush', dirt = 100, uses = 20 },
     },
 
-    -- If true, feeding/cleaning requires the horse to be OUT and near you. If
-    -- false, you can tend a stabled horse from the menu too.
+    -- Default durability if an item has `uses = true` but no number.
+    defaultUses = 20,
+
+    -- If true, feeding/cleaning requires the horse to be OUT and near you.
     requireHorsePresent = true,
     interactDistance    = 4.0,
 }

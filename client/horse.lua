@@ -270,11 +270,41 @@ CreateThread(function()
     end
 end)
 
+--------------------------------------------------------------------------------
+-- FLEE  [D13] — send the horse home
+--------------------------------------------------------------------------------
+-- The owner reported "the flee option in the horse menu does not work." We build
+-- no horse menu, so that's RDR2's OWN Flee command — INPUT_HORSE_COMMAND_FLEE
+-- (F, in the HorseCommands / lock-on context: look at the horse, focus, F). We
+-- hook the control and make it dismiss the horse home — the same
+-- walk-off-then-despawn as /sovdismiss. (PHASE1_SPIKE_FINDINGS flagged this
+-- control as "exactly D13".)
+--
+-- NOTE: we do NOT force the control context — doing so disables most other
+-- inputs. So F registers here only when the game is already in the horse-command
+-- context (aiming at / locked onto the horse), which is the intended flow. The
+-- /sovflee command below is the guaranteed path.
+local FLEE_CTRL = 0x4216AF06   -- INPUT_HORSE_COMMAND_FLEE
+
+CreateThread(function()
+    while true do
+        if active and DoesEntityExist(active.ent) then
+            if IsControlJustPressed(0, FLEE_CTRL) then
+                Horse.dismiss()   -- walks off, then despawns home
+            end
+            Wait(0)
+        else
+            Wait(400)   -- no horse out — idle cheaply
+        end
+    end
+end)
+
 -- Commands remain as a fallback / for testing. No RegisterKeyMapping: its
 -- defaults only bind after a full CLIENT restart, and E is the mount key.
 RegisterCommand('sovwhistle', function() Horse.longWhistle() end, false)
 RegisterCommand('sovfollow', function() Horse.shortWhistle() end, false)
 RegisterCommand('sovdismiss', function() Horse.dismiss() end, false)
+RegisterCommand('sovflee', function() Horse.dismiss() end, false)
 
 AddEventHandler('onResourceStop', function(res)
     if res == GetCurrentResourceName() then Horse.despawn(true) end

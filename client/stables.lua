@@ -70,6 +70,8 @@ local function spawnHorseAt(model, pos, noSnap)
     FreezeEntityPosition(horse, true)
     SetBlockingOfNonTemporaryEvents(horse, true)
     SetModelAsNoLongerNeeded(hash)
+    -- The stablehand's horse is part of the showroom too — keep it spotless [L9].
+    if Metabolism and Metabolism.forceClean then pcall(Metabolism.forceClean, horse) end
     return horse
 end
 

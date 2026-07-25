@@ -176,6 +176,15 @@ end
 --   callback fires only if we say so — vorp calls the callback, we decide.
 --------------------------------------------------------------------------------
 local pendingTarget = {}   -- [src] = horseId the client last had out
+local pendingMounted = {}  -- [src] = true if the client is on the horse right now
+
+-- Which animation should using this item play? Inferred from its effect so the
+-- config stays simple: a brush (dirt) grooms; food/water feeds.
+local function animFor(def)
+    if def.dirt then return 'brush' end
+    if def.hunger or def.thirst then return 'feed' end
+    return nil
+end
 
 RegisterNetEvent(Events.RequestCare, function(horseId, itemName)
     -- Path for a menu-driven feed (no usable item): validate and apply directly.
@@ -198,7 +207,8 @@ RegisterNetEvent(Events.RequestCare, function(horseId, itemName)
             -- refund the item — we took it but couldn't use it
             Util.warn(('care refund: %s to char %s (%s)'):format(itemName, charid, msg))
         end
-        TriggerClientEvent(Events.CareResult, src, { ok = ok, message = msg, horseId = horseId, card = card })
+        TriggerClientEvent(Events.CareResult, src,
+            { ok = ok, message = msg, horseId = horseId, card = card, animate = ok and animFor(def) or nil })
     end)
 end)
 
@@ -235,21 +245,57 @@ AddEventHandler('onResourceStart', function(res)
                 Bridge.notify(src, 'Bring the horse out first.')
                 return
             end
+            -- Horseback-only tools (the brush) can only be used from the saddle.
+            if def.horsebackOnly and not pendingMounted[src] then
+                Bridge.notify(src, ('You must be on the horse to use the %s.'):format(def.label or itemName))
+                return
+            end
+
             CreateThread(function()
-                if not Bridge.takeItem(src, itemName, 1) then
-                    Bridge.notify(src, ('You have no %s.'):format(def.label or itemName)); return
+                -- DURABILITY. A tool with `uses` isn't consumed each time — it
+                -- loses one use, tracked in ITS OWN metadata, and only breaks at
+                -- zero. Feed has no `uses`, so it's a plain one-shot consume.
+                if def.uses then
+                    local item = data.item or {}
+                    local meta = item.metadata or {}
+                    local left = tonumber(meta.uses)
+                    if left == nil then
+                        left = (def.uses == true) and (mcfg().defaultUses or 20) or def.uses
+                    end
+                    left = left - 1
+                    local ok, msg, card = Metabolism.applyItem(charid, horseId, def)
+                    if not ok then Bridge.notify(src, msg or 'Nothing to do.'); return end
+                    if left <= 0 then
+                        Bridge.removeItemById(src, item.id)
+                        Bridge.notify(src, ('Your %s wore out.'):format(def.label or itemName))
+                    else
+                        meta.uses = left
+                        meta.description = ('%d uses left'):format(left)
+                        Bridge.setItemMetadata(src, item.id, meta)
+                    end
+                    TriggerClientEvent(Events.CareResult, src,
+                        { ok = true, message = msg, horseId = horseId, card = card, animate = animFor(def) })
+                else
+                    if not Bridge.takeItem(src, itemName, 1) then
+                        Bridge.notify(src, ('You have no %s.'):format(def.label or itemName)); return
+                    end
+                    local ok, msg, card = Metabolism.applyItem(charid, horseId, def)
+                    TriggerClientEvent(Events.CareResult, src,
+                        { ok = ok, message = msg, horseId = horseId, card = card, animate = animFor(def) })
                 end
-                local ok, msg, card = Metabolism.applyItem(charid, horseId, def)
-                TriggerClientEvent(Events.CareResult, src, { ok = ok, message = msg, horseId = horseId, card = card })
             end)
         end)
     end
     Util.log('metabolism: usable feed/clean items registered')
 end)
 
--- The client tells us which horse it has out, so a used item knows its target.
-RegisterNetEvent(Events.SyncCare, function(horseId)
-    pendingTarget[source] = horseId
+-- The client tells us which horse it has out and whether it's mounted, so a used
+-- item knows its target and can enforce horseback-only tools.
+RegisterNetEvent(Events.SyncCare, function(horseId, mounted)
+    pendingTarget[source]  = horseId
+    pendingMounted[source] = mounted and true or false
 end)
 
-AddEventHandler('playerDropped', function() pendingTarget[source] = nil end)
+AddEventHandler('playerDropped', function()
+    pendingTarget[source], pendingMounted[source] = nil, nil
+end)

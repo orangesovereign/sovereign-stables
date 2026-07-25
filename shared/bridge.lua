@@ -169,4 +169,15 @@ if IS_SERVER then
         pcall(function() exports.vorp_inventory:subItem(src, item, amount) end)
         return true
     end
+
+    -- Remove a specific item INSTANCE by its inventory id (for durable tools that
+    -- track state in metadata — we remove the exact one that wore out).
+    function Bridge.removeItemById(src, id)
+        pcall(function() exports.vorp_inventory:subItemById(src, id) end)
+    end
+
+    -- Write metadata onto a specific item instance (durability counters, etc.).
+    function Bridge.setItemMetadata(src, id, metadata)
+        pcall(function() exports.vorp_inventory:setItemMetadata(src, id, metadata, 1) end)
+    end
 end
