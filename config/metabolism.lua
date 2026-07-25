@@ -127,19 +127,23 @@ Config.Metabolism = {
         ['apple']        = { label = 'Apple',         hunger = 20, golden = false },
         ['wild_carrot']  = { label = 'Wild Carrot',   hunger = 20, thirst = 10 },
         -- The grooming brush: the ONLY thing that cleans a horse [H5]. A TOOL —
-        -- 20 uses before it wears out.
+        -- 20 uses before it wears out — and used FROM THE SADDLE, as you asked.
         --
-        -- ⚠️ You asked for the brush to be horseback-only. The REAL brushing
-        -- animation (Interaction_Brush, verified in the game files) is an ON-FOOT
-        -- directed interaction — there is no proper mounted brush animation. So
-        -- to keep the "appropriate animation" you also asked for, the brush is an
-        -- on-foot action near your horse. If you'd rather force horseback and
-        -- accept NO animation, set `horsebackOnly = true` here.
-        ['horsebrush']   = { label = 'Grooming Brush', dirt = 100, uses = 20 },
+        -- ✅ RDR2 does have a mounted brushing animation after all
+        -- (mech_animal_interaction@horse@mounted@brushing), so horseback-only
+        -- costs us nothing. Set `horsebackOnly = false` to also allow brushing
+        -- on foot, which uses the engine's own walk-up-and-brush interaction.
+        ['horsebrush']   = { label = 'Grooming Brush', dirt = 100, uses = 20, horsebackOnly = true },
     },
 
     -- Default durability if an item has `uses = true` but no number.
     defaultUses = 20,
+
+    -- Play the mounted brushing/feeding animations from the saddle. RDR2 has
+    -- proper mounted clips for both, played as upper-body so the ride isn't
+    -- interrupted. Set false if they ever look wrong in game — the care effect
+    -- still applies either way, you just don't see the flourish.
+    mountedAnimations = true,
 
     -- If true, feeding/cleaning requires the horse to be OUT and near you.
     requireHorsePresent = true,
