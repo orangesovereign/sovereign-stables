@@ -56,6 +56,53 @@ function Validate.run()
         end
     end
 
+    -- METABOLISM: a core nothing can restore is a trap. Thirst drained faster
+    -- than hunger while the only item touching it gave 10 points, so a horse's
+    -- thirst was effectively unrecoverable and the retest couldn't do it. Catch
+    -- that at boot instead of in game.
+    local m = Config.Metabolism
+    if m and m.enabled ~= false then
+        local restores = { hunger = 0, thirst = 0, dirt = 0 }
+        for _, def in pairs(m.items or {}) do
+            for core in pairs(restores) do
+                if type(def[core]) == 'number' and def[core] > 0 then
+                    restores[core] = restores[core] + def[core]
+                end
+            end
+        end
+        if restores.hunger <= 0 then
+            problems[#problems + 1] = 'Metabolism: NO item restores hunger — horses will starve with no way to feed them (config/metabolism.lua `items`)'
+        end
+        if restores.thirst <= 0 then
+            problems[#problems + 1] = 'Metabolism: NO item restores thirst — add a water item (config/metabolism.lua `items`)'
+        end
+        if (m.cleanliness and m.cleanliness.enabled ~= false) and restores.dirt <= 0 then
+            problems[#problems + 1] = 'Metabolism: NO item removes dirt — add a brush (config/metabolism.lua `items`)'
+        end
+        -- Restoring a core is one thing; restoring ENOUGH of it is another. Ask
+        -- how many minutes of drain the best single item actually buys back. A
+        -- horse that needs feeding every few minutes is a chore, not a system.
+        -- (This was live: thirst drains 1.0/min and the only item touching it
+        -- gave 10 — one carrot per 10 minutes, forever.)
+        local MIN_MINUTES = 20
+        local best = { hunger = 0, thirst = 0 }
+        for _, def in pairs(m.items or {}) do
+            for core in pairs(best) do
+                if type(def[core]) == 'number' and def[core] > best[core] then best[core] = def[core] end
+            end
+        end
+        for core, cfg in pairs({ hunger = m.hunger, thirst = m.thirst }) do
+            local rate = cfg and cfg.drainPerMinute or 0
+            if rate > 0 and best[core] > 0 then
+                local minutes = best[core] / rate
+                if minutes < MIN_MINUTES then
+                    problems[#problems + 1] = ('Metabolism: the best %s item restores %d, but %s drains %.1f/min — only %.0f minutes per use. Add a stronger item.'):
+                        format(core, best[core], core, rate, minutes)
+                end
+            end
+        end
+    end
+
     -- stables
     local nStables = 0
     for id, s in pairs(Config.Stables or {}) do

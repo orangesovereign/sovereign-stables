@@ -105,6 +105,29 @@ Config.Metabolism = {
         -- [L9] The storefront/preview horse is ALWAYS shown spotless, whatever
         -- the real horse's state. A showroom model is clean.
         previewAlwaysClean = true,
+
+        ------------------------------------------------------------------------
+        -- MUD & HARD RIDING (owner request 2026-07-25) — a horse ridden through
+        -- water or rain, or galloped hard, gets filthy faster than one walked
+        -- down a dry road.
+        --
+        -- ⚠️ HOW THIS WORKS, HONESTLY: RDR3 gives us no "am I standing in mud"
+        -- native — there's no ground-material or dirt-level READ available, only
+        -- the write. So rather than pretend, we multiply the dirt rate using the
+        -- three things we CAN read: whether the horse is in water, whether it's
+        -- raining, and how fast it's moving. Wet ground plus hooves is mud, and
+        -- that's a fair approximation of it.
+        --
+        -- These MULTIPLY `gainPerMinute` and stack, capped by `maxMultiplier`.
+        -- Set any to 1.0 to switch that source off.
+        mud = {
+            enabled       = true,
+            inWater       = 3.0,   -- fording a river / splashing through shallows
+            whileRaining  = 2.0,   -- rain makes the ground muddy underfoot
+            galloping     = 1.5,   -- hard riding kicks it up
+            gallopSpeed   = 9.0,   -- m/s that counts as a gallop
+            maxMultiplier = 4.0,   -- ceiling when several stack at once
+        },
     },
 
     ----------------------------------------------------------------------------
@@ -126,24 +149,32 @@ Config.Metabolism = {
         ['horse_oats']   = { label = 'Oats',          hunger = 70, golden = false },
         ['apple']        = { label = 'Apple',         hunger = 20, golden = false },
         ['wild_carrot']  = { label = 'Wild Carrot',   hunger = 20, thirst = 10 },
+
+        -- ⚠️ THIRST HAS ALMOST NOTHING TO RESTORE IT — add your water item here.
+        -- Thirst drains FASTER than hunger (1.0/min vs 0.7), but the only thing
+        -- above that touches it is the carrot, at 10 points. So a horse's thirst
+        -- is effectively unrecoverable, which is why the retest couldn't do it.
+        -- Uncomment/rename these to water items that exist in YOUR inventory:
+        -- ['water_canteen'] = { label = 'Canteen',      thirst = 60 },
+        -- ['water_bucket']  = { label = 'Water Bucket', thirst = 100, uses = 10 },
+        -- (/stables_diag warns at boot if a core has no item that restores it.)
+
         -- The grooming brush: the ONLY thing that cleans a horse [H5]. A TOOL —
-        -- 20 uses before it wears out — and used FROM THE SADDLE, as you asked.
-        --
-        -- ✅ RDR2 does have a mounted brushing animation after all
-        -- (mech_animal_interaction@horse@mounted@brushing), so horseback-only
-        -- costs us nothing. Set `horsebackOnly = false` to also allow brushing
-        -- on foot, which uses the engine's own walk-up-and-brush interaction.
-        ['horsebrush']   = { label = 'Grooming Brush', dirt = 100, uses = 20, horsebackOnly = true },
+        -- 20 uses before it wears out.
+        -- Usable BOTH from the saddle and stood beside the horse (owner ruling
+        -- 2026-07-25) — the game's interaction system picks the right animation
+        -- for wherever you are. Set `horsebackOnly = true` to require the saddle.
+        ['horsebrush']   = { label = 'Grooming Brush', dirt = 100, uses = 20 },
     },
 
     -- Default durability if an item has `uses = true` but no number.
     defaultUses = 20,
 
-    -- Play the mounted brushing/feeding animations from the saddle. RDR2 has
-    -- proper mounted clips for both, played as upper-body so the ride isn't
-    -- interrupted. Set false if they ever look wrong in game — the care effect
-    -- still applies either way, you just don't see the flourish.
-    mountedAnimations = true,
+    -- Play the brushing/feeding animations. We hand the job to the GAME'S own
+    -- interaction system, which picks the right variant for where you are —
+    -- mounted, or stood at the horse's left or right. Set false to skip the
+    -- animation entirely; the care effect still applies either way.
+    careAnimations = true,
 
     -- If true, feeding/cleaning requires the horse to be OUT and near you.
     requireHorsePresent = true,

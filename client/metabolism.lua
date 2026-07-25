@@ -138,63 +138,40 @@ end)
 --              nothing to walk to. We play the mounted clip directly as an
 --              UPPER-BODY animation so the ride isn't interrupted.
 --
--- ⚠️ PHASE1_SPIKE_FINDINGS gotcha #4 warns that `mech_*` clips are synced
--- interaction anims that contort a ped when played raw — that bit us on the
--- grooming stablehand. It applied to the ON-FOOT paired clips, where the ped has
--- to be placed relative to the horse. The mounted clips don't have that problem
--- (the rider is already in place), and we mask to the upper body. Even so, this
--- is the exact class of thing that has misbehaved before: NEEDS IN-GAME
--- CONFIRMATION, and `Config.Metabolism.mountedAnimations = false` turns it off
--- without losing the care effect.
-local MOUNTED_ANIMS = {
-    brush = { dict = 'mech_animal_interaction@horse@mounted@brushing', clip = 'brushing_horse' },
-    feed  = { dict = 'mech_animal_interaction@horse@mounted@feeding',  clip = 'feeding_player',
-              horseClip = 'feeding_horse' },   -- the horse's half of the paired anim
+-- ❌ WHAT WENT WRONG IN ROUND 2, and the lesson (2026-07-25).
+-- I found the mounted dictionaries and played them BY HAND with TaskPlayAnim.
+-- The rider "contorts completely 90 degrees to the side and into the horse" —
+-- which is PHASE1_SPIKE_FINDINGS gotcha #4, word for word: `mech_*` clips are
+-- SYNCED-INTERACTION anims and contort a ped when played raw. It wrecked the
+-- grooming stablehand in 1.1, and I did it again here. I even wrote the warning
+-- in this file and then shipped the thing it warns about.
+--
+-- ✅ THE POINT I MISSED: the left@ / right@ / mounted@ family exists *because*
+-- TASK_ANIMAL_INTERACTION picks between them. It's the engine's own interaction
+-- system — you tell it "brush this horse" and IT decides which variant fits your
+-- position, plays both halves in sync, and handles the prop. That's exactly why
+-- the on-foot path "works perfect" and my hand-played mounted path didn't.
+--
+-- So: ONE call, both cases. Never TaskPlayAnim for these. If the engine has no
+-- mounted variant for something, it plays nothing — which is a clean no-op, not
+-- a broken pose.
+local INTERACTIONS = {
+    brush = { hash = 'Interaction_Brush', prop = 'p_brushHorse02x' },
+    feed  = { hash = 'Interaction_Food',  prop = nil },
 }
-local UPPER_BODY_FLAG = 48   -- 16 (upper body) + 32 (keep player control)
-
-local function loadDict(dict, timeoutMs)
-    if HasAnimDictLoaded(dict) then return true end
-    RequestAnimDict(dict)
-    local t = GetGameTimer()
-    while not HasAnimDictLoaded(dict) and (GetGameTimer() - t) < (timeoutMs or 2000) do Wait(10) end
-    return HasAnimDictLoaded(dict)
-end
 
 local function playCareAnim(kind)
+    if (mcfg().careAnimations == false) then return end
     local ped = PlayerPedId()
     local a = Horse and Horse.active and Horse.active()
     if not (a and a.ent and DoesEntityExist(a.ent)) then return end
 
-    if IsPedOnMount(ped) then
-        if (mcfg().mountedAnimations == false) then return end
-        local m = MOUNTED_ANIMS[kind]; if not m then return end
-        CreateThread(function()
-            if not loadDict(m.dict) then
-                Util.warn(('mounted care anim dict failed to load: %s'):format(m.dict))
-                return
-            end
-            -- Upper body only: the horse keeps walking, the rider leans over.
-            TaskPlayAnim(ped, m.dict, m.clip, 4.0, -4.0, -1, UPPER_BODY_FLAG, 0.0, false, false, false)
-            -- Feeding is a PAIRED animation — the horse has its own half.
-            if m.horseClip and DoesEntityExist(a.ent) then
-                TaskPlayAnim(a.ent, m.dict, m.horseClip, 4.0, -4.0, -1, 0, 0.0, false, false, false)
-            end
-            Wait(4000)
-            if DoesEntityExist(ped) then ClearPedSecondaryTask(ped) end
-            RemoveAnimDict(m.dict)
-        end)
-        return
-    end
-
-    -- On foot: let the engine do the positioning + prop.
-    if kind == 'brush' then
-        Citizen.InvokeNative(0xCD181A959CFDD7F4, ped, a.ent,
-            GetHashKey('Interaction_Brush'), GetHashKey('p_brushHorse02x'), 1)  -- TASK_ANIMAL_INTERACTION
-    elseif kind == 'feed' then
-        Citizen.InvokeNative(0xCD181A959CFDD7F4, ped, a.ent,
-            GetHashKey('Interaction_Food'), 0, 1)
-    end
+    local i = INTERACTIONS[kind]; if not i then return end
+    Citizen.InvokeNative(0xCD181A959CFDD7F4,             -- TASK_ANIMAL_INTERACTION
+        ped, a.ent,
+        GetHashKey(i.hash),
+        i.prop and GetHashKey(i.prop) or 0,
+        1)                                                -- 1 = skip the idle intro
 end
 
 function Metabolism.card() return current end
@@ -204,6 +181,40 @@ function Metabolism.card() return current end
 -- The server clamps and only ever accepts a DIRTIER value, so this can't be used
 -- to clean a horse for free.
 --------------------------------------------------------------------------------
+-- How much faster is this horse getting dirty right now? [mud]
+-- RDR3 exposes no ground-material or dirt READ, so we infer muddiness from the
+-- three signals we can actually get: water, weather, speed.
+local RAINY = { RAIN = true, DRIZZLE = true, SHOWER = true, THUNDER = true,
+                THUNDERSTORM = true, SLEET = true, SNOW = true }
+
+local function dirtMultiplier(ent)
+    local mud = (mcfg().cleanliness or {}).mud
+    if not (mud and mud.enabled ~= false) then return 1.0 end
+    local mult = 1.0
+
+    -- In water: fording a river or splashing through shallows.
+    local okWater, inWater = pcall(function() return IsEntityInWater(ent) end)
+    if okWater and inWater then mult = mult * (mud.inWater or 1.0) end
+
+    -- Raining: wet ground underfoot.
+    local okW, weather = pcall(function()
+        return Citizen.InvokeNative(0x564B884A05EC45A3, Citizen.ResultAsString())  -- GetPrevWeatherTypeHashName
+    end)
+    if okW and type(weather) == 'string' and RAINY[weather:upper()] then
+        mult = mult * (mud.whileRaining or 1.0)
+    end
+
+    -- Galloping: hooves kicking it up.
+    local okS, spd = pcall(function()
+        return Citizen.InvokeNative(0xFB6BA510A533DF81, ent, Citizen.ResultAsFloat())  -- GetEntitySpeed
+    end)
+    if okS and (spd or 0.0) >= (mud.gallopSpeed or 9.0) then
+        mult = mult * (mud.galloping or 1.0)
+    end
+
+    return math.min(mult, mud.maxMultiplier or 4.0)
+end
+
 CreateThread(function()
     while true do
         Wait(30000)   -- every 30s; dirt is slow, this is plenty
@@ -211,8 +222,8 @@ CreateThread(function()
         if c.enabled ~= false and current and Horse and Horse.active then
             local a = Horse.active()
             if a and a.ent and DoesEntityExist(a.ent) and c.cleanliness and c.cleanliness.enabled ~= false then
-                current.dirt = math.min(c.cleanliness.max or 100,
-                    (current.dirt or 0) + (c.cleanliness.gainPerMinute or 0) * 0.5)  -- 30s = 0.5 min
+                local gain = (c.cleanliness.gainPerMinute or 0) * 0.5 * dirtMultiplier(a.ent)  -- 30s = 0.5 min
+                current.dirt = math.min(c.cleanliness.max or 100, (current.dirt or 0) + gain)
                 Metabolism.applyDirt(a.ent, current.dirt)
                 TriggerServerEvent(Events.ReportDirt, a.id, math.floor(current.dirt + 0.5))
             end
