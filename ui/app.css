@@ -105,6 +105,23 @@ html, body { width: 100%; height: 100%; background: transparent; overflow: hidde
   color: var(--parch-dim); background: rgba(0,0,0,.2); border: 1px solid var(--brass-dim); padding: 9px 6px; cursor: pointer; }
 .tabs button:hover { color: var(--parch); }
 .tabs button.is-active { color: var(--parch); background: linear-gradient(180deg, var(--oxblood), var(--oxblood-2)); border-color: var(--oxblood-2); }
+/* ---------- breed filter [N1] ---------- */
+.filter { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.filter.hidden { display: none; }
+.filter__l { font-family: var(--f-disp); font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--brass); flex: 0 0 auto; }
+.filter__s { flex: 1; min-width: 0; font-family: var(--f-body); font-size: 12.5px;
+  color: var(--parch); background: rgba(0,0,0,.28); border: 1px solid var(--brass-dim);
+  padding: 7px 9px; cursor: pointer; appearance: none; -webkit-appearance: none;
+  /* brass chevron, drawn rather than an image so nothing loads from disk */
+  background-image: linear-gradient(45deg, transparent 50%, var(--brass) 50%),
+                    linear-gradient(135deg, var(--brass) 50%, transparent 50%);
+  background-position: calc(100% - 15px) 50%, calc(100% - 10px) 50%;
+  background-size: 5px 5px, 5px 5px; background-repeat: no-repeat; padding-right: 28px; }
+.filter__s:hover, .filter__s:focus { color: var(--parch); border-color: var(--brass); outline: none; }
+/* the dropdown list itself is OS-drawn — keep it dark so it isn't a white flash */
+.filter__s option { background: var(--panel); color: var(--parch); }
+
 .list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 4px; }
 .row { display: flex; align-items: center; gap: 12px; text-align: left; width: 100%;
   background: rgba(0,0,0,.18); border: 1px solid var(--line); border-radius: 4px; padding: 10px 12px; cursor: pointer; }

@@ -51,6 +51,12 @@
                         <button data-tab="specialty" class="is-active">Specialty Horses</button>
                         <button data-tab="stock">Stock Horses</button>
                     </div>
+                    <!-- Breed filter [N1] — 100+ coats across 27 breeds is a lot
+                         of scrolling; this narrows the list to one breed. -->
+                    <div class="filter" id="breedFilterWrap">
+                        <label class="filter__l" for="breedFilter">Breed</label>
+                        <select class="filter__s" id="breedFilter"></select>
+                    </div>
                     <div class="list" id="list"></div>
                     <div class="cat__foot" id="catFoot"></div>
                 </section>

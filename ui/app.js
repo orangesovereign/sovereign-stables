@@ -12,6 +12,8 @@
 
     var rows = [];          // full horse catalog
     var tab = 'specialty';  // active tab
+    var ALL_BREEDS = '__all__';
+    var breed = ALL_BREEDS; // active breed filter [N1]
     var selected = null;    // selected model id
     var owned = [];         // horses this character owns
     var ownedCap = 0;       // how many they may keep
@@ -63,7 +65,48 @@
     function el(tag, cls, html) { var e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
 
     /* ---------- catalog list ---------- */
-    function visibleRows() { return rows.filter(function (r) { return (r.tier || 'stock') === tab; }); }
+    // Rows on the active tab, before the breed filter. The filter's options are
+    // built from THIS, so it only ever offers breeds you could actually reach.
+    function tabRows() { return rows.filter(function (r) { return (r.tier || 'stock') === tab; }); }
+
+    function visibleRows() {
+        var vis = tabRows();
+        if (breed !== ALL_BREEDS) {
+            vis = vis.filter(function (r) { return (r.breed || '') === breed; });
+        }
+        return vis;
+    }
+
+    // Rebuild the breed dropdown for the current tab. Counts are included
+    // because "Mustang (8)" tells you whether it's worth opening.
+    function renderBreedFilter() {
+        var sel = document.getElementById('breedFilter');
+        var wrap = document.getElementById('breedFilterWrap');
+        if (!sel || !wrap) return;
+
+        var counts = {};
+        tabRows().forEach(function (r) {
+            var b = r.breed || 'Unknown';
+            counts[b] = (counts[b] || 0) + 1;
+        });
+        var names = Object.keys(counts).sort();
+
+        // One breed (or none) means the filter can't narrow anything — hide it
+        // rather than show a control that does nothing.
+        wrap.classList.toggle('hidden', names.length < 2);
+
+        // If the chosen breed isn't on this tab, fall back to All rather than
+        // showing an empty list and leaving the player wondering why.
+        if (breed !== ALL_BREEDS && !counts[breed]) breed = ALL_BREEDS;
+
+        var total = tabRows().length;
+        var html = '<option value="' + ALL_BREEDS + '">All breeds (' + total + ')</option>';
+        names.forEach(function (b) {
+            html += '<option value="' + b.replace(/"/g, '&quot;') + '">' + b + ' (' + counts[b] + ')</option>';
+        });
+        sel.innerHTML = html;
+        sel.value = breed;
+    }
 
     /* ---------- owned horses ---------- */
     function renderOwnedList(list) {
@@ -195,6 +238,10 @@
     function applyView() {
         var copy = VIEW_COPY[view] || VIEW_COPY.shop;
         document.querySelector('.tabs').style.display = (view === 'shop') ? '' : 'none';
+        // The breed filter belongs to the horse shop only — My Horses, Wagons and
+        // the tack room have their own lists and it would filter nothing there.
+        var bf = document.getElementById('breedFilterWrap');
+        if (bf) bf.classList.toggle('hidden', view !== 'shop');
         document.querySelector('.cat__head').textContent = copy.head;
         document.querySelector('.cat__sub').textContent = copy.sub;
         document.querySelectorAll('.nav__item[data-view]').forEach(function (b) {
@@ -220,7 +267,20 @@
         if (view === 'owned')  { renderOwnedList(list); return; }
         if (view === 'wagons') { renderWagonList(list); return; }
         if (view === 'tack')   { renderTackList(list); return; }
+
+        // Keep the tab highlight correct BEFORE any early return below, or an
+        // empty breed leaves the tabs showing the wrong one as active.
+        document.querySelectorAll('.tabs button').forEach(function (b) {
+            b.classList.toggle('is-active', b.dataset.tab === tab);
+        });
+
+        renderBreedFilter();
         var vis = visibleRows();
+        if (!vis.length) {
+            list.innerHTML = '<div class="empty">No horses of that breed here.</div>';
+            document.getElementById('catFoot').textContent = '0 horses';
+            return;
+        }
         vis.forEach(function (r) {
             var row = el('button', 'row' + (r.model === selected ? ' is-active' : '') + (r.locked ? ' is-locked' : ''));
             row.dataset.model = r.model;
@@ -234,9 +294,6 @@
             list.appendChild(row);
         });
         document.getElementById('catFoot').textContent = vis.length + (vis.length === 1 ? ' horse' : ' horses');
-        document.querySelectorAll('.tabs button').forEach(function (b) {
-            b.classList.toggle('is-active', b.dataset.tab === tab);
-        });
     }
 
     function choose(model) {
@@ -417,6 +474,7 @@
     /* ---------- open / close ---------- */
     function open(msg) {
         view = 'shop';
+        breed = ALL_BREEDS;   // reset the filter per visit, not per session
         renderHeader(msg.header || {});
         rows = (msg.catalog && msg.catalog.rows) || [];
         // default to whichever tab has stock; prefer specialty
@@ -494,12 +552,27 @@
     document.querySelectorAll('.nav__item[data-view]').forEach(function (b) {
         b.addEventListener('click', function () { view = b.dataset.view; applyView(); });
     });
+    // Breed filter [N1]. Picking a breed narrows the list and jumps to its first
+    // horse, so the preview stage isn't left showing something you filtered out.
+    var breedSel = document.getElementById('breedFilter');
+    if (breedSel) {
+        breedSel.addEventListener('change', function () {
+            breed = breedSel.value;
+            var vis = visibleRows();
+            if (vis.length && !vis.some(function (r) { return r.model === selected; })) choose(vis[0].model);
+            else renderList();
+        });
+    }
+
     document.getElementById('prev').addEventListener('click', function () { cycle(-1); });
     document.getElementById('next').addEventListener('click', function () { cycle(1); });
     document.getElementById('esc').addEventListener('click', requestClose);
     document.querySelectorAll('.tabs button').forEach(function (b) {
         b.addEventListener('click', function () {
             tab = b.dataset.tab;
+            // Rebuild the filter for the new tab first — it may drop a breed the
+            // other tab doesn't carry, and visibleRows() below depends on that.
+            renderBreedFilter();
             var vis = visibleRows();
             if (vis.length && !vis.some(function (r) { return r.model === selected; })) choose(vis[0].model);
             else renderList();
