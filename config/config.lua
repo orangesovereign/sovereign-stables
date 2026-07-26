@@ -401,18 +401,21 @@ Config.Integrations = {
 -- UI
 --------------------------------------------------------------------------------
 Config.UI = {
-    -- THE HORSE INFO PANEL. Stand near your horse (or ride it), hold
-    -- RIGHT-CLICK, and its condition is drawn at the side of the screen:
-    -- Hunger, Thirst, Stamina, Health and coat condition.
-    -- Deliberately plain on-screen text rather than the branded NUI — it's a
-    -- glance while riding, and opening the NUI would take mouse focus.
-    -- Courage joins this panel in Phase 3.
-    horseInfo = {
-        enabled  = true,
-        distance = 6.0,     -- how near you must be on foot (riding always counts)
-        x        = 0.015,   -- screen position, 0-1 from the left
-        y        = 0.42,    -- 0-1 from the top
-        width    = 0.105,   -- bar width
+    -- THE HORSE INTERACTION MENU. Walk up to your horse and the game shows its
+    -- name with its condition beside it — Hunger, Thirst, Stamina — plus what
+    -- you can do: lead it, and water it when there's water to hand.
+    --
+    -- ⚠️ Replaced the old `horseInfo` screen-corner panel, which drew its own
+    -- 2D text and never appeared at all (2.1 R3, I1-I7). This uses RDR2's own
+    -- prompt group instead, which renders beside the horse — which is both what
+    -- the owner asked for ("next to the horse's name") and the thing that
+    -- actually works. No x/y/width here on purpose: the game positions it.
+    --
+    -- Courage joins this readout in Phase 3 — one line in conditionLabel().
+    horseMenu = {
+        enabled      = true,
+        distance     = 5.0,   -- how near you must be on foot (riding always counts)
+        drinkSeconds = 8,     -- how long the drinking animation runs
     },
 
     -- 'circular' or 'arrows' — how horse components are cycled in the customizer. [S15]

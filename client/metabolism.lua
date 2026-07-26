@@ -302,7 +302,7 @@ end
 -- No prompt, no item: stand the horse at a river or a trough and its thirst
 -- fills. The server decides how much from elapsed time; this only reports that
 -- the horse IS at water.
-local function atWater(ent)
+function Metabolism.atWater(ent)
     local d = mcfg().drinking or {}
     if d.enabled == false then return false end
     if speedOf(ent) > (d.maxSpeed or 1.5) then return false end   -- must be still

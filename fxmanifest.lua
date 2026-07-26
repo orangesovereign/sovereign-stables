@@ -34,7 +34,7 @@ client_scripts {
     'client/components.lua',   -- tack apply pipeline; horse.lua + preview.lua use it
     'client/metabolism.lua',   -- care state; horse.lua + preview.lua call into it
     'client/horse.lua',
-    'client/horseinfo.lua',    -- right-click condition panel; reads Horse + Metabolism
+    'client/horsemenu.lua',    -- horse interaction menu: name + condition, lead, drink
     'client/wagon.lua',
     'client/transfer.lua',
     'client/storefront.lua',
