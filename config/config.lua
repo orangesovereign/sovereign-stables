@@ -381,6 +381,20 @@ Config.Integrations = {
 -- UI
 --------------------------------------------------------------------------------
 Config.UI = {
+    -- THE HORSE INFO PANEL. Stand near your horse (or ride it), hold
+    -- RIGHT-CLICK, and its condition is drawn at the side of the screen:
+    -- Hunger, Thirst, Stamina, Health and coat condition.
+    -- Deliberately plain on-screen text rather than the branded NUI — it's a
+    -- glance while riding, and opening the NUI would take mouse focus.
+    -- Courage joins this panel in Phase 3.
+    horseInfo = {
+        enabled  = true,
+        distance = 6.0,     -- how near you must be on foot (riding always counts)
+        x        = 0.015,   -- screen position, 0-1 from the left
+        y        = 0.42,    -- 0-1 from the top
+        width    = 0.105,   -- bar width
+    },
+
     -- 'circular' or 'arrows' — how horse components are cycled in the customizer. [S15]
     componentControl = 'circular',
     showNameTags     = false,   -- floating names above horses [S17-baseline]
