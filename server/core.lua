@@ -99,6 +99,7 @@ RegisterNetEvent(Events.RequestHeader, function(_stableId)
     TriggerClientEvent(Events.HeaderData, src, {
         charName = name,
         job = job or '',
+        grade = grade or 0,     -- so the client can grey out trainer-brokered stock
         permTier = permTier,
         cash = cash or 0,
         gold = gold or 0,

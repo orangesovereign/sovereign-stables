@@ -47,6 +47,7 @@ title = L.eval("function(j,g) return Perms.title(j,g) end")
 tints = L.eval("function(j,g) return Perms.tintsFor(j,g) end")
 may_tint = L.eval("function(j,g,t) return Perms.mayUseTint(j,g,t) end")
 slots = L.eval("function(j,g) return Perms.tintSlotsFor(j,g) end")
+brokered_tiers = L.eval("function() return Config.Economy.trainerBrokeredTiers or {} end")
 
 T = "horsetrainer"
 CHECKS = [
@@ -109,6 +110,23 @@ CHECKS = [
     ("an off-list tint is REFUSED",          may_tint(None, None, 200) is False),
     ("trainer may use that same tint",       may_tint(T, 0, 200) is True),
     ("public gets 1 tint slot, trainer 3",   slots(None, None) == 1 and slots(T, 0) == 3),
+
+    # ── Training is TRAINER-EXCLUSIVE (07-HORSE-TRAINER) ───────────────────
+    # JobDefaults.training sat as `true` until 2026-07-26, which would have given
+    # every player on the server training rights the moment Phase 3 shipped.
+    ("a plain player CANNOT train",          can(None, None, "training") is False),
+    ("only trainer grades can train",        can(T, 0, "training") and can(T, 1, "training")
+                                             and can(T, 3, "training") and not can(T, 2, "training")),
+
+    # ── Trainer-brokered specialty stock (ruled 2026-07-26) ────────────────
+    # "There shouldn't be a prompt to purchase Specialty Horses. It should have a
+    #  card that says to contact the stable's trainer."
+    ("specialty is a brokered tier",         "specialty" in dict(brokered_tiers())),
+    ("plain player CANNOT broker",           can(None, None, "brokerSpecialty") is False),
+    ("Horse Trainer(0) CAN broker",          can(T, 0, "brokerSpecialty") is True),
+    ("Senior(1) CAN broker",                 can(T, 1, "brokerSpecialty") is True),
+    ("Wagon Maker(2) CANNOT broker",         can(T, 2, "brokerSpecialty") is False),
+    ("Stable Owner(3) CAN broker",           can(T, 3, "brokerSpecialty") is True),
 
     # ── Caps: Config.Caps is a BASELINE, a job REPLACES it ─────────────────
     ("trainer's ruled higher cap = 8",       horses(T, 0) == 8),

@@ -20,7 +20,15 @@ Config.JobDefaults = {
     maxBreedings       = 1,      -- concurrent active breedings [J3]
     xpModifier         = 1.0,    -- multiplies horse XP gain [J4]
 
-    training           = true,   -- general horse training [J5]
+    -- ⚠️ FALSE, and that matters. Ruling: "Training is TRAINER-EXCLUSIVE — no
+    -- player can train their own horse" (07-HORSE-TRAINER). This sat as `true`
+    -- until 2026-07-26, which would have handed every player on the server
+    -- training rights the moment Phase 3 shipped. Nothing read it before now.
+    training           = false,  -- general horse training [J5] — trainers only
+    -- Buying trainer-brokered stock (specialty racers) to sell on. A separate
+    -- permission from `training` on purpose: brokering is commerce, not craft,
+    -- and a future job might do one without the other.
+    brokerSpecialty    = false,
     lunging            = true,   -- [J6]
     obstacleCourses    = true,   -- [J7]
     bonding            = true,   -- [J8]
@@ -87,6 +95,7 @@ Config.Jobs = {
             [0] = {
                 title             = 'Horse Trainer',
                 training          = true,
+                brokerSpecialty   = true,
                 fullCustomization = true,   -- the whole palette; the Horse Maker is not theirs
                 storefronts       = false,
                 wagonCrafting     = false,
@@ -96,6 +105,7 @@ Config.Jobs = {
             [1] = {
                 title             = 'Senior Horse Trainer',
                 training          = true,
+                brokerSpecialty   = true,
                 fullCustomization = true,
                 storefronts       = true,
                 wagonCrafting     = false,
@@ -108,6 +118,7 @@ Config.Jobs = {
                 --  storefronts." — owner, 2026-07-15
                 title             = 'Wagon Maker',
                 training          = false,  -- ← the whole point. Not a trainer.
+                brokerSpecialty   = false,  -- and so no specialty stock either
                 -- No full HORSE customization either: their trade is wagons.
                 -- They still get the public counter like everyone else.
                 fullCustomization = false,
@@ -121,6 +132,7 @@ Config.Jobs = {
                 -- has everything — a policy, not an inheritance rule.
                 title             = 'Stable Owner',
                 training          = true,
+                brokerSpecialty   = true,
                 fullCustomization = true,
                 storefronts       = true,
                 wagonCrafting     = true,

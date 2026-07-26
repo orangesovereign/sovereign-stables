@@ -18,11 +18,29 @@ local current = nil   -- the active horse's live card { hunger, thirst, dirt, go
 --------------------------------------------------------------------------------
 -- Dirt on the ped
 --------------------------------------------------------------------------------
--- 0-100 dirt -> the game's 0.0-1.0 dirt level, applied to a horse ped.
+-- Our 0-100 dirt -> the game's 0.0-1.0 level, WITH A GRACE THRESHOLD.
+--
+-- Owner, 2026-07-26: "I don't think dirty should begin to show until a certain
+-- threshold. As a player if I brush my horse and then ride out of Valentine and
+-- see dirt I would lose it."
+--
+-- Dead right. A freshly brushed horse should LOOK freshly brushed for a good
+-- while. So `visibleAbove` is a grace band: below it the coat renders perfectly
+-- clean, and above it the remaining range is rescaled across the full 0-1 so you
+-- still get the whole span of filth. The stored number keeps ticking up either
+-- way — this is about when it starts to SHOW, not when it starts to count.
+local function dirtToLevel(dirt0to100)
+    local c = (mcfg().cleanliness or {})
+    local maxD  = c.max or 100
+    local grace = c.visibleAbove or 0
+    local d = math.max(0, math.min(maxD, tonumber(dirt0to100) or 0))
+    if d <= grace then return 0.0 end
+    return math.max(0.0, math.min(1.0, (d - grace) / math.max(1, maxD - grace)))
+end
+
 function Metabolism.applyDirt(ped, dirt0to100)
     if not (ped and DoesEntityExist(ped)) then return end
-    local lvl = math.max(0.0, math.min(1.0, (tonumber(dirt0to100) or 0) / 100.0))
-    Citizen.InvokeNative(0x7A56D66C78D1AAB7, ped, lvl + 0.0)   -- SET_PED_DIRT_LEVEL
+    Citizen.InvokeNative(0x7A56D66C78D1AAB7, ped, dirtToLevel(dirt0to100) + 0.0)  -- SET_PED_DIRT_LEVEL
 end
 
 -- Scrub a ped spotless — the full clear-pass. Used for the storefront preview
@@ -49,6 +67,31 @@ function Metabolism.forceClean(ped)
             Wait(100)
             if not (ped and DoesEntityExist(ped)) then return end
             clearPass(ped)
+        end
+    end)
+end
+
+-- ⚠️ USE THIS WHENEVER DIRT GOES **DOWN** (brushing, rain, fording a river).
+--
+-- The 2.1 R3 brush bug: the animation played, the server correctly cleaned the
+-- horse, uses counted down — and the coat stayed filthy. Cause: a single
+-- SET_PED_DIRT_LEVEL is overwritten within a few frames as the engine re-applies
+-- environmental grime. It's the same thing that made the storefront preview
+-- stay dirty, and the same reason forceClean loops. Setting it once is only ever
+-- reliable when dirt is going UP (the engine agrees with you).
+--
+-- So: clear properly first, then re-assert the target over ~800ms.
+function Metabolism.setDirt(ped, dirt0to100)
+    if not (ped and DoesEntityExist(ped)) then return end
+    local lvl = dirtToLevel(dirt0to100)
+    clearPass(ped)                                              -- wipe env dirt + decals
+    Citizen.InvokeNative(0x7A56D66C78D1AAB7, ped, lvl + 0.0)
+    CreateThread(function()
+        for _ = 1, 8 do
+            Wait(100)
+            if not (ped and DoesEntityExist(ped)) then return end
+            if lvl <= 0.0 then clearPass(ped) end
+            Citizen.InvokeNative(0x7A56D66C78D1AAB7, ped, lvl + 0.0)
         end
     end)
 end
@@ -302,7 +345,14 @@ CreateThread(function()
                 local delta, source = dirtDelta(a.ent, current.dirt or 0, minutes)
                 local before = current.dirt or 0
                 current.dirt = math.max(0, math.min(c.cleanliness.max or 100, before + delta))
-                Metabolism.applyDirt(a.ent, current.dirt)
+                -- Going DOWN (rain/water) needs the re-asserting setter, or the
+                -- engine paints the grime straight back on. Going up is fine
+                -- with a single set.
+                if current.dirt < before then
+                    Metabolism.setDirt(a.ent, current.dirt)
+                else
+                    Metabolism.applyDirt(a.ent, current.dirt)
+                end
                 applyShine(a.ent, current.dirt)
 
                 -- Tell the server. Dirt going UP uses the clamped report; going
@@ -332,7 +382,11 @@ RegisterNetEvent(Events.CareResult, function(res)
             current = res.card
             local a = Horse and Horse.active and Horse.active()
             if a and a.ent and DoesEntityExist(a.ent) then
-                Metabolism.applyDirt(a.ent, res.card.dirt)
+                -- setDirt, NOT applyDirt: an item that cleans (the brush) is a
+                -- dirt DECREASE, and a single set gets painted over within a few
+                -- frames. This was the R1/R2 bug — animation played, uses counted
+                -- down, server cleaned the horse, and the coat stayed filthy.
+                Metabolism.setDirt(a.ent, res.card.dirt)
                 applyPenalties(a.ent, res.card)
             end
         end

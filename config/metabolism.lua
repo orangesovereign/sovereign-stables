@@ -106,6 +106,20 @@ Config.Metabolism = {
         -- the real horse's state. A showroom model is clean.
         previewAlwaysClean = true,
 
+        -- WHEN DIRT STARTS TO SHOW  (owner ruling 2026-07-26)
+        --   "I don't think dirty should begin to show until a certain threshold.
+        --    As a player if I brush my horse and then ride out of Valentine and
+        --    see dirt I would lose it."
+        --
+        -- A grace band. Below this the coat renders perfectly clean; above it the
+        -- rest of the range is stretched across the full visible span, so you
+        -- still get everything from a light dusting to filthy.
+        --
+        -- The stored number keeps climbing either way — this changes when dirt
+        -- SHOWS, not when it counts. Raise it if horses still look grubby too
+        -- soon after a brush; drop it toward 0 for a grimier, harder world.
+        visibleAbove = 25,
+
         ------------------------------------------------------------------------
         -- WHAT DIRTIES A HORSE, AND WHAT WASHES IT (owner ruling 2026-07-25)
         ------------------------------------------------------------------------

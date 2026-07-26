@@ -408,6 +408,13 @@
                   (d.isDefault
                     ? '<div class="detail__default">&#9733; Your default ride</div>'
                     : '<button class="buy ghost" id="mkdef">Make Default Ride</button>')
+              // TRAINER-BROKERED: shown, not sold. No purchase prompt at all —
+              // a button that always refuses is worse than no button.
+              : d.brokered
+                ? '<div class="brokered">' +
+                    '<div class="brokered__h">Not sold over the counter</div>' +
+                    '<p>Speak to the stable&rsquo;s <b>trainer</b> to arrange this horse.</p>' +
+                  '</div>'
                 : '<button class="buy" id="buy">Request Purchase</button>' +
                   '<div class="buyform hidden" id="buyform">' +
                     '<label class="field"><span>Name</span>' +

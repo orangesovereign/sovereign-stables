@@ -193,6 +193,26 @@ Config.Economy = {
     enableGold     = true,   -- allow gold pricing alongside cash
     -- Anti-dupe / audit: log every money-moving action server-side (X2).
     transactionLog = true,
+
+    --==========================================================================
+    -- TRAINER-BROKERED TIERS  (owner ruling 2026-07-26)
+    --==========================================================================
+    -- "There shouldn't be a prompt to purchase Specialty Horses. It should have
+    --  a card that says to contact the stable's trainer to purchase."
+    --
+    -- The racers aren't counter stock. You don't walk in off the street and buy
+    -- a Turkoman — you go through the trainer, who sources it. The storefront
+    -- still SHOWS them (that's the shop window, and it's what makes them worth
+    -- wanting); it just doesn't sell them.
+    --
+    -- Who may still buy: anyone who can TRAIN horses — Horse Trainer, Senior,
+    -- Stable Owner. That's deliberate: it gives trainers stock to broker on, a
+    -- revenue line beside finishing, foals and remediation (07-HORSE-TRAINER).
+    -- The Wagon Maker cannot; their trade is wagons.
+    --
+    -- Keys are the `tier` on a horse in config/horses.lua. Empty this table to
+    -- put everything back on the open counter.
+    trainerBrokeredTiers = { specialty = true },
 }
 
 --------------------------------------------------------------------------------

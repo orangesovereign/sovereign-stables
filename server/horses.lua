@@ -80,6 +80,16 @@ function Horses.buy(src, stableId, model, wanted)
     local allowed, why = Catalog.canBuy(card, stableId, job)
     if not allowed then return false, why or 'You may not buy that here.' end
 
+    -- TRAINER-BROKERED TIERS [owner ruling 2026-07-26]. Specialty horses are not
+    -- counter stock — they go through the stable's trainer. Checked HERE and not
+    -- only in the UI: hiding a button is presentation, not a rule, and a crafted
+    -- event would otherwise buy one anyway.
+    local brokered = (Config.Economy.trainerBrokeredTiers or {})[card.tier or '']
+    if brokered and not Perms.can(job, grade, 'brokerSpecialty') then
+        return false, ('%s is not sold over the counter — speak to the stable\'s trainer.')
+            :format(card.name or card.label or 'That horse')
+    end
+
     -- Ownership cap (global cap vs job cap, whichever is stricter)
     local cap   = Perms.maxHorses(job, grade)
     local owned = Horses.countOwned(charid)

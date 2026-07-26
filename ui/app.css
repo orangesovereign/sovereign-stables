@@ -105,6 +105,17 @@ html, body { width: 100%; height: 100%; background: transparent; overflow: hidde
   color: var(--parch-dim); background: rgba(0,0,0,.2); border: 1px solid var(--brass-dim); padding: 9px 6px; cursor: pointer; }
 .tabs button:hover { color: var(--parch); }
 .tabs button.is-active { color: var(--parch); background: linear-gradient(180deg, var(--oxblood), var(--oxblood-2)); border-color: var(--oxblood-2); }
+/* ---------- trainer-brokered notice ---------- */
+/* Shown INSTEAD of the purchase form on specialty stock. Deliberately reads as
+   a notice pinned to the stall, not a disabled button. */
+.brokered { margin-top: 14px; padding: 14px 15px; border: 1px solid var(--brass-dim);
+  border-left: 3px solid var(--oxblood); background: rgba(0,0,0,.22); }
+.brokered__h { font-family: var(--f-disp); font-size: 11px; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--brass); margin-bottom: 6px; }
+.brokered p { margin: 0; font-family: var(--f-fell); font-style: italic;
+  font-size: 14px; color: var(--parch-dim); line-height: 1.5; }
+.brokered p b { color: var(--parch); font-style: normal; }
+
 /* ---------- breed filter [N1] ---------- */
 .filter { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
 .filter.hidden { display: none; }

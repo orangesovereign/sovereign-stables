@@ -28,6 +28,17 @@ local function catalogRows(stableId)
     return rows
 end
 
+-- Is this horse trainer-brokered FOR THIS PLAYER? A trainer sees a normal buy
+-- button; everyone else gets the "speak to the trainer" card. The header tells
+-- us our own job/grade (server-sent), so we can answer without another round
+-- trip — and if we get it wrong, the server refuses the purchase anyway.
+local myJob, myGrade = nil, nil
+local function brokeredForMe(h)
+    local tiers = (Config.Economy or {}).trainerBrokeredTiers or {}
+    if not tiers[h.tier or ''] then return false end
+    return not (Perms and Perms.can and Perms.can(myJob, myGrade, 'brokerSpecialty'))
+end
+
 -- Full detail payload for the right-hand panel.
 local function detailOf(model)
     local h = Catalog.horse(model); if not h then return nil end
@@ -36,6 +47,9 @@ local function detailOf(model)
         sex = h.sex, age = h.age, hands = h.hands, lore = h.lore,
         traits = h.traits or {}, stats = h.stats or {},
         cash = h.price.cash or 0, gold = h.price.gold or 0, tier = h.tier,
+        -- Trainer-brokered [owner ruling]: the shop shows it but doesn't sell it.
+        -- Presentation only — the server enforces the same rule independently.
+        brokered = brokeredForMe(h),
     }
 end
 
@@ -128,6 +142,8 @@ function Storefront.isOpen() return isOpen end
 -- Server → client: real identity + wallet arrived; update the header in place.
 RegisterNetEvent(Events.HeaderData, function(header)
     if not isOpen then return end
+    -- Remember who we are, so brokeredForMe() can answer without a round trip.
+    myJob, myGrade = header.job, header.grade
     local stable = Config.Stables[currentStable]
     SendNUIMessage({
         action = 'header',
@@ -141,6 +157,12 @@ RegisterNetEvent(Events.HeaderData, function(header)
             gold        = header.gold or 0,
         },
     })
+    -- The header arrives AFTER the shop opens, so the first detail panel was
+    -- rendered before we knew our own job. Re-send it now, or a trainer would be
+    -- told to go and see the trainer until they clicked something else.
+    if currentModel then
+        SendNUIMessage({ action = 'detail', detail = detailOf(currentModel) })
+    end
 end)
 
 -- NUI → client callbacks -------------------------------------------------------
