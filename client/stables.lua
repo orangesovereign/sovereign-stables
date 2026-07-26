@@ -70,6 +70,10 @@ local function spawnHorseAt(model, pos, noSnap)
     FreezeEntityPosition(horse, true)
     SetBlockingOfNonTemporaryEvents(horse, true)
     SetModelAsNoLongerNeeded(hash)
+    -- Stop it bolting when a player walks up. Frozen only pins the BODY — a
+    -- spooked horse still plays the gallop and runs on the spot. Preview.calm
+    -- turns the fear off at source (animal tuning surface).
+    if Preview and Preview.calm then pcall(Preview.calm, horse) end
     -- The stablehand's horse is part of the showroom too — keep it spotless [L9].
     if Metabolism and Metabolism.forceClean then pcall(Metabolism.forceClean, horse) end
     return horse
