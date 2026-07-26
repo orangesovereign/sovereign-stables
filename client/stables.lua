@@ -274,6 +274,49 @@ RegisterKeyMapping('sovstable', 'Sovereign Stables: speak with stablehand', 'key
 RegisterCommand('stable', function() Stables.interact() end, false)                  -- alias
 RegisterCommand('sovstableforce', function() Stables.forceNearest() end, false)      -- debug: ignores range
 
+--------------------------------------------------------------------------------
+-- /sovcoords — capture the spot you're standing on, formatted for the config
+--------------------------------------------------------------------------------
+-- Placing a stable means six positions, and typing them out of an admin coord
+-- tool is where the mistakes creep in. Stand where you want a thing, run this
+-- with the name of the slot, and it prints the exact line to paste.
+--
+--   /sovcoords              -> a plain {x, y, z, heading} you can put anywhere
+--   /sovcoords prompt       -> prompt = { coords = {...}, distance = 1.5 },
+--   /sovcoords ped          -> coords = {x, y, z, h},
+--   /sovcoords horse        -> horsePos = {...},   (grooming or preview)
+--   /sovcoords wagon        -> wagonPos = {...},
+--   /sovcoords blip         -> coords = {x, y, z},
+--
+-- It also copies to the clipboard where the game allows it, and prints to F8 so
+-- you can scroll back through a whole placement session at the end.
+RegisterCommand('sovcoords', function(_, args)
+    local slot = (args and args[1] or ''):lower()
+    local ped = PlayerPedId()
+    local c = GetEntityCoords(ped)
+    local h = GetEntityHeading(ped)
+    local x, y, z = c.x, c.y, c.z
+
+    local line
+    if slot == 'prompt' then
+        line = ('prompt = { coords = { %.3f, %.3f, %.3f }, distance = 1.5 },'):format(x, y, z)
+    elseif slot == 'blip' then
+        line = ('coords  = { %.3f, %.3f, %.3f },'):format(x, y, z)
+    elseif slot == 'ped' then
+        line = ('coords   = { %.3f, %.3f, %.3f, %.1f },'):format(x, y, z, h)
+    elseif slot == 'horse' then
+        line = ('horsePos = { %.3f, %.3f, %.3f, %.1f },'):format(x, y, z, h)
+    elseif slot == 'wagon' then
+        line = ('wagonPos = { %.3f, %.3f, %.3f, %.1f },'):format(x, y, z, h)
+    else
+        line = ('{ %.3f, %.3f, %.3f, %.1f },'):format(x, y, z, h)
+    end
+
+    print('^2[sov_coords]^7 ' .. line)
+    pcall(function() if SetClipboardText then SetClipboardText(line) end end)
+    Bridge.notify(('Copied: %.1f, %.1f, %.1f'):format(x, y, z))
+end, false)
+
 AddEventHandler('onResourceStop', function(res)
     if res ~= GetCurrentResourceName() then return end
     for _, blip in ipairs(blips) do RemoveBlip(blip) end

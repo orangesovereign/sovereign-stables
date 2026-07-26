@@ -126,6 +126,45 @@ function Validate.run()
             if s.blip and s.blip.enabled and not Util.isVec3(s.blip.coords) then
                 problems[#problems + 1] = w .. ': blip.coords needs {x, y, z}'
             end
+            ------------------------------------------------------------------
+            -- STRAY COORDS — the copy-paste trap.
+            ------------------------------------------------------------------
+            -- Adding a stable means duplicating a block and replacing SIX sets
+            -- of coordinates. Miss one and it silently points at the stable you
+            -- copied from, hundreds of metres away. That happened with
+            -- Blackwater: everything spawned correctly except `prompt.coords`,
+            -- which still held Valentine's — so the ped and horse appeared and
+            -- nothing else worked, with no error anywhere.
+            --
+            -- Every position in a stable should be within a few hundred metres
+            -- of its own blip. Anything further is a stray, and we say which.
+            local anchor = (s.blip and Util.isVec3(s.blip.coords)) and s.blip.coords
+                        or (s.ped and s.ped.coords)
+            if anchor and #anchor >= 3 then
+                local STRAY = 300.0     -- metres; generous — a big ranch is fine
+                local function far(pos)
+                    if not (pos and #pos >= 3) then return nil end
+                    local dx, dy, dz = pos[1] - anchor[1], pos[2] - anchor[2], pos[3] - anchor[3]
+                    local d = math.sqrt(dx * dx + dy * dy + dz * dz)
+                    return (d > STRAY) and d or nil
+                end
+                local spots = {
+                    { 'prompt.coords',          s.prompt and s.prompt.coords },
+                    { 'ped.coords',             s.ped and s.ped.enabled and s.ped.coords },
+                    { 'ped.grooming.horsePos',  s.ped and s.ped.grooming and s.ped.grooming.horsePos },
+                    { 'preview.horsePos',       s.preview and s.preview.horsePos },
+                    { 'preview.wagonPos',       s.preview and s.preview.wagonPos },
+                    { 'retrieve.wagonPos',      s.retrieve and s.retrieve.wagonPos },
+                }
+                for _, e in ipairs(spots) do
+                    local d = far(e[2])
+                    if d then
+                        problems[#problems + 1] = ('%s: %s is %.0fm from this stable — did you copy another stable\'s block and forget to change it?')
+                            :format(w, e[1], d)
+                    end
+                end
+            end
+
             -- catalog references must exist in the catalogs
             for _, hid in ipairs((s.catalog and s.catalog.horses) or {}) do
                 if type(hid) == 'string' and not horses[hid] then
