@@ -227,6 +227,88 @@ RegisterNetEvent(Events.ReportDirt, function(horseId, dirt)
     end)
 end)
 
+-- WASHED by rain or water [owner ruling 2026-07-25]. This needs its own event
+-- because ReportDirt deliberately refuses any value that would make a horse
+-- CLEANER — otherwise a client could scrub its horse for free. Here the server
+-- does the cleaning itself from elapsed time, and the client's number is only a
+-- hint about which source applied; it can't dictate the result.
+local lastWash = {}   -- [src] = os.time() of the previous accepted wash tick
+
+-- NOTE the parameter is `washSource`, NOT `source`: naming it `source` would
+-- shadow FiveM's `source` global, and `local src = source` would then read the
+-- string "rain" instead of the player id.
+RegisterNetEvent(Events.ReportWashed, function(horseId, _clientDirt, washSource)
+    local src = source
+    if not horseId then return end
+    CreateThread(function()
+        local charid = Bridge.getCharId(src)
+        if not charid then return end
+        local cl = (mcfg().cleanliness or {})
+        local rate
+        if washSource == 'rain' then
+            if not (cl.rain and cl.rain.enabled ~= false) then return end
+            rate = cl.rain.cleanPerMinute or 60.0
+        elseif washSource == 'water' then
+            if not (cl.water and cl.water.enabled ~= false) then return end
+            rate = cl.water.cleanPerMinute or 25.0
+        else
+            return
+        end
+
+        -- Time-based, so spamming the event can't scrub a horse instantly.
+        local now = os.time()
+        local since = math.min(60, now - (lastWash[src] or now - 15))
+        lastWash[src] = now
+        if since <= 0 then return end
+
+        local m = loadBlob(charid, horseId); if not m then return end
+        local floor = (washSource == 'water') and (cl.water.floor or 20.0) or 0.0
+        local washed = rate * (since / 60.0)
+        local newDirt = math.max(floor, m.dirt - washed)
+        if newDirt < m.dirt then
+            m.dirt = newDirt
+            m.ts = now
+            saveBlob(charid, horseId, m)
+        end
+    end)
+end)
+
+-- DRANK from a trough or a body of water [owner ruling 2026-07-25]. Same shape:
+-- the server decides how much from elapsed time, the client only reports that
+-- the horse is at water.
+local lastDrink = {}   -- [src] = os.time()
+
+RegisterNetEvent(Events.ReportDrank, function(horseId)
+    local src = source
+    if not horseId then return end
+    CreateThread(function()
+        local charid = Bridge.getCharId(src)
+        if not charid then return end
+        local d = mcfg().drinking or {}
+        if d.enabled == false then return end
+
+        local now = os.time()
+        local since = math.min(60, now - (lastDrink[src] or now - 5))
+        lastDrink[src] = now
+        if since <= 0 then return end
+
+        local m = loadBlob(charid, horseId); if not m then return end
+        local gain = (d.thirstPerMinute or 40.0) * (since / 60.0)
+        local before = m.thirst
+        m.thirst = clamp(m.thirst + gain, 0, (mcfg().thirst or {}).max or 100)
+        if m.thirst > before then
+            m.ts = now
+            saveBlob(charid, horseId, m)
+            TriggerClientEvent(Events.CareResult, src,
+                { ok = true, horseId = horseId, card = Metabolism.card(m), quiet = true })
+        end
+    end)
+end)
+
+AddEventHandler('playerDropped', function()
+    lastWash[source], lastDrink[source] = nil, nil
+end)
+
 --------------------------------------------------------------------------------
 -- Register the configured feed/clean items as usable, so "use" from the satchel
 -- feeds the horse the player has out.

@@ -107,26 +107,67 @@ Config.Metabolism = {
         previewAlwaysClean = true,
 
         ------------------------------------------------------------------------
-        -- MUD & HARD RIDING (owner request 2026-07-25) — a horse ridden through
-        -- water or rain, or galloped hard, gets filthy faster than one walked
-        -- down a dry road.
+        -- WHAT DIRTIES A HORSE, AND WHAT WASHES IT (owner ruling 2026-07-25)
+        ------------------------------------------------------------------------
+        -- ❌ I had this backwards. The first version treated water and rain as
+        -- dirt SOURCES ("wet ground is mud"). The owner corrected it, and they're
+        -- plainly right: water WASHES a horse. Rain washes it clean.
         --
-        -- ⚠️ HOW THIS WORKS, HONESTLY: RDR3 gives us no "am I standing in mud"
-        -- native — there's no ground-material or dirt-level READ available, only
-        -- the write. So rather than pretend, we multiply the dirt rate using the
-        -- three things we CAN read: whether the horse is in water, whether it's
-        -- raining, and how fast it's moving. Wet ground plus hooves is mud, and
-        -- that's a fair approximation of it.
+        -- So the model is now the sensible one:
+        --   HARD RIDING dirties      — hooves kick up ground
+        --   WATER cleans, a little   — fording a river rinses the worst off
+        --   RAIN cleans completely   — and leaves the coat gleaming
         --
-        -- These MULTIPLY `gainPerMinute` and stack, capped by `maxMultiplier`.
-        -- Set any to 1.0 to switch that source off.
-        mud = {
-            enabled       = true,
-            inWater       = 3.0,   -- fording a river / splashing through shallows
-            whileRaining  = 2.0,   -- rain makes the ground muddy underfoot
-            galloping     = 1.5,   -- hard riding kicks it up
-            gallopSpeed   = 9.0,   -- m/s that counts as a gallop
-            maxMultiplier = 4.0,   -- ceiling when several stack at once
+        -- ⚠️ Still honest about the limit: RDR3 gives us no "am I standing in
+        -- mud" native — no ground-material or dirt-level READ, only the write.
+        -- So "dirty" is inferred from hard riding rather than from real terrain.
+        dirtying = {
+            enabled     = true,
+            galloping   = 2.0,     -- hard riding kicks up the ground (x gainPerMinute)
+            gallopSpeed = 9.0,     -- m/s that counts as a gallop
+        },
+
+        -- WATER: riding through a river or shallows rinses SOME dirt off. It is
+        -- not a bath — it takes the edge off, and won't get a filthy horse clean.
+        water = {
+            enabled        = true,
+            cleanPerMinute = 25.0,   -- dirt removed per minute spent in water
+            floor          = 20.0,   -- water alone can't get it below this
+        },
+
+        -- RAIN: a proper wash. Standing out in it cleans the horse to spotless
+        -- and leaves the coat SHINY [M3] — the shine is the reward for it, and
+        -- fades as the horse dirties again.
+        rain = {
+            enabled        = true,
+            cleanPerMinute = 60.0,   -- rain scrubs fast — a few minutes and it's clean
+            shine          = true,   -- gleaming coat once rain gets it to spotless
+            shineFadesAt   = 10.0,   -- dirt above this and the shine is gone
+        },
+    },
+
+    ----------------------------------------------------------------------------
+    -- DRINKING  [H2] (owner ruling 2026-07-25)
+    --   "To fill the horses thirst they should be able to drink out of horse
+    --    troughs and be able to drink from bodies of water."
+    --
+    -- A horse standing at water drinks by itself — no item, no prompt. Leave it
+    -- at a river or a trough for a moment and its thirst fills. This is why
+    -- water items are a convenience rather than a necessity: the world is full
+    -- of water, and a rider who plans around it never needs to carry any.
+    ----------------------------------------------------------------------------
+    drinking = {
+        enabled         = true,
+        thirstPerMinute = 40.0,   -- a good long drink fills it in well under a minute
+        -- The horse must be standing still to drink — you can't gulp at a gallop.
+        maxSpeed        = 1.5,    -- m/s
+
+        -- TROUGHS. Any of these props within `troughDistance` counts as water.
+        -- Add your own trough props here if your map has custom ones.
+        troughDistance  = 3.5,
+        troughProps = {
+            'p_trough02x', 'p_trough03x', 'p_troughwater01x',
+            'p_waterpump01x', 'p_trough01x',
         },
     },
 

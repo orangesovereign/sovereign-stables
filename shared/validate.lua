@@ -73,8 +73,11 @@ function Validate.run()
         if restores.hunger <= 0 then
             problems[#problems + 1] = 'Metabolism: NO item restores hunger — horses will starve with no way to feed them (config/metabolism.lua `items`)'
         end
-        if restores.thirst <= 0 then
-            problems[#problems + 1] = 'Metabolism: NO item restores thirst — add a water item (config/metabolism.lua `items`)'
+        -- Thirst has a WORLD source too: a horse drinks from troughs and rivers.
+        -- So it only needs an item if drinking is switched off.
+        local canDrink = (m.drinking and m.drinking.enabled ~= false)
+        if restores.thirst <= 0 and not canDrink then
+            problems[#problems + 1] = 'Metabolism: NO item restores thirst and drinking is disabled — a horse could never drink (config/metabolism.lua)'
         end
         if (m.cleanliness and m.cleanliness.enabled ~= false) and restores.dirt <= 0 then
             problems[#problems + 1] = 'Metabolism: NO item removes dirt — add a brush (config/metabolism.lua `items`)'
@@ -92,8 +95,11 @@ function Validate.run()
             end
         end
         for core, cfg in pairs({ hunger = m.hunger, thirst = m.thirst }) do
+            -- Skip thirst when the horse can drink from the world — a river is a
+            -- better water source than any item, and always to hand.
+            local worldSource = (core == 'thirst') and canDrink
             local rate = cfg and cfg.drainPerMinute or 0
-            if rate > 0 and best[core] > 0 then
+            if rate > 0 and best[core] > 0 and not worldSource then
                 local minutes = best[core] / rate
                 if minutes < MIN_MINUTES then
                     problems[#problems + 1] = ('Metabolism: the best %s item restores %d, but %s drains %.1f/min — only %.0f minutes per use. Add a stronger item.'):

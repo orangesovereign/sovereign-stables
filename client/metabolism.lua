@@ -181,51 +181,138 @@ function Metabolism.card() return current end
 -- The server clamps and only ever accepts a DIRTIER value, so this can't be used
 -- to clean a horse for free.
 --------------------------------------------------------------------------------
--- How much faster is this horse getting dirty right now? [mud]
--- RDR3 exposes no ground-material or dirt READ, so we infer muddiness from the
--- three signals we can actually get: water, weather, speed.
+--------------------------------------------------------------------------------
+-- WHAT DIRTIES AND WHAT WASHES  (owner ruling 2026-07-25)
+--------------------------------------------------------------------------------
+-- Hard riding dirties. Water rinses some off. Rain washes it clean and leaves
+-- the coat shining. (An earlier version had water and rain DIRTYING the horse —
+-- backwards, and the owner corrected it.)
 local RAINY = { RAIN = true, DRIZZLE = true, SHOWER = true, THUNDER = true,
                 THUNDERSTORM = true, SLEET = true, SNOW = true }
 
-local function dirtMultiplier(ent)
-    local mud = (mcfg().cleanliness or {}).mud
-    if not (mud and mud.enabled ~= false) then return 1.0 end
-    local mult = 1.0
-
-    -- In water: fording a river or splashing through shallows.
-    local okWater, inWater = pcall(function() return IsEntityInWater(ent) end)
-    if okWater and inWater then mult = mult * (mud.inWater or 1.0) end
-
-    -- Raining: wet ground underfoot.
-    local okW, weather = pcall(function()
+local function isRaining()
+    local ok, w = pcall(function()
         return Citizen.InvokeNative(0x564B884A05EC45A3, Citizen.ResultAsString())  -- GetPrevWeatherTypeHashName
     end)
-    if okW and type(weather) == 'string' and RAINY[weather:upper()] then
-        mult = mult * (mud.whileRaining or 1.0)
-    end
+    return ok and type(w) == 'string' and RAINY[w:upper()] or false
+end
 
-    -- Galloping: hooves kicking it up.
-    local okS, spd = pcall(function()
+local function inWater(ent)
+    local ok, v = pcall(function() return IsEntityInWater(ent) end)
+    return ok and v or false
+end
+
+local function speedOf(ent)
+    local ok, s = pcall(function()
         return Citizen.InvokeNative(0xFB6BA510A533DF81, ent, Citizen.ResultAsFloat())  -- GetEntitySpeed
     end)
-    if okS and (spd or 0.0) >= (mud.gallopSpeed or 9.0) then
-        mult = mult * (mud.galloping or 1.0)
+    return ok and (s or 0.0) or 0.0
+end
+
+-- Net change in dirt over `minutes`. Positive = dirtier, negative = cleaner.
+-- Cleaning WINS over dirtying when both apply — you can't get muddier while
+-- standing in a rainstorm.
+local function dirtDelta(ent, dirt, minutes)
+    local cl = mcfg().cleanliness or {}
+    local raining = (cl.rain and cl.rain.enabled ~= false) and isRaining()
+    local wet     = (cl.water and cl.water.enabled ~= false) and inWater(ent)
+
+    if raining then
+        return -((cl.rain.cleanPerMinute or 60.0) * minutes), 'rain'
+    end
+    if wet then
+        -- Water only rinses down to its floor; it's not a proper wash.
+        local floor = cl.water.floor or 20.0
+        if dirt > floor then
+            local wash = (cl.water.cleanPerMinute or 25.0) * minutes
+            return -math.min(wash, dirt - floor), 'water'
+        end
+        return 0.0, 'water'
     end
 
-    return math.min(mult, mud.maxMultiplier or 4.0)
+    -- Otherwise it dirties, faster if you're riding hard.
+    local base = (cl.gainPerMinute or 0) * minutes
+    local d = cl.dirtying
+    if d and d.enabled ~= false and speedOf(ent) >= (d.gallopSpeed or 9.0) then
+        base = base * (d.galloping or 1.0)
+    end
+    return base, nil
+end
+
+-- Shine [M3]: rain that gets a horse spotless leaves the coat gleaming, and it
+-- fades as the horse dirties again. Applied via the wetness native — a clean wet
+-- coat IS the shine, which is why rain gives it and a brush doesn't.
+local function applyShine(ent, dirt)
+    local cl = mcfg().cleanliness or {}
+    if not (cl.rain and cl.rain.shine) then return end
+    if not (ent and DoesEntityExist(ent)) then return end
+    if dirt <= (cl.rain.shineFadesAt or 10.0) then
+        pcall(function() Citizen.InvokeNative(0x9B0D4B9B3C2D6B5F, ent, 1.0) end)  -- SET_PED_WETNESS_HEIGHT
+    else
+        pcall(function() if ClearPedWetness then ClearPedWetness(ent) end end)
+    end
+end
+
+--------------------------------------------------------------------------------
+-- DRINKING  [H2] — a horse at water drinks by itself (owner ruling 2026-07-25)
+--------------------------------------------------------------------------------
+-- No prompt, no item: stand the horse at a river or a trough and its thirst
+-- fills. The server decides how much from elapsed time; this only reports that
+-- the horse IS at water.
+local function atWater(ent)
+    local d = mcfg().drinking or {}
+    if d.enabled == false then return false end
+    if speedOf(ent) > (d.maxSpeed or 1.5) then return false end   -- must be still
+
+    if inWater(ent) then return true end                          -- stood in a river
+
+    -- Or beside a trough.
+    local c = GetEntityCoords(ent)
+    local dist = d.troughDistance or 3.5
+    for _, prop in ipairs(d.troughProps or {}) do
+        local ok, obj = pcall(function()
+            return GetClosestObjectOfType(c.x, c.y, c.z, dist, GetHashKey(prop), false, false, false)
+        end)
+        if ok and obj and obj ~= 0 and DoesEntityExist(obj) then return true end
+    end
+    return false
 end
 
 CreateThread(function()
     while true do
-        Wait(30000)   -- every 30s; dirt is slow, this is plenty
+        Wait(5000)   -- drinking should feel responsive: a few seconds at a trough
+        local c = mcfg()
+        if c.enabled ~= false and current and Horse and Horse.active then
+            local a = Horse.active()
+            if a and a.ent and DoesEntityExist(a.ent) and atWater(a.ent) then
+                TriggerServerEvent(Events.ReportDrank, a.id)
+            end
+        end
+    end
+end)
+
+CreateThread(function()
+    while true do
+        Wait(15000)   -- 15s: rain should visibly clean within a minute or two
         local c = mcfg()
         if c.enabled ~= false and current and Horse and Horse.active then
             local a = Horse.active()
             if a and a.ent and DoesEntityExist(a.ent) and c.cleanliness and c.cleanliness.enabled ~= false then
-                local gain = (c.cleanliness.gainPerMinute or 0) * 0.5 * dirtMultiplier(a.ent)  -- 30s = 0.5 min
-                current.dirt = math.min(c.cleanliness.max or 100, (current.dirt or 0) + gain)
+                local minutes = 0.25   -- 15s
+                local delta, source = dirtDelta(a.ent, current.dirt or 0, minutes)
+                local before = current.dirt or 0
+                current.dirt = math.max(0, math.min(c.cleanliness.max or 100, before + delta))
                 Metabolism.applyDirt(a.ent, current.dirt)
-                TriggerServerEvent(Events.ReportDirt, a.id, math.floor(current.dirt + 0.5))
+                applyShine(a.ent, current.dirt)
+
+                -- Tell the server. Dirt going UP uses the clamped report; going
+                -- DOWN is a real clean and needs the authoritative path, or the
+                -- server's "never accept a cleaner value" rule would discard it.
+                if current.dirt > before then
+                    TriggerServerEvent(Events.ReportDirt, a.id, math.floor(current.dirt + 0.5))
+                elseif current.dirt < before then
+                    TriggerServerEvent(Events.ReportWashed, a.id, math.floor(current.dirt + 0.5), source)
+                end
             end
         end
     end
@@ -236,7 +323,9 @@ end)
 --------------------------------------------------------------------------------
 RegisterNetEvent(Events.CareResult, function(res)
     res = res or {}
-    if res.message then Bridge.notify(res.message) end
+    -- `quiet` = a background update (drinking at a trough). Update the numbers,
+    -- but don't fire a notification every few seconds while the horse drinks.
+    if res.message and not res.quiet then Bridge.notify(res.message) end
     if res.ok then
         if res.animate then playCareAnim(res.animate) end
         if res.card then
