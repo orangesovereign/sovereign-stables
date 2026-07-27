@@ -121,12 +121,22 @@ end
 -- world dirty the horse the way it always did. We decide when a horse is CLEAN;
 -- the engine decides what dirty looks like. That's the half of the split each
 -- side can actually deliver.
+-- Set true by /sovdirtprobe so the guard stops fighting the probe. THIS is why
+-- R6 D3 read "none" for every candidate: the guard below runs twice a second and,
+-- whenever stored dirt is under the grace band, calls SET_PED_DIRT_LEVEL(0.0) and
+-- a full clearPass — so a probe that dirtied the horse was scrubbed clean before
+-- the owner could look. The probe was never testing the native; it was racing our
+-- own cleaner and losing.
+Metabolism._probing = false
+
 CreateThread(function()
     local tick = 0
     while true do
         Wait(500)
         local a = Horse and Horse.active and Horse.active()
-        if current and a and a.ent and DoesEntityExist(a.ent) then
+        if Metabolism._probing then
+            -- hands entirely off while probing
+        elseif current and a and a.ent and DoesEntityExist(a.ent) then
             local lvl = dirtToLevel(current.dirt or 0)
             if lvl <= 0.0 then
                 -- Below the threshold: hold it spotless. The level alone isn't
@@ -149,11 +159,12 @@ end)
 --------------------------------------------------------------------------------
 -- ⚠️ TEMPORARY: WHICH NATIVE ACTUALLY PAINTS DIRT?  (remove once answered)
 --------------------------------------------------------------------------------
--- We have never established this. The clean direction is proven; the dirty
--- direction I assumed, and assumed wrong. `/sovdirtprobe` tries each candidate
--- on the horse you have out, one per run, so the answer comes from the game
--- rather than from me — the same way your health probe settled the wagon
--- natives after three wrong guesses.
+-- ⚠️ R6 D3 returned "none" for all five, but that test was INVALID: the dirt
+-- guard above was scrubbing the horse clean twice a second while the probe ran.
+-- The probe now SUSPENDS the guard (Metabolism._probing) so the native's effect
+-- can survive long enough to see. Candidate 3 (SET_PED_DIRT_LEVEL 100.0) is the
+-- one I most expect to work now that nothing is fighting it — the clean
+-- direction of this exact native is already proven.
 local DIRT_CANDIDATES = {
     { name = 'SET_PED_DIRT_LEVEL 1.0',    fn = function(e) Citizen.InvokeNative(0x7A56D66C78D1AAB7, e, 1.0) end },
     { name = 'SET_PED_DIRT_LEVEL 5.0',    fn = function(e) Citizen.InvokeNative(0x7A56D66C78D1AAB7, e, 5.0) end },
@@ -167,18 +178,34 @@ RegisterCommand('sovdirtprobe', function(_, args)
     if not (a and a.ent and DoesEntityExist(a.ent)) then
         Bridge.notify('Bring your horse out first.'); return
     end
-    local n = tonumber(args and args[1])
+    local first = args and args[1]
+    if first == 'off' then
+        Metabolism._probing = false
+        Bridge.notify('Dirt guard back on.')
+        return
+    end
+    local n = tonumber(first)
     if not n then
-        print('^3[sov_dirt]^7 candidates:')
+        print('^3[sov_dirt]^7 candidates (the guard is suspended while probing):')
         for i, c in ipairs(DIRT_CANDIDATES) do print(('  %d = %s'):format(i, c.name)) end
-        Bridge.notify('See F8 — then /sovdirtprobe <number>')
+        print('  off = re-enable the coat guard')
+        Bridge.notify('See F8 — then /sovdirtprobe <number>, /sovdirtprobe off when done')
         return
     end
     local c = DIRT_CANDIDATES[n]
     if not c then Bridge.notify('No such candidate.'); return end
-    c.fn(a.ent)
-    print(('^3[sov_dirt]^7 applied #%d — %s. Does the horse LOOK dirty now?'):format(n, c.name))
-    Bridge.notify(('Tried: %s'):format(c.name))
+    -- Suspend the guard, then re-assert the native for a few seconds so a
+    -- one-shot that the engine repaints over still has time to be seen.
+    Metabolism._probing = true
+    CreateThread(function()
+        for _ = 1, 30 do            -- ~6s of holding the dirty value
+            if not Metabolism._probing then break end
+            if a.ent and DoesEntityExist(a.ent) then c.fn(a.ent) end
+            Wait(200)
+        end
+    end)
+    print(('^3[sov_dirt]^7 applied #%d — %s (guard suspended, held ~6s). Does the horse LOOK dirty?'):format(n, c.name))
+    Bridge.notify(('Tried: %s — /sovdirtprobe off to restore'):format(c.name))
 end, false)
 
 --------------------------------------------------------------------------------
