@@ -46,7 +46,8 @@ Events.CareResult      = e('careResult')       -- outcome + fresh status
 Events.SyncCare        = e('syncCare')          -- push current status to the client
 Events.ReportDirt      = e('reportDirt')        -- client tells server how dirty it got
 Events.ReportWashed    = e('reportWashed')      -- rain/water washed it CLEANER
-Events.ReportDrank     = e('reportDrank')       -- drank from a trough / body of water
+Events.ReportDrank     = e('reportDrank')       -- (retired) auto-drink at a trough / body of water
+Events.RequestDrink    = e('requestDrink')      -- player CHOSE to water the horse from the menu
 
 -- tack [F1/F5] — milestone 1.4
 Events.RequestOwnedTack  = e('requestOwnedTack')   -- what tack do I own + what's on this horse

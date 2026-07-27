@@ -178,7 +178,13 @@ function Metabolism.applyItem(charid, horseId, itemDef)
     if not changed then return false, 'Nothing to do.' end
 
     saveBlob(charid, horseId, m)
-    return true, ('%s given.'):format(itemDef.label or 'Feed'), Metabolism.card(m)
+    -- Brushing gets NO message (owner ruling 2026-07-27, R6 F4) — the coat
+    -- changing is feedback enough, and a chip every brush is noise. Feed still
+    -- confirms, because a fed horse shows nothing visible. `quiet` suppresses the
+    -- chip client-side without hiding the animation or the card update.
+    local isBrush = itemDef.dirt and not (itemDef.hunger or itemDef.thirst)
+    local msg = isBrush and nil or ('%s given.'):format(itemDef.label or 'Feed')
+    return true, msg, Metabolism.card(m)
 end
 
 --------------------------------------------------------------------------------
@@ -338,35 +344,55 @@ RegisterNetEvent(Events.ReportWashed, function(horseId, _clientDirt, washSource)
     end)
 end)
 
--- DRANK from a trough or a body of water [owner ruling 2026-07-25]. Same shape:
--- the server decides how much from elapsed time, the client only reports that
--- the horse is at water.
+-- WATERING THE HORSE — a CHOICE now, not automatic (owner ruling 2026-07-27).
+--
+-- R6 W1: "I do not want it to drink by itself... Drink should be in the horse
+-- menu. If the horse is full already it should have a chip notification saying
+-- the [Horse's Name] is not thirsty."
+--
+-- So drinking is a single deliberate act: the player takes Drink from the
+-- lock-on menu while the horse is at water, and it drinks its fill in one go.
+-- The old ReportDrank trickle (a few points every five seconds while stood
+-- there) is retired — that WAS "drinking by itself". A short cooldown stops the
+-- prompt being mashed, but a normal press gives a proper drink.
 local lastDrink = {}   -- [src] = os.time()
 
-RegisterNetEvent(Events.ReportDrank, function(horseId)
+RegisterNetEvent(Events.RequestDrink, function(horseId, horseName)
     local src = source
     if not horseId then return end
     CreateThread(function()
-        local charid = Bridge.getCharId(src)
-        if not charid then return end
+        local charid = Bridge.getCharId(src); if not charid then return end
         local d = mcfg().drinking or {}
         if d.enabled == false then return end
 
-        local now = os.time()
-        local since = math.min(60, now - (lastDrink[src] or now - 5))
-        lastDrink[src] = now
-        if since <= 0 then return end
-
         local m = loadBlob(charid, horseId); if not m then return end
-        local gain = (d.thirstPerMinute or 40.0) * (since / 60.0)
-        local before = m.thirst
-        m.thirst = clamp(m.thirst + gain, 0, (mcfg().thirst or {}).max or 100)
-        if m.thirst > before then
-            m.ts = now
-            saveBlob(charid, horseId, m)
-            TriggerClientEvent(Events.CareResult, src,
-                { ok = true, horseId = horseId, card = Metabolism.card(m), quiet = true })
+        drift(m, 'active', os.time())
+
+        local maxT = (mcfg().thirst or {}).max or 100
+        local name = (horseName and horseName ~= '') and horseName or 'Your horse'
+
+        -- Already full: the chip the owner asked for, and nothing else happens.
+        if m.thirst >= maxT - 1 then
+            Bridge.notifyCard(src, 'info', 'Stables', ('%s is not thirsty.'):format(name))
+            return
         end
+
+        -- Cooldown only guards against spamming a fresh full drink; it never
+        -- blocks the first press.
+        local now = os.time()
+        if now - (lastDrink[src] or 0) < (d.drinkCooldownSeconds or 8) then
+            Bridge.notifyCard(src, 'info', 'Stables', ('%s has had enough for now.'):format(name))
+            return
+        end
+        lastDrink[src] = now
+
+        -- One press = a proper drink. `drinkFill` points, capped at max.
+        m.thirst = clamp(m.thirst + (d.drinkFill or 100), 0, maxT)
+        m.ts = now
+        saveBlob(charid, horseId, m)
+        TriggerClientEvent(Events.CareResult, src,
+            { ok = true, horseId = horseId, card = Metabolism.card(m),
+              message = ('%s takes a long drink.'):format(name) })
     end)
 end)
 

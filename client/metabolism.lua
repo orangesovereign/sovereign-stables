@@ -406,18 +406,12 @@ function Metabolism.atWater(ent)
     return false
 end
 
-CreateThread(function()
-    while true do
-        Wait(5000)   -- drinking should feel responsive: a few seconds at a trough
-        local c = mcfg()
-        if c.enabled ~= false and current and Horse and Horse.active then
-            local a = Horse.active()
-            if a and a.ent and DoesEntityExist(a.ent) and Metabolism.atWater(a.ent) then
-                TriggerServerEvent(Events.ReportDrank, a.id)
-            end
-        end
-    end
-end)
+-- ⚠️ The automatic "drink a little every five seconds while stood at water"
+-- thread lived here and is GONE (owner ruling 2026-07-27). That behaviour WAS
+-- "the horse drinks by itself", which is exactly what was asked to stop.
+-- Watering is now a deliberate Drink entry in the lock-on menu — see
+-- client/horsemenu.lua. Metabolism.atWater stays: the menu uses it to decide
+-- whether to OFFER Drink, so the option only appears when there's water to hand.
 
 CreateThread(function()
     while true do

@@ -202,7 +202,12 @@ Config.Metabolism = {
     ----------------------------------------------------------------------------
     drinking = {
         enabled         = true,
-        thirstPerMinute = 40.0,   -- a good long drink fills it in well under a minute
+        -- Watering is a CHOICE from the lock-on menu, not automatic (2026-07-27).
+        -- One press = one proper drink of this many thirst points, then a short
+        -- cooldown so it can't be mashed. A horse already full gets a "not
+        -- thirsty" chip instead. (thirstPerMinute is retired with the old trickle.)
+        drinkFill           = 100,  -- points restored per drink (capped at max)
+        drinkCooldownSeconds = 8,   -- wait between full drinks
         -- The horse must be standing still to drink — you can't gulp at a gallop.
         maxSpeed        = 1.5,    -- m/s
 

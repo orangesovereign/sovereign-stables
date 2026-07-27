@@ -41,9 +41,13 @@ local function cfg() return (Config.UI and Config.UI.horseMenu) or {} end
 -- and Stop Leading share it because they are never available at the same time.
 local function ctrlLead() return cfg().leadControl or 0xF5C4701B end  -- INPUT_INTERACT_LOCKON_DETACH_HORSE (E)
 
-local pLead, pStop
+local pLead, pStop, pDrink
 local leadGroup = nil     -- the group our prompts are currently attached to
 local leading = false
+
+-- Drink shares no control with Lead, so it needs its own. R is the horse-feed
+-- input — the closest native meaning to "give the horse something".
+local function ctrlDrink() return cfg().drinkControl or 0x0D55A0F0 end  -- INPUT_INTERACT_HORSE_FEED (R)
 
 --------------------------------------------------------------------------------
 -- Prompts, attached to the HORSE rather than to a group of our own
@@ -71,8 +75,9 @@ local function newPrompt(control, label)
 end
 
 CreateThread(function()
-    pLead = newPrompt(ctrlLead(), 'Lead Horse')
-    pStop = newPrompt(ctrlLead(), 'Stop Leading')
+    pLead  = newPrompt(ctrlLead(),  'Lead Horse')
+    pStop  = newPrompt(ctrlLead(),  'Stop Leading')
+    pDrink = newPrompt(ctrlDrink(), 'Give Water')
 end)
 
 -- ⚠️ THE ENTITY HANDLE IS NOT THE GROUP ID. This is what R5 got wrong.
@@ -98,15 +103,24 @@ local function groupIdFor(ent)
 end
 
 local function attachTo(ent)
-    if not (pLead and pStop) then return end
+    if not (pLead and pStop and pDrink) then return end
     -- Re-asked every pass rather than cached against the entity: the group id
     -- belongs to the game's targeting, not to us, and it is not ours to assume
     -- stays put.
     local g = groupIdFor(ent)
     if not g or g == leadGroup then return end
     leadGroup = g
-    UiPromptSetGroup(pLead, g, 0)
-    UiPromptSetGroup(pStop, g, 0)
+    UiPromptSetGroup(pLead,  g, 0)
+    UiPromptSetGroup(pStop,  g, 0)
+    UiPromptSetGroup(pDrink, g, 0)
+end
+
+-- Does the horse have water right where it stands? Reuses the exact test the old
+-- automatic drinking used, so Give Water only appears when a drink is possible.
+local function atWater(ent)
+    if not (Metabolism and Metabolism.atWater) then return false end
+    local ok, v = pcall(Metabolism.atWater, ent)
+    return ok and v or false
 end
 
 --------------------------------------------------------------------------------
@@ -125,15 +139,17 @@ function HorseMenu.startLead(a)
     Bridge.notify(('You take %s by the reins.'):format(a.name or 'the horse'))
 end
 
--- Leading is a task on the PLAYER, so that's what has to be cleared. Secondary
--- first — the gentler cancel, and it leaves you walking rather than rooted.
+-- Leading is a task on the PLAYER, so that's what has to be cleared. R6 M5:
+-- "Stop Leading should immediately stop the lead. Period." So the release is
+-- unconditional and instant — the flag drops first, then every task that could
+-- be holding the rope is cleared on both the player and the horse, so nothing
+-- can re-drive it a frame later. No chip: stopping is its own feedback.
 function HorseMenu.stopLead(a)
     leading = false
     local ped = PlayerPedId()
     pcall(function() ClearPedSecondaryTask(ped) end)
     pcall(function() ClearPedTasks(ped) end)
     if a and a.ent and DoesEntityExist(a.ent) then ClearPedTasks(a.ent) end
-    Bridge.notify('You let the reins go.')
 end
 
 function HorseMenu.isLeading() return leading end
@@ -155,26 +171,104 @@ CreateThread(function()
                     wait = 0
                     attachTo(a.ent)
 
-                    local canLead = not leading
-                    local canStop = leading
-                    UiPromptSetEnabled(pLead, canLead); UiPromptSetVisible(pLead, canLead)
-                    UiPromptSetEnabled(pStop, canStop); UiPromptSetVisible(pStop, canStop)
+                    local canLead  = not leading
+                    local canStop  = leading
+                    local canDrink = atWater(a.ent)   -- offered only when there IS water
+                    UiPromptSetEnabled(pLead,  canLead);  UiPromptSetVisible(pLead,  canLead)
+                    UiPromptSetEnabled(pStop,  canStop);  UiPromptSetVisible(pStop,  canStop)
+                    UiPromptSetEnabled(pDrink, canDrink); UiPromptSetVisible(pDrink, canDrink)
 
                     if canLead and UiPromptHasStandardModeCompleted(pLead) then HorseMenu.startLead(a) end
                     if canStop and UiPromptHasStandardModeCompleted(pStop) then HorseMenu.stopLead(a) end
+                    if canDrink and UiPromptHasStandardModeCompleted(pDrink) then
+                        -- The server decides the outcome: a full drink, or the
+                        -- "not thirsty" chip. Name goes along for that chip.
+                        TriggerServerEvent(Events.RequestDrink, a.id, a.name)
+                    end
                 else
-                    UiPromptSetVisible(pLead, false)
+                    UiPromptSetVisible(pLead,  false)
+                    UiPromptSetVisible(pDrink, false)   -- too far to water it
                     -- Stop Leading survives the distance check: leading drags the
                     -- horse along with you, so you are never far from it, and a
                     -- state you can enter must stay a state you can leave.
                     UiPromptSetVisible(pStop, leading)
                 end
             else
-                if pLead then UiPromptSetVisible(pLead, false) end
-                if pStop then UiPromptSetVisible(pStop, false) end
+                if pLead  then UiPromptSetVisible(pLead,  false) end
+                if pStop  then UiPromptSetVisible(pStop,  false) end
+                if pDrink then UiPromptSetVisible(pDrink, false) end
                 if leading and not (a and a.ent and DoesEntityExist(a.ent)) then leading = false end
             end
         end
         Wait(wait)
     end
 end)
+
+--------------------------------------------------------------------------------
+-- ⚠️ TEMPORARY: FIND WHICH PROMPT TYPES ARE VANILLA BRUSH / FEED
+--------------------------------------------------------------------------------
+-- R6 M1/F1: "Feed and Brush should be removed from this list." Those are the
+-- game's OWN lock-on prompts, and the only lever we have is
+-- UiPromptDisablePromptTypeThisFrame(type) — 0xFC094EF26DD153FA — which must be
+-- called EVERY FRAME to suppress a prompt type. Type 12 is the mount prompt; the
+-- brush and feed type numbers are not documented anywhere I can find.
+--
+-- R5's probe called it once and nothing happened — because once is not enough,
+-- it has to be per-frame. This one holds the numbers and disables them every
+-- frame in the loop below, so the answer comes from the game, exactly like the
+-- dirt and wagon-health probes did.
+--
+--   /sovpromptprobe 1 2 3 ...   disable these type numbers each frame
+--   /sovpromptprobe sweep       walk 0-40 automatically, ~2s each, printing each
+--   /sovpromptprobe off         stop
+local DISABLE_PROMPT_TYPE = 0xFC094EF26DD153FA
+local probeTypes = {}
+local sweeping = false
+
+CreateThread(function()
+    while true do
+        if next(probeTypes) then
+            for t in pairs(probeTypes) do
+                Citizen.InvokeNative(DISABLE_PROMPT_TYPE, t)
+            end
+            Wait(0)
+        else
+            Wait(300)
+        end
+    end
+end)
+
+RegisterCommand('sovpromptprobe', function(_, args)
+    args = args or {}
+    local first = args[1]
+    if not first or first == 'off' then
+        probeTypes, sweeping = {}, false
+        Bridge.notify('Prompt probe off.')
+        return
+    end
+    if first == 'sweep' then
+        if sweeping then return end
+        sweeping = true
+        Bridge.notify('Sweeping prompt types 0-40. Lock on to your horse and watch Brush/Feed.')
+        CreateThread(function()
+            for t = 0, 40 do
+                if not sweeping then break end
+                probeTypes = { [t] = true }
+                print(('^3[sov_prompt]^7 now disabling type %d — is Brush or Feed gone?'):format(t))
+                Wait(2000)
+            end
+            probeTypes, sweeping = {}, false
+            print('^3[sov_prompt]^7 sweep done.')
+        end)
+        return
+    end
+    -- explicit list of numbers
+    probeTypes, sweeping = {}, false
+    local list = {}
+    for _, s in ipairs(args) do
+        local n = tonumber(s)
+        if n then probeTypes[n] = true; list[#list + 1] = n end
+    end
+    print(('^3[sov_prompt]^7 disabling types: %s (per frame)'):format(table.concat(list, ', ')))
+    Bridge.notify('See F8. Lock on to your horse.')
+end, false)
