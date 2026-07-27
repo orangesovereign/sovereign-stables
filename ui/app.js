@@ -334,7 +334,7 @@
                   (Number(w.is_default) === 1
                     ? '<div class="detail__default">&#9733; Your default wagon</div>'
                     : '<button class="buy ghost" id="mkdefwagon">Make Default Wagon</button>')
-                : '<button class="buy" id="buywagon">Request Purchase</button>' +
+                : '<button class="buy" id="buywagon">Purchase</button>' +
                   '<div class="buyform hidden" id="wbuyform">' +
                     '<label class="field"><span>Name</span>' +
                       '<input id="wname" maxlength="24" spellcheck="false" placeholder="Name your wagon" /></label>' +
@@ -415,7 +415,7 @@
                     '<div class="brokered__h">Not sold over the counter</div>' +
                     '<p>Speak to the stable&rsquo;s <b>trainer</b> to arrange this horse.</p>' +
                   '</div>'
-                : '<button class="buy" id="buy">Request Purchase</button>' +
+                : '<button class="buy" id="buy">Purchase</button>' +
                   '<div class="buyform hidden" id="buyform">' +
                     '<label class="field"><span>Name</span>' +
                       '<input id="hname" maxlength="24" spellcheck="false" placeholder="Name your horse" /></label>' +

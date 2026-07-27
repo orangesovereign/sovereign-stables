@@ -176,4 +176,58 @@ RegisterNetEvent(Events.RequestSetDefault, function(horseId)
     end)
 end)
 
-AddEventHandler('playerDropped', function() busy[source] = nil end)
+--------------------------------------------------------------------------------
+-- A PLAYER WHO LEAVES TAKES THEIR HORSE WITH THEM  (owner ruling 2026-07-27)
+--------------------------------------------------------------------------------
+-- Horses are created by the client, so every other tidy-up path we have is
+-- client-side — and a dropped player runs no client code at all. Left alone the
+-- horse doesn't vanish: RedM migrates ownership of a networked entity to another
+-- nearby player, so it stays in the world, riderless and unowned, for as long as
+-- someone is stood near it. Hence the cleanup lives here, on the one machine
+-- still running when a player disconnects.
+--
+-- The client reports its horse's NET ID (the id every machine agrees on) when it
+-- spawns one, and retracts it whenever the horse goes away by any other route.
+local outHorse = {}   -- [src] = { netId, model }
+
+RegisterNetEvent(Events.ReportHorseEntity, function(netId, model)
+    local src = source
+    netId = tonumber(netId)
+    if not netId or netId == 0 then outHorse[src] = nil; return end
+    outHorse[src] = { netId = netId, model = tonumber(model) }
+end)
+
+AddEventHandler('playerDropped', function()
+    local src  = source
+    local held = outHorse[src]
+    busy[src], outHorse[src] = nil, nil
+    if not held then return end
+
+    -- Net ids are RECYCLED. By the time we look, this one may belong to a
+    -- completely different entity — so check it is still a ped of the model we
+    -- were told about before deleting anything. Getting this wrong deletes some
+    -- other player's horse, which is far worse than leaving a stray one.
+    local function tryDelete()
+        local ent = NetworkGetEntityFromNetworkId(held.netId)
+        if not (ent and ent ~= 0 and DoesEntityExist(ent)) then return false end
+        if held.model and GetEntityModel(ent) ~= held.model then
+            Util.log(('drop cleanup: net id %d no longer the horse we were given — left alone')
+                :format(held.netId))
+            return true   -- resolved, but not ours: stop looking
+        end
+        DeleteEntity(ent)
+        Util.log(('drop cleanup: removed horse (net id %d) for departed player %s'):format(held.netId, src))
+        return true
+    end
+
+    -- The entity may not be resolvable the instant the player drops, so give it
+    -- a few tries over a couple of seconds rather than one hopeful attempt.
+    if tryDelete() then return end
+    local tries = 0
+    local function retry()
+        tries = tries + 1
+        if tryDelete() or tries >= 4 then return end
+        SetTimeout(500, retry)
+    end
+    SetTimeout(500, retry)
+end)

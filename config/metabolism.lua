@@ -100,8 +100,25 @@ Config.Metabolism = {
     cleanliness = {
         enabled          = true,
         start            = 0,
-        gainPerMinute    = 1.5,   -- gets dirtier while OUT and ridden [L6]
         max              = 100,
+
+        -- HOW FAST A HORSE GETS DIRTY, and why this number had to go up.
+        --
+        -- Owner, 2026-07-27: "Dirt not accumulating or accumulating too slow."
+        --
+        -- ⚠️ Both, and the cause is my own fix. Until the dirt guard landed, a
+        -- horse looked dirty because the ENGINE painted environmental grime on it
+        -- — our number barely mattered. The guard deliberately stopped that, so
+        -- the coat now shows nothing but this figure. That is the right design
+        -- (it's what makes a brushed horse stay brushed), but it means this
+        -- number is now the ONLY thing that dirties a horse, and at 1.5/min it
+        -- was nowhere near carrying that on its own: 17 minutes of riding before
+        -- a single speck showed through the grace band below.
+        --
+        -- At 6.0 a ridden horse starts to show dirt in about 2 minutes and is
+        -- filthy inside 15; galloping doubles it (see `dirtying`). Raise for a
+        -- grubbier county, lower for a cleaner one.
+        gainPerMinute    = 6.0,   -- gets dirtier while OUT and ridden [L6]
 
         -- [H10] A dirty horse LEFT AT THE STABLE is groomed clean by the
         -- stablehand over this many real minutes. This is why L6 ("gets dirty")
@@ -125,7 +142,13 @@ Config.Metabolism = {
         -- The stored number keeps climbing either way — this changes when dirt
         -- SHOWS, not when it counts. Raise it if horses still look grubby too
         -- soon after a brush; drop it toward 0 for a grimier, harder world.
-        visibleAbove = 25,
+        --
+        -- Dropped 25 -> 15 on 2026-07-27 alongside the rate above. 25 was set
+        -- when dirt climbed at 1.5/min and the engine was still painting its own
+        -- grime on top; on its own it was a 17-minute blackout during which
+        -- nothing appeared to happen at all. 15 keeps a brushed horse looking
+        -- brushed out of town without hiding the first real dirt of a long ride.
+        visibleAbove = 15,
 
         ------------------------------------------------------------------------
         -- WHAT DIRTIES A HORSE, AND WHAT WASHES IT (owner ruling 2026-07-25)

@@ -37,6 +37,8 @@ function RegisterNetEvent() end
 function AddEventHandler() end
 function CreateThread() end
 function TriggerClientEvent() end
+function RegisterCommand() end
+function SetTimeout() end
 function GetCurrentResourceName() return 'sovereign_stables' end
 os = os or {}
 """)
@@ -53,11 +55,26 @@ def fresh(ts=0):
 CHECKS = []
 def check(name, cond): CHECKS.append((name, bool(cond)))
 
-# 1) 60 min ACTIVE: hunger -0.7*60=42 -> 58, thirst -1.0*60=60 -> 40, dirt +1.5*60 capped 100
+# 1) 60 min ACTIVE: hunger -0.7*60=42 -> 58, thirst -1.0*60=60 -> 40
 b = fresh(0); drift(b, "active", 3600)
 check("active 60m: hunger 100 -> 58", round(b.hunger) == 58)
 check("active 60m: thirst 100 -> 40", round(b.thirst) == 40)
-check("active 60m: dirt 0 -> 90",     round(b.dirt) == 90)
+
+# 1b) DIRT PACING. This used to assert a bare number (dirt == 90 at 1.5/min),
+# which passed happily while the owner's actual complaint — "dirt not
+# accumulating or accumulating too slow" — was true. The number was right and
+# the FEEL was wrong, so a number is the wrong thing to assert. What matters is
+# how long a rider waits to SEE anything, which is the rate and the grace band
+# together: below `visibleAbove` the coat renders spotless no matter what the
+# stored value says.
+grace = L.eval("Config.Metabolism.cleanliness.visibleAbove")
+def dirt_after(minutes):
+    x = fresh(0); drift(x, "active", int(minutes * 60)); return x.dirt
+
+check("dirt shows within 3 min of riding",  dirt_after(3) > grace)
+check("but NOT instantly (brush holds 1m)", dirt_after(1) <= grace)
+check("filthy inside 20 min",               dirt_after(20) >= 90)
+check("dirt still ceils at 100",            dirt_after(600) == 100)
 
 # 2) STORED time does NOT drain cores (drainWhile='active') and DOES clean.
 b = L.table_from({"hunger":50,"thirst":50,"dirt":100,"golden":False,"goldenTs":0,"ts":0})

@@ -393,3 +393,49 @@ end)
 AddEventHandler('playerDropped', function()
     pendingTarget[source], pendingMounted[source] = nil, nil
 end)
+
+--------------------------------------------------------------------------------
+-- ⚠️ TEMPORARY TESTING AID — REMOVE BEFORE PHASE 2 CLOSES
+--------------------------------------------------------------------------------
+-- `/sovdirty [0-100]` cakes the horse you have out in mud. No argument = 100.
+-- Requested 2026-07-27 so cleaning can be tested without riding for a quarter of
+-- an hour first.
+--
+-- Server-side on purpose: dirt is the server's number, so setting it here means
+-- it persists, survives a restart, and the coat guard picks it up on its next
+-- pass — the same route a real ride takes. A client-side version would paint the
+-- ped and be wiped by that guard half a second later.
+--
+-- IT CAN ONLY ADD DIRT. A command that also cleans is a free brush every player
+-- can type, which would quietly make the grooming loop — the thing this exists
+-- to test — pointless. Testing tools should not be able to win the game.
+RegisterCommand('sovdirty', function(src, args)
+    if src == 0 then print('[sovereign_stables] /sovdirty must be run in game.'); return end
+
+    local horseId = pendingTarget[src]
+    if not horseId then
+        Bridge.notifyCard(src, 'failed', 'Stables', 'Bring your horse out first.')
+        return
+    end
+
+    local want = tonumber(args and args[1]) or 100
+    CreateThread(function()
+        local charid = Bridge.getCharId(src); if not charid then return end
+        local m = loadBlob(charid, horseId); if not m then return end
+        drift(m, 'active', os.time())
+
+        local maxD = (mcfg().cleanliness and mcfg().cleanliness.max) or 100
+        want = clamp(want, 0, maxD)
+        if want <= m.dirt then
+            Bridge.notifyCard(src, 'failed', 'Stables',
+                ('Already %d%% dirty — this only adds. Use the brush to clean.'):format(math.floor(m.dirt + 0.5)))
+            return
+        end
+
+        m.dirt = want
+        saveBlob(charid, horseId, m)
+        Util.log(('[TEST] /sovdirty set horse %s to %d%% dirt for char %s'):format(horseId, want, charid))
+        TriggerClientEvent(Events.CareResult, src,
+            { ok = true, card = Metabolism.card(m), message = ('Your horse is now %d%% filthy.'):format(want) })
+    end)
+end, false)

@@ -27,6 +27,8 @@ Events.RequestSummon     = e('requestSummon')    -- whistle for your default hor
 Events.RequestBringOut   = e('requestBringOut')  -- fetch a specific horse at a stable
 Events.ReportDismiss     = e('reportDismiss')    -- horse sent away
 Events.ReportDeath       = e('reportDeath')      -- horse died (hard-death bookkeeping)
+Events.ReportHorseEntity = e('reportHorseEntity')-- net id of the horse you have out,
+                                                 -- so the server can delete it if you drop
 
 -- wagons [WG1/WG2/WG13] — milestone 1.4
 Events.RequestOwnedWagons     = e('requestOwnedWagons')

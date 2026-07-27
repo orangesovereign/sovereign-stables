@@ -75,6 +75,17 @@ function Horse.spawn(data)
     active = { ent = horse, id = data.id, name = data.name, model = data.model }
     following = false
 
+    -- Hand the server this horse's NET ID so it can delete the horse itself if
+    -- you disconnect. Horse.despawn below can't cover that case: a dropped
+    -- player runs no client code at all, so the cleanup has to live somewhere
+    -- that is still running. See server/horses.lua.
+    -- The model goes with it: net ids get recycled, so the server checks the
+    -- entity is still THIS horse before deleting anything.
+    local netId = NetworkGetNetworkIdFromEntity(horse)
+    if netId and netId ~= 0 then
+        TriggerServerEvent(Events.ReportHorseEntity, netId, GetEntityModel(horse))
+    end
+
     -- Put its tack on [F1/F5]. The server hands us the stored components with
     -- the horse; the pieces are the player's, not the horse's, but what a given
     -- horse is WEARING is stored per horse.
@@ -102,6 +113,9 @@ function Horse.despawn(silent)
         DeleteEntity(active.ent)
     end
     active, following = nil, false
+    -- Nothing out any more: retract the net id so a later disconnect doesn't
+    -- have the server hunting an entity that's already gone.
+    TriggerServerEvent(Events.ReportHorseEntity, nil)
     if not silent then Bridge.notify('Your horse wanders off.') end
 end
 
@@ -171,6 +185,10 @@ function Horse.dismiss()
 
     -- Let go of it first, then let it walk away on its own before it goes.
     active, following = nil, false
+    -- Retract the net id here too: this path deletes the horse itself rather
+    -- than going through Horse.despawn, so without this the server would keep
+    -- holding a net id for a horse that is already gone.
+    TriggerServerEvent(Events.ReportHorseEntity, nil)
     Horse.fleeAndDespawn(ent)
 end
 
