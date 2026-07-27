@@ -209,9 +209,21 @@ Config.Metabolism = {
         -- TROUGHS. Any of these props within `troughDistance` counts as water.
         -- Add your own trough props here if your map has custom ones.
         troughDistance  = 3.5,
+
+        -- ⚠️ THE LIST BELOW IS THE OWNER'S, NOT MINE (2026-07-27, R5 M6/G3).
+        -- My first pass was five prop names I'd assumed; Blackwater's trough
+        -- wasn't among them, so a horse stood at it simply never drank and
+        -- automatic drinking read as broken. Rivers worked the whole time,
+        -- which is what made it look like a drinking bug rather than a list bug.
+        -- If you add a stable whose trough isn't here, add its prop name.
         troughProps = {
-            'p_trough02x', 'p_trough03x', 'p_troughwater01x',
-            'p_waterpump01x', 'p_trough01x',
+            'p_feedtrough01x', 'p_feedtroughsml01x',
+            'p_watertrough01x', 'p_watertrough01x_new',
+            'p_watertrough02x', 'p_watertrough03x', 'p_watertroughsml01x',
+            'p_troughtable01x', 'p_trough01_h',
+            -- kept from the first pass, harmless if a map doesn't use them
+            'p_trough01x', 'p_trough02x', 'p_trough03x',
+            'p_troughwater01x', 'p_waterpump01x',
         },
     },
 

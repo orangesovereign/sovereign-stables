@@ -97,11 +97,30 @@ end
 -- real problem is that a one-shot write is a GUESS about when the engine will
 -- next disagree with us. So: stop guessing, and hold the value continuously.
 --
--- The invariant this buys is worth more than the bug it fixes: THE COAT ALWAYS
--- SHOWS EXACTLY WHAT THE NUMBER SAYS. Our model is the only thing that decides
--- how dirty a horse looks — engine grime can no longer add dirt behind our back,
--- which is also what made a freshly-brushed horse look grubby on the ride out of
--- town. One native call twice a second, on one horse. Nothing.
+-- ❌ AND THAT INVARIANT WAS WRONG. (Corrected 2026-07-27 after R5.)
+--
+-- The first version of this guard held the coat at EXACTLY our number every
+-- 500ms, in both directions — asserting dirt as confidently as it asserted
+-- clean. Owner, R5: "It seems you've removed or disabled the visible dirty
+-- entirely. Shows no dirty at any time." Six checks failed on it.
+--
+-- The mistake was assuming SET_PED_DIRT_LEVEL is symmetrical. Everything we
+-- actually PROVED about it (PHASE1_SPIKE_FINDINGS) was in the clean direction —
+-- coal uses it as `0.0` plus a clear-pass, and that is the only use we ever
+-- verified. I extended it to mean "and 1.0 makes a horse filthy", which nothing
+-- established. So the guard suppressed the engine's own environmental grime —
+-- the thing that was ACTUALLY making horses look dirty all along — and put
+-- nothing in its place. A horse could no longer get dirty at all.
+--
+-- Worse, R4 passed it. Every dirt check that round tested CLEANING, so the half
+-- that worked was the only half under test.
+--
+-- SO THE GUARD IS NOW ONE-DIRECTIONAL: it asserts CLEAN and never asserts DIRT.
+-- Below the visible threshold we hold the horse spotless, which is what keeps a
+-- brushed horse brushed. Above it we take our hands off entirely and let the
+-- world dirty the horse the way it always did. We decide when a horse is CLEAN;
+-- the engine decides what dirty looks like. That's the half of the split each
+-- side can actually deliver.
 CreateThread(function()
     local tick = 0
     while true do
@@ -109,14 +128,58 @@ CreateThread(function()
         local a = Horse and Horse.active and Horse.active()
         if current and a and a.ent and DoesEntityExist(a.ent) then
             local lvl = dirtToLevel(current.dirt or 0)
-            Citizen.InvokeNative(0x7A56D66C78D1AAB7, a.ent, lvl + 0.0)   -- SET_PED_DIRT_LEVEL
-            -- At spotless, the level alone isn't enough: env dirt and decals are
-            -- separate layers and need the full clear. Every 2s is plenty.
-            tick = tick + 1
-            if lvl <= 0.0 and (tick % 4) == 0 then clearPass(a.ent) end
+            if lvl <= 0.0 then
+                -- Below the threshold: hold it spotless. The level alone isn't
+                -- enough — env dirt and decals are separate layers — so the full
+                -- clear runs every 2s.
+                Citizen.InvokeNative(0x7A56D66C78D1AAB7, a.ent, 0.0)
+                tick = tick + 1
+                if (tick % 4) == 0 then clearPass(a.ent) end
+            else
+                -- Above it: hands off. We still nudge the level up, because if
+                -- SET_PED_DIRT_LEVEL does paint dirt it costs nothing — but we
+                -- no longer CLEAR anything, so engine grime is free to build.
+                Citizen.InvokeNative(0x7A56D66C78D1AAB7, a.ent, lvl + 0.0)
+                tick = 0
+            end
         end
     end
 end)
+
+--------------------------------------------------------------------------------
+-- ⚠️ TEMPORARY: WHICH NATIVE ACTUALLY PAINTS DIRT?  (remove once answered)
+--------------------------------------------------------------------------------
+-- We have never established this. The clean direction is proven; the dirty
+-- direction I assumed, and assumed wrong. `/sovdirtprobe` tries each candidate
+-- on the horse you have out, one per run, so the answer comes from the game
+-- rather than from me — the same way your health probe settled the wagon
+-- natives after three wrong guesses.
+local DIRT_CANDIDATES = {
+    { name = 'SET_PED_DIRT_LEVEL 1.0',    fn = function(e) Citizen.InvokeNative(0x7A56D66C78D1AAB7, e, 1.0) end },
+    { name = 'SET_PED_DIRT_LEVEL 5.0',    fn = function(e) Citizen.InvokeNative(0x7A56D66C78D1AAB7, e, 5.0) end },
+    { name = 'SET_PED_DIRT_LEVEL 100.0',  fn = function(e) Citizen.InvokeNative(0x7A56D66C78D1AAB7, e, 100.0) end },
+    { name = '_SET_PED_DAMAGE_CLEANLINESS 3', fn = function(e) Citizen.InvokeNative(0x397CF3E1E2947A62, e, 3) end },
+    { name = 'SET_PED_WETNESS_HEIGHT 1.0',fn = function(e) Citizen.InvokeNative(0x9B0D4B9B3C2D6B5F, e, 1.0) end },
+}
+
+RegisterCommand('sovdirtprobe', function(_, args)
+    local a = Horse and Horse.active and Horse.active()
+    if not (a and a.ent and DoesEntityExist(a.ent)) then
+        Bridge.notify('Bring your horse out first.'); return
+    end
+    local n = tonumber(args and args[1])
+    if not n then
+        print('^3[sov_dirt]^7 candidates:')
+        for i, c in ipairs(DIRT_CANDIDATES) do print(('  %d = %s'):format(i, c.name)) end
+        Bridge.notify('See F8 — then /sovdirtprobe <number>')
+        return
+    end
+    local c = DIRT_CANDIDATES[n]
+    if not c then Bridge.notify('No such candidate.'); return end
+    c.fn(a.ent)
+    print(('^3[sov_dirt]^7 applied #%d — %s. Does the horse LOOK dirty now?'):format(n, c.name))
+    Bridge.notify(('Tried: %s'):format(c.name))
+end, false)
 
 --------------------------------------------------------------------------------
 -- Penalties — a starving/parched horse is sluggish (never frozen).

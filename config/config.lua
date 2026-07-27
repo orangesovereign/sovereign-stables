@@ -419,29 +419,26 @@ Config.UI = {
     -- Courage joins that same readout in Phase 3, behind the same gesture, which
     -- is how the owner ruled it: visible when "standing at the horse and right
     -- clicking".
+    -- ⚠️ REWRITTEN 2026-07-27 after R5. This was briefly a whole custom menu —
+    -- Brush, Feed, Pat, Flee and a stats readout, all built by us. That was a
+    -- misreading. RDR2's own lock-on menu (Show Info / Brush / Feed / Pat) is
+    -- LIVE on this server and works; the owner's ruling was "the native menu is
+    -- what needs to be altered to fit our things, not create a new one."
+    --
+    -- So we add exactly one entry the game doesn't have — Lead Horse — and
+    -- leave everything else to vanilla. Brushing and feeding happen by using the
+    -- item in your satchel, which is how the owner ruled it and what already
+    -- worked (R5 Art. IV, 5/5).
     horseMenu = {
-        enabled        = true,
-        distance       = 5.0,   -- how near you must be on foot for the prompts at all
-        revealDistance = 2.0,   -- how near you must be for right-click to show the stats
-        revealSeconds  = 5,     -- a tap keeps the readout up this long; holding also works
-        drinkSeconds   = 8,     -- how long the drinking animation runs
+        enabled  = true,
+        distance = 5.0,   -- how near you must be on foot for the Lead prompt
 
-        -- THE MENU'S KEYS, once you're holding right-click at the horse:
-        --   G  Lead Horse          E  Stop Leading (only while leading)
-        --   H  Brush It            E  Pat It       (only while NOT leading)
-        --   R  Feed It, or Let It Drink when there's water to hand
-        --   F  Send It Home
-        --
-        -- ⚠️ SUPPRESSING RDR2's OWN horse prompts (added 2026-07-27, R4 L1).
-        -- The vanilla lock-on menu shows Brush/Feed/Pat/Flee permanently GREYED
-        -- on a RedM server, because nothing implements them — that dead menu
-        -- sitting next to our live one is what the owner reported. Config flag
-        -- 442 kills the Flee prompt (confirmed by shipping resources); the rest
-        -- need a prompt-TYPE number, and no public table of those numbers
-        -- exists. So this list is empty until we find them, and there is a
-        -- `/sovpromptprobe <n>` command to find them by experiment rather than
-        -- by me guessing. Add the numbers that work here.
-        suppressPromptTypes = {},
+        -- ⚠️ NOT G. G is the native pat/calm and it plays — binding Lead there
+        -- would fight a vanilla interaction the owner wants kept. E's native
+        -- meaning is "detach horse", which is the nearest thing the game has to
+        -- letting go of one. Change this if E turns out to collide with
+        -- something in the native list.
+        leadControl = 0xF5C4701B,   -- INPUT_INTERACT_LOCKON_DETACH_HORSE (E)
     },
 
     -- 'circular' or 'arrows' — how horse components are cycled in the customizer. [S15]

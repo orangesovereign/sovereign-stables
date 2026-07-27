@@ -263,75 +263,19 @@ RegisterNetEvent(Events.RequestCare, function(horseId, itemName)
 end)
 
 --------------------------------------------------------------------------------
--- "BRUSH IT" / "FEED IT" — the horse menu asks by KIND, not by item name
+-- ⚠️ REMOVED 2026-07-27: the "brush it / feed it by KIND" handlers.
 --------------------------------------------------------------------------------
--- Owner, 2026-07-27 (R4 L1): "Brush and Feed are greyed out and should do what
--- they are intended."
+-- These existed for one round, to drive Brush and Feed prompts in a custom horse
+-- menu. The owner ruled that menu out entirely — "Brush should only be done by
+-- double clicking on the item in the inventory. Not with a key toggle" — so the
+-- handlers had no caller left. Deleted rather than left dormant: an unreachable
+-- net event is still a reachable net event, and dead code that spends items is
+-- the wrong kind of dead code to leave lying about.
 --
--- The menu can't sensibly ask for an item by name — the player might carry oats,
--- an apple and a carrot, and picking between them is not a decision anyone wants
--- to make at a horse. So the menu says "feed it" and the SERVER decides which
--- item that means, because the server is the only side that knows what's in the
--- satchel. That also keeps the prompt honest: it asks the same question to
--- decide whether the option is offered at all, so a prompt is only ever shown
--- when it will actually work.
-local function kindOf(def)
-    if def.dirt then return 'brush' end
-    if def.hunger or def.thirst then return 'feed' end
-    return nil
-end
-
--- Best item of this kind the player is carrying, or nil. "Best" = restores the
--- most, so feeding reaches for the proper meal before the apple.
-local function bestItemFor(src, kind, mounted)
-    local best, bestDef, bestScore = nil, nil, -1
-    for name, def in pairs(mcfg().items or {}) do
-        if kindOf(def) == kind and not (def.horsebackOnly and not mounted) then
-            if (Bridge.itemCount(src, name) or 0) > 0 then
-                local score = (def.dirt or 0) + (def.hunger or 0) + (def.thirst or 0)
-                if score > bestScore then best, bestDef, bestScore = name, def, score end
-            end
-        end
-    end
-    return best, bestDef
-end
-
--- What may the menu offer this player right now? Asked when the menu opens, so
--- an option is greyed out only when it genuinely can't be done.
-RegisterNetEvent(Events.RequestCareOptions, function()
-    local src = source
-    CreateThread(function()
-        local mounted = pendingMounted[src] and true or false
-        local brush, brushDef = bestItemFor(src, 'brush', mounted)
-        local feed,  feedDef  = bestItemFor(src, 'feed',  mounted)
-        TriggerClientEvent(Events.CareOptions, src, {
-            brush = brush and { item = brush, label = brushDef.label or brush } or nil,
-            feed  = feed  and { item = feed,  label = feedDef.label  or feed  } or nil,
-        })
-    end)
-end)
-
-RegisterNetEvent(Events.RequestCareKind, function(horseId, kind)
-    local src = source
-    if kind ~= 'brush' and kind ~= 'feed' then return end
-    CreateThread(function()
-        local charid = Bridge.getCharId(src); if not charid then return end
-        local mounted = pendingMounted[src] and true or false
-        local itemName, def = bestItemFor(src, kind, mounted)
-        if not itemName then
-            TriggerClientEvent(Events.CareResult, src, { ok = false, message =
-                (kind == 'brush') and 'You have nothing to brush it with.'
-                                   or 'You have nothing to feed it.' })
-            return
-        end
-        -- Durable tools need the exact instance, or we'd destroy the brush
-        -- instead of counting it down.
-        local instance = def.uses and Bridge.getItem(src, itemName) or nil
-        local ok, msg, card = spendAndApply(src, charid, horseId, itemName, def, instance)
-        TriggerClientEvent(Events.CareResult, src,
-            { ok = ok, message = msg, horseId = horseId, card = card, animate = ok and animFor(def) or nil })
-    end)
-end)
+-- `spendAndApply` above SURVIVED the cull and is the good half of that work: it
+-- is now the single place any item is spent, shared by the satchel's Use, the
+-- /sovfeed command and anything later. It is what made brush durability behave
+-- identically through every door (R5 Art. IV passed 5/5).
 
 -- Client periodically reports how dirty the out-horse got, so dirt persists even
 -- if the horse is dismissed rather than stored through the menu. Clamped; the
