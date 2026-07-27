@@ -198,6 +198,50 @@ local function animFor(def)
     return nil
 end
 
+-- ONE place where an item is spent and its effect applied, shared by the
+-- satchel's "Use" and the horse menu's Brush/Feed. These were briefly two
+-- copies, which is how you end up with a brush that counts down properly when
+-- used from the satchel and is destroyed outright when used from the menu — the
+-- same action wearing out at two different rates depending on where you clicked.
+-- Returns ok, message, card.
+local function spendAndApply(src, charid, horseId, itemName, def, instance)
+    -- DURABILITY. A tool with `uses` isn't consumed each time — it loses one
+    -- use, tracked in ITS OWN metadata, and only breaks at zero. Feed has no
+    -- `uses`, so it's a plain one-shot consume.
+    if def.uses then
+        local item = instance or {}
+        if not item.id then
+            return false, ('You have no %s.'):format(def.label or itemName)
+        end
+        local meta = item.metadata or {}
+        local left = tonumber(meta.uses)
+        if left == nil then
+            left = (def.uses == true) and (mcfg().defaultUses or 20) or def.uses
+        end
+        left = left - 1
+        local ok, msg, card = Metabolism.applyItem(charid, horseId, def)
+        if not ok then return false, msg end
+        if left <= 0 then
+            Bridge.removeItemById(src, item.id)
+            Bridge.notify(src, ('Your %s wore out.'):format(def.label or itemName))
+        else
+            meta.uses = left
+            meta.description = ('%d uses left'):format(left)
+            Bridge.setItemMetadata(src, item.id, meta)
+        end
+        return true, msg, card
+    end
+
+    if not Bridge.takeItem(src, itemName, 1) then
+        return false, ('You have no %s.'):format(def.label or itemName)
+    end
+    local ok, msg, card = Metabolism.applyItem(charid, horseId, def)
+    if not ok then
+        Util.warn(('care refund: %s to char %s (%s)'):format(itemName, charid, msg or '?'))
+    end
+    return ok, msg, card
+end
+
 RegisterNetEvent(Events.RequestCare, function(horseId, itemName)
     -- Path for a menu-driven feed (no usable item): validate and apply directly.
     local src = source
@@ -209,16 +253,81 @@ RegisterNetEvent(Events.RequestCare, function(horseId, itemName)
             TriggerClientEvent(Events.CareResult, src, { ok = false, message = 'No such feed.' })
             return
         end
-        -- Must actually hold the item.
-        if not Bridge.takeItem(src, itemName, 1) then
-            TriggerClientEvent(Events.CareResult, src, { ok = false, message = ('You have no %s.'):format(def.label or itemName) })
+        -- Same spend routine as the satchel and the horse menu, so /sovfeed with
+        -- a durable tool counts it down instead of destroying it.
+        local instance = def.uses and Bridge.getItem(src, itemName) or nil
+        local ok, msg, card = spendAndApply(src, charid, horseId, itemName, def, instance)
+        TriggerClientEvent(Events.CareResult, src,
+            { ok = ok, message = msg, horseId = horseId, card = card, animate = ok and animFor(def) or nil })
+    end)
+end)
+
+--------------------------------------------------------------------------------
+-- "BRUSH IT" / "FEED IT" — the horse menu asks by KIND, not by item name
+--------------------------------------------------------------------------------
+-- Owner, 2026-07-27 (R4 L1): "Brush and Feed are greyed out and should do what
+-- they are intended."
+--
+-- The menu can't sensibly ask for an item by name — the player might carry oats,
+-- an apple and a carrot, and picking between them is not a decision anyone wants
+-- to make at a horse. So the menu says "feed it" and the SERVER decides which
+-- item that means, because the server is the only side that knows what's in the
+-- satchel. That also keeps the prompt honest: it asks the same question to
+-- decide whether the option is offered at all, so a prompt is only ever shown
+-- when it will actually work.
+local function kindOf(def)
+    if def.dirt then return 'brush' end
+    if def.hunger or def.thirst then return 'feed' end
+    return nil
+end
+
+-- Best item of this kind the player is carrying, or nil. "Best" = restores the
+-- most, so feeding reaches for the proper meal before the apple.
+local function bestItemFor(src, kind, mounted)
+    local best, bestDef, bestScore = nil, nil, -1
+    for name, def in pairs(mcfg().items or {}) do
+        if kindOf(def) == kind and not (def.horsebackOnly and not mounted) then
+            if (Bridge.itemCount(src, name) or 0) > 0 then
+                local score = (def.dirt or 0) + (def.hunger or 0) + (def.thirst or 0)
+                if score > bestScore then best, bestDef, bestScore = name, def, score end
+            end
+        end
+    end
+    return best, bestDef
+end
+
+-- What may the menu offer this player right now? Asked when the menu opens, so
+-- an option is greyed out only when it genuinely can't be done.
+RegisterNetEvent(Events.RequestCareOptions, function()
+    local src = source
+    CreateThread(function()
+        local mounted = pendingMounted[src] and true or false
+        local brush, brushDef = bestItemFor(src, 'brush', mounted)
+        local feed,  feedDef  = bestItemFor(src, 'feed',  mounted)
+        TriggerClientEvent(Events.CareOptions, src, {
+            brush = brush and { item = brush, label = brushDef.label or brush } or nil,
+            feed  = feed  and { item = feed,  label = feedDef.label  or feed  } or nil,
+        })
+    end)
+end)
+
+RegisterNetEvent(Events.RequestCareKind, function(horseId, kind)
+    local src = source
+    if kind ~= 'brush' and kind ~= 'feed' then return end
+    CreateThread(function()
+        local charid = Bridge.getCharId(src); if not charid then return end
+        local mounted = pendingMounted[src] and true or false
+        local itemName, def = bestItemFor(src, kind, mounted)
+        if not itemName then
+            TriggerClientEvent(Events.CareResult, src, { ok = false, message =
+                (kind == 'brush') and 'You have nothing to brush it with.'
+                                   or 'You have nothing to feed it.' })
             return
         end
-        local ok, msg, card = Metabolism.applyItem(charid, horseId, def)
-        if not ok then
-            -- refund the item — we took it but couldn't use it
-            Util.warn(('care refund: %s to char %s (%s)'):format(itemName, charid, msg))
-        end
+        -- Durable tools need the exact instance, or we'd destroy the brush
+        -- instead of counting it down.
+        local instance = def.uses and Bridge.getItem(src, itemName) or nil
+        local ok, msg, card = spendAndApply(src, charid, horseId, itemName, def, instance)
         TriggerClientEvent(Events.CareResult, src,
             { ok = ok, message = msg, horseId = horseId, card = card, animate = ok and animFor(def) or nil })
     end)
@@ -346,37 +455,13 @@ AddEventHandler('onResourceStart', function(res)
             end
 
             CreateThread(function()
-                -- DURABILITY. A tool with `uses` isn't consumed each time — it
-                -- loses one use, tracked in ITS OWN metadata, and only breaks at
-                -- zero. Feed has no `uses`, so it's a plain one-shot consume.
-                if def.uses then
-                    local item = data.item or {}
-                    local meta = item.metadata or {}
-                    local left = tonumber(meta.uses)
-                    if left == nil then
-                        left = (def.uses == true) and (mcfg().defaultUses or 20) or def.uses
-                    end
-                    left = left - 1
-                    local ok, msg, card = Metabolism.applyItem(charid, horseId, def)
-                    if not ok then Bridge.notify(src, msg or 'Nothing to do.'); return end
-                    if left <= 0 then
-                        Bridge.removeItemById(src, item.id)
-                        Bridge.notify(src, ('Your %s wore out.'):format(def.label or itemName))
-                    else
-                        meta.uses = left
-                        meta.description = ('%d uses left'):format(left)
-                        Bridge.setItemMetadata(src, item.id, meta)
-                    end
-                    TriggerClientEvent(Events.CareResult, src,
-                        { ok = true, message = msg, horseId = horseId, card = card, animate = animFor(def) })
-                else
-                    if not Bridge.takeItem(src, itemName, 1) then
-                        Bridge.notify(src, ('You have no %s.'):format(def.label or itemName)); return
-                    end
-                    local ok, msg, card = Metabolism.applyItem(charid, horseId, def)
-                    TriggerClientEvent(Events.CareResult, src,
-                        { ok = ok, message = msg, horseId = horseId, card = card, animate = animFor(def) })
-                end
+                -- vorp hands us the exact instance that was clicked, which is
+                -- what durability needs. Same routine as the horse menu's
+                -- Brush/Feed, so the two can never drift apart.
+                local ok, msg, card = spendAndApply(src, charid, horseId, itemName, def, data.item)
+                if not ok then Bridge.notify(src, msg or 'Nothing to do.'); return end
+                TriggerClientEvent(Events.CareResult, src,
+                    { ok = true, message = msg, horseId = horseId, card = card, animate = animFor(def) })
             end)
         end)
     end

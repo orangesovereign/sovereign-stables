@@ -41,7 +41,10 @@ Events.RequestRepairWagon     = e('requestRepairWagon')   -- field/pro repair [W
 Events.WagonRepaired          = e('wagonRepaired')        -- client-bound: new condition
 
 -- metabolism / care [C-series] — milestone 2.1
-Events.RequestCare     = e('requestCare')      -- feed/water/clean a horse
+Events.RequestCare     = e('requestCare')      -- feed/water/clean a horse (named item)
+Events.RequestCareKind    = e('requestCareKind')    -- "brush it" / "feed it" — server picks the item
+Events.RequestCareOptions = e('requestCareOptions') -- what can I actually do at this horse?
+Events.CareOptions        = e('careOptions')        -- client-bound answer to the above
 Events.CareResult      = e('careResult')       -- outcome + fresh status
 Events.SyncCare        = e('syncCare')          -- push current status to the client
 Events.ReportDirt      = e('reportDirt')        -- client tells server how dirty it got

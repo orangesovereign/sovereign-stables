@@ -425,6 +425,23 @@ Config.UI = {
         revealDistance = 2.0,   -- how near you must be for right-click to show the stats
         revealSeconds  = 5,     -- a tap keeps the readout up this long; holding also works
         drinkSeconds   = 8,     -- how long the drinking animation runs
+
+        -- THE MENU'S KEYS, once you're holding right-click at the horse:
+        --   G  Lead Horse          E  Stop Leading (only while leading)
+        --   H  Brush It            E  Pat It       (only while NOT leading)
+        --   R  Feed It, or Let It Drink when there's water to hand
+        --   F  Send It Home
+        --
+        -- ⚠️ SUPPRESSING RDR2's OWN horse prompts (added 2026-07-27, R4 L1).
+        -- The vanilla lock-on menu shows Brush/Feed/Pat/Flee permanently GREYED
+        -- on a RedM server, because nothing implements them — that dead menu
+        -- sitting next to our live one is what the owner reported. Config flag
+        -- 442 kills the Flee prompt (confirmed by shipping resources); the rest
+        -- need a prompt-TYPE number, and no public table of those numbers
+        -- exists. So this list is empty until we find them, and there is a
+        -- `/sovpromptprobe <n>` command to find them by experiment rather than
+        -- by me guessing. Add the numbers that work here.
+        suppressPromptTypes = {},
     },
 
     -- 'circular' or 'arrows' — how horse components are cycled in the customizer. [S15]

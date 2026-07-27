@@ -38,7 +38,6 @@ local function cfg() return (Config.UI and Config.UI.horseMenu) or {} end
 -- Controls, chosen so each one's NATIVE meaning matches what we use it for —
 -- the key you'd instinctively press is the key that works.
 local CTRL_LEAD   = 0x5415BE48   -- INPUT_INTERACT_LOCKON_ANIMAL       (G) "interact with animal"
-local CTRL_DRINK  = 0x71F89BBC   -- INPUT_INTERACT_LOCKON_CALL_ANIMAL  (R)
 local CTRL_STOP   = 0xF5C4701B   -- INPUT_INTERACT_LOCKON_DETACH_HORSE (E) literally "detach horse"
 local CTRL_REVEAL = 0xF8982F00   -- INPUT_INTERACT_LOCKON       (RIGHT MOUSE) vanilla lock-on
 
@@ -48,11 +47,44 @@ local CTRL_REVEAL = 0xF8982F00   -- INPUT_INTERACT_LOCKON       (RIGHT MOUSE) va
 -- The comment said "(R)" because that's what it SHOULD have been; the hash never
 -- delivered it. Verified against the RDR3 control table, not from memory.
 
+-- The rest of the menu (R4 L1). Owner: "In the same menu as Brush, Feed, Pat,
+-- Flee." Those four are RDR2's OWN lock-on prompts, and on a RedM server they
+-- are permanently greyed out because the vanilla horse-care system isn't there
+-- to satisfy them. So we replace them rather than sit beside them: our versions
+-- go in OUR group, driven by our items, and the dead native ones are suppressed.
+-- ⚠️ TWO CONSTRAINTS THE KEY LIST HAD TO BEND AROUND, both verified against the
+-- RDR3 control table rather than assumed:
+--
+--   1. THERE IS NO "PAT" INPUT. INPUT_INTERACT_HORSE_BRUSH and _FEED exist;
+--      nothing named pat, calm or soothe does. So Pat borrows a context input.
+--   2. INPUT_INTERACT_HORSE_FEED (0x0D55A0F0) IS REAL BUT UNBOUND — no default
+--      keyboard key. A prompt on it renders with a blank key that nothing
+--      presses. That exact trap already cost us the Drink prompt once, so Feed
+--      gets a key that actually exists instead of the one with the right name.
+--
+-- Pat and Stop Leading share E on purpose: Pat is hidden while you're leading
+-- and Stop only exists while you are, so the two are never on screen together.
+local CTRL_BRUSH = 0x63A38F2C   -- INPUT_INTERACT_HORSE_BRUSH        (H)
+local CTRL_FEED  = 0x71F89BBC   -- INPUT_INTERACT_LOCKON_CALL_ANIMAL (R)
+local CTRL_PAT   = 0xD51B784F   -- INPUT_CONTEXT_Y                   (E)
+local CTRL_FLEE  = 0x4216AF06   -- INPUT_HORSE_COMMAND_FLEE          (F) as client/horse.lua
+
 local group = GetRandomIntInRange(0, 0xFFFFFF)
-local pLead, pDrink, pStop, pReveal
+-- pGive is ONE prompt on R that reads the situation: at water it offers a free
+-- drink, away from water it offers food. Two prompts fighting over the same key
+-- would be worse, and so would a Feed that quietly burns an apple while the
+-- horse is stood in a river.
+local pLead, pGive, pStop, pReveal, pBrush, pPat, pFlee
 local leading = false
 local drinking = false
 local revealUntil = 0   -- GetGameTimer() ms; a tap latches the readout briefly
+
+-- What the server says we can actually do, refreshed when the menu opens. The
+-- prompt is only offered when it will work, so nothing is ever shown greyed out
+-- for a reason the player can't see — which was the complaint about the native
+-- menu in the first place.
+local options = { brush = nil, feed = nil }
+local optionsAskedAt = 0
 
 --------------------------------------------------------------------------------
 -- Prompts
@@ -67,12 +99,52 @@ local function newPrompt(control, label)
     return p
 end
 
+-- The label can change between frames (Feed It / Let It Drink), so it's settable.
+local function setLabel(p, text)
+    UiPromptSetText(p, CreateVarString(10, 'LITERAL_STRING', text))
+end
+
 CreateThread(function()
     pLead   = newPrompt(CTRL_LEAD,   'Lead Horse')
-    pDrink  = newPrompt(CTRL_DRINK,  'Let It Drink')
+    pGive   = newPrompt(CTRL_FEED,   'Feed It')
+    pBrush  = newPrompt(CTRL_BRUSH,  'Brush It')
+    pPat    = newPrompt(CTRL_PAT,    'Pat It')
+    pFlee   = newPrompt(CTRL_FLEE,   'Send It Home')
     pStop   = newPrompt(CTRL_STOP,   'Stop Leading')
     pReveal = newPrompt(CTRL_REVEAL, 'Check Condition')
 end)
+
+--------------------------------------------------------------------------------
+-- Suppressing RDR2's own horse prompts
+--------------------------------------------------------------------------------
+-- The native lock-on menu shows Brush / Feed / Pat / Flee permanently GREYED on
+-- a RedM server, because the vanilla horse-care system that would satisfy them
+-- isn't running. That's what the owner was looking at in R4 L1: a dead menu next
+-- to our live one. Ours replaces it.
+--
+-- ⚠️ HONEST NOTE: flag 442 (remove the Flee prompt) is confirmed by shipping
+-- resources. The rest is NOT well documented — UiPromptDisablePromptTypeThisFrame
+-- takes a prompt-type number nobody has published a table for. So rather than
+-- guess and claim it works, `/sovpromptprobe <n>` below lets us find the right
+-- number empirically, the same way your health probe settled the wagon natives.
+local function suppressNativePrompts(ent)
+    if not (ent and DoesEntityExist(ent)) then return end
+    pcall(function()
+        Citizen.InvokeNative(0x1913FE4CBF41C463, ent, 442, true)   -- SetPedConfigFlag: no Flee prompt
+    end)
+    for _, t in ipairs(cfg().suppressPromptTypes or {}) do
+        pcall(function() UiPromptDisablePromptTypeThisFrame(t) end)
+    end
+end
+
+-- Probe: turn one prompt type off and see what disappears. `/sovpromptprobe 12`
+-- then walk up to your horse. Testing aid; goes when the number is known.
+local probeType = nil
+RegisterCommand('sovpromptprobe', function(_, args)
+    probeType = tonumber(args and args[1])
+    print(('^3[sov_prompts]^7 disabling prompt type %s each frame — lock on to your horse and report what vanished.')
+        :format(tostring(probeType)))
+end, false)
 
 --------------------------------------------------------------------------------
 -- The label beside the horse's name — this IS the info panel the owner asked
@@ -185,6 +257,49 @@ function HorseMenu.drink(a)
 end
 
 --------------------------------------------------------------------------------
+-- Brush · Feed · Pat  (R4 L1 — "should do what they are intended")
+--------------------------------------------------------------------------------
+-- Brush and Feed ask the server by KIND, not by item name. The client has no
+-- business knowing what's in the satchel, and the player has no interest in
+-- choosing between oats and an apple while stood at a horse. The server picks,
+-- spends it through the same routine the satchel's Use goes through — so a brush
+-- wears down identically either way — and the animation comes back on the reply.
+function HorseMenu.brush(a)
+    if not a then return end
+    TriggerServerEvent(Events.RequestCareKind, a.id, 'brush')
+end
+
+function HorseMenu.feed(a)
+    if not a then return end
+    TriggerServerEvent(Events.RequestCareKind, a.id, 'feed')
+end
+
+-- PAT. Pure flavour — no item, no cost, no stat. It exists because the owner
+-- listed it and because a horse you can only ever consume resources at is a
+-- worse horse.
+--
+-- ⚠️ THE ONE UNVERIFIED NAME IN THIS FILE. Interaction_Brush and Interaction_Food
+-- are confirmed working (they're what the care animations use). A patting
+-- interaction is NOT in any table I could check, so `Interaction_Calming` is an
+-- educated guess and may simply do nothing. It's wrapped so a miss is silent
+-- rather than an error, and the calming EFFECT below is applied regardless — so
+-- even if the animation never plays, patting still settles the horse.
+local PAT_INTERACTION = 'Interaction_Calming'
+
+function HorseMenu.pat(a)
+    if not (a and a.ent and DoesEntityExist(a.ent)) then return end
+    pcall(function()
+        Citizen.InvokeNative(0xCD181A959CFDD7F4,          -- TASK_ANIMAL_INTERACTION
+            PlayerPedId(), a.ent, GetHashKey(PAT_INTERACTION), 0, 1)
+    end)
+    -- Settle it, the same way the showroom horses are settled (client/preview).
+    pcall(function()
+        Citizen.InvokeNative(0x9FF1E042FA597187, a.ent, GetHashKey('SPOOK'), false)
+    end)
+    Bridge.notify(('You pat %s.'):format(a.name or 'your horse'))
+end
+
+--------------------------------------------------------------------------------
 -- The loop
 --------------------------------------------------------------------------------
 -- Cheap when idle: 400ms until you're actually near your own horse on foot.
@@ -233,22 +348,53 @@ CreateThread(function()
                 end
                 local revealed = GetGameTimer() < revealUntil
 
+                -- Ask the server what's actually in the satchel the moment the
+                -- menu opens (and no more than once a second while it's up), so
+                -- Brush and Feed are offered only when they'd work.
+                if revealed and (GetGameTimer() - optionsAskedAt) > 1000 then
+                    optionsAskedAt = GetGameTimer()
+                    TriggerServerEvent(Events.RequestCareOptions)
+                elseif not revealed then
+                    optionsAskedAt = 0
+                end
+
+                -- RDR2's own Brush/Feed/Pat/Flee prompts are dead weight on a
+                -- RedM server — permanently greyed, because nothing implements
+                -- them. Ours replace them.
+                suppressNativePrompts(a.ent)
+                if probeType then pcall(function() UiPromptDisablePromptTypeThisFrame(probeType) end) end
+
                 -- Everything optional lives BEHIND the right-click (ruled
                 -- 2026-07-27). Walk past your horse and you get its name, nothing
                 -- more — no prompts hanging in the air every time you pass it.
-                local canLead  = revealed and (not leading) and (not drinking)
-                local canDrink = revealed and (not drinking) and atWater(a)
+                local busy     = drinking
+                local atWet    = atWater(a)
+                local canLead  = revealed and (not leading) and (not busy)
+                local canBrush = revealed and (not busy) and options.brush ~= nil
+                local canPat   = revealed and (not busy) and (not leading)
+                local canFlee  = revealed and (not busy)
+                -- ONE key, two meanings: free water beats spending an item, so at
+                -- water R drinks and away from it R feeds. It never burns an
+                -- apple while the horse is stood in a river.
+                local canGive  = revealed and (not busy) and (atWet or options.feed ~= nil)
 
                 -- ⚠️ THE ONE EXCEPTION. Stop Leading stays visible whenever you
                 -- ARE leading, gate or no gate. It isn't ambient clutter — it's
                 -- the way out of a state you're already in, and burying it would
                 -- mean a player who can't put the reins down. States you can
                 -- enter must always be states you can leave.
-                local canStop  = (not mounted) and leading and (not drinking)
+                local canStop  = (not mounted) and leading and (not busy)
+
+                setLabel(pGive, atWet and 'Let It Drink'
+                                      or ('Feed It (%s)'):format((options.feed and options.feed.label) or '—'))
+                if options.brush then setLabel(pBrush, ('Brush It (%s)'):format(options.brush.label)) end
 
                 UiPromptSetEnabled(pLead,   canLead);   UiPromptSetVisible(pLead,   canLead)
                 UiPromptSetEnabled(pStop,   canStop);   UiPromptSetVisible(pStop,   canStop)
-                UiPromptSetEnabled(pDrink,  canDrink);  UiPromptSetVisible(pDrink,  canDrink)
+                UiPromptSetEnabled(pGive,   canGive);   UiPromptSetVisible(pGive,   canGive)
+                UiPromptSetEnabled(pBrush,  canBrush);  UiPromptSetVisible(pBrush,  canBrush)
+                UiPromptSetEnabled(pPat,    canPat);    UiPromptSetVisible(pPat,    canPat)
+                UiPromptSetEnabled(pFlee,   canFlee);   UiPromptSetVisible(pFlee,   canFlee)
                 -- The hint only exists when it would do something, and gets out
                 -- of the way once the menu is up.
                 local showHint = closeEnough and (not revealed)
@@ -267,7 +413,13 @@ CreateThread(function()
 
                 if canLead  and UiPromptHasStandardModeCompleted(pLead)  then used(); HorseMenu.startLead(a) end
                 if canStop  and UiPromptHasStandardModeCompleted(pStop)  then          HorseMenu.stopLead(a)  end
-                if canDrink and UiPromptHasStandardModeCompleted(pDrink) then used(); HorseMenu.drink(a)     end
+                if canBrush and UiPromptHasStandardModeCompleted(pBrush) then used(); HorseMenu.brush(a)     end
+                if canPat   and UiPromptHasStandardModeCompleted(pPat)   then used(); HorseMenu.pat(a)       end
+                if canFlee  and UiPromptHasStandardModeCompleted(pFlee)  then          Horse.dismiss()        end
+                if canGive  and UiPromptHasStandardModeCompleted(pGive)  then
+                    used()
+                    if atWet then HorseMenu.drink(a) else HorseMenu.feed(a) end
+                end
             else
                 revealUntil = 0
                 if leading then leading = false end   -- horse gone / too far
@@ -275,4 +427,16 @@ CreateThread(function()
         end
         Wait(wait)
     end
+end)
+
+--------------------------------------------------------------------------------
+-- Server → client: what the menu may offer
+--------------------------------------------------------------------------------
+-- The server answers RequestCareOptions with what's actually in the satchel.
+-- Nil means "you have none", which is what hides the prompt — so a Brush that
+-- isn't offered is a Brush you genuinely can't do, not a greyed-out mystery.
+RegisterNetEvent(Events.CareOptions, function(o)
+    o = o or {}
+    options.brush = o.brush
+    options.feed  = o.feed
 end)

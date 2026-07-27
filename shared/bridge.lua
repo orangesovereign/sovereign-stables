@@ -170,6 +170,23 @@ if IS_SERVER then
         return true
     end
 
+    -- The actual item INSTANCE the player is carrying, with its id and metadata.
+    --
+    -- Needed because a durable tool's remaining uses live in the metadata of one
+    -- specific brush, not in the item type. `itemCount` can tell you a brush
+    -- exists; only this can tell you WHICH brush, which is what you must have
+    -- before you can decrement it. Without this the horse menu's Brush would
+    -- consume the whole tool on first use while the satchel's Use correctly
+    -- counted it down — the same action wearing out at two different rates.
+    function Bridge.getItem(src, item)
+        local p = promise.new()
+        local ok = pcall(function()
+            exports.vorp_inventory:getItem(src, item, function(found) p:resolve(found) end)
+        end)
+        if not ok then p:resolve(nil) end
+        return Citizen.Await(p)
+    end
+
     -- Remove a specific item INSTANCE by its inventory id (for durable tools that
     -- track state in metadata — we remove the exact one that wore out).
     function Bridge.removeItemById(src, id)
