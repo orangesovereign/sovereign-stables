@@ -45,7 +45,6 @@ Events.RequestCare     = e('requestCare')      -- feed/water/clean a horse (name
 Events.CareResult      = e('careResult')       -- outcome + fresh status
 Events.SyncCare        = e('syncCare')          -- push current status to the client
 Events.ReportDirt      = e('reportDirt')        -- client tells server how dirty it got
-Events.ReportWashed    = e('reportWashed')      -- rain/water washed it CLEANER
 Events.ReportDrank     = e('reportDrank')       -- (retired) auto-drink at a trough / body of water
 Events.RequestDrink    = e('requestDrink')      -- player CHOSE to water the horse from the menu
 

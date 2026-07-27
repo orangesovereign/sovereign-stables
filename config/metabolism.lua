@@ -102,6 +102,17 @@ Config.Metabolism = {
         start            = 0,
         max              = 100,
 
+        -- ⚠️ THE ENGINE OWNS DIRT NOW (2026-07-27). We spent six rounds trying to
+        -- simulate a dirt RATE, then found the native we were writing to
+        -- ("SET_PED_DIRT_LEVEL") is a GTA V native that doesn't exist in RDR3 — so
+        -- every write was a no-op and the engine was painting the mud all along.
+        -- So: the game dirties the horse as it rides and washes it in the rain, on
+        -- its own; we just READ that level and persist it. The simulation knobs
+        -- below (gainPerMinute, dirtying, water, rain, visibleAbove) are RETIRED —
+        -- they no longer do anything and are kept only so old configs don't error.
+        -- The one live knob is stableAutoCleanMinutes: how fast a STORED horse is
+        -- groomed clean by the stablehand.
+
         -- HOW FAST A HORSE GETS DIRTY, and why this number had to go up.
         --
         -- Owner, 2026-07-27: "Dirt not accumulating or accumulating too slow."

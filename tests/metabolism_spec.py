@@ -60,21 +60,15 @@ b = fresh(0); drift(b, "active", 3600)
 check("active 60m: hunger 100 -> 58", round(b.hunger) == 58)
 check("active 60m: thirst 100 -> 40", round(b.thirst) == 40)
 
-# 1b) DIRT PACING. This used to assert a bare number (dirt == 90 at 1.5/min),
-# which passed happily while the owner's actual complaint — "dirt not
-# accumulating or accumulating too slow" — was true. The number was right and
-# the FEEL was wrong, so a number is the wrong thing to assert. What matters is
-# how long a rider waits to SEE anything, which is the rate and the grace band
-# together: below `visibleAbove` the coat renders spotless no matter what the
-# stored value says.
-grace = L.eval("Config.Metabolism.cleanliness.visibleAbove")
-def dirt_after(minutes):
-    x = fresh(0); drift(x, "active", int(minutes * 60)); return x.dirt
-
-check("dirt shows within 3 min of riding",  dirt_after(3) > grace)
-check("but NOT instantly (brush holds 1m)", dirt_after(1) <= grace)
-check("filthy inside 20 min",               dirt_after(20) >= 90)
-check("dirt still ceils at 100",            dirt_after(600) == 100)
+# 1b) DIRT IS THE ENGINE'S NOW (2026-07-27). We chased dirt for six rounds trying
+# to simulate a rate, then learned the "SET_PED_DIRT_LEVEL" we were writing to is a
+# GTA V native that doesn't exist in RDR3 — every write was a no-op, and the engine
+# was painting the dirt all along. So the server no longer simulates dirt while a
+# horse is ACTIVE; the client reads the engine's real level and reports it. The
+# server's only dirt job is grooming a STORED horse (tested below). This asserts
+# the removal: active time must NOT invent dirt.
+b = fresh(0); drift(b, "active", 3600)
+check("active time does NOT simulate dirt", round(b.dirt) == 0)
 
 # 2) STORED time does NOT drain cores (drainWhile='active') and DOES clean.
 b = L.table_from({"hunger":50,"thirst":50,"dirt":100,"golden":False,"goldenTs":0,"ts":0})
@@ -92,7 +86,6 @@ check("stored 15m: dirt 100 -> 50", round(b.dirt) == 50)
 b = fresh(0); drift(b, "active", 3600*10)   # 10h active
 check("clamp: hunger floors at 0", b.hunger == 0)
 check("clamp: thirst floors at 0", b.thirst == 0)
-check("clamp: dirt ceils at 100",  b.dirt == 100)
 
 # 5-7) GOLDEN IS OFF (owner ruling 2026-07-27): "Do not want it to show golden
 # state. Actually remove Golden state altogether or just turn it off."

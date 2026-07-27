@@ -67,17 +67,15 @@ local function drift(m, context, now)
         m.thirst = clamp(m.thirst - (c.thirst.drainPerMinute or 0) * gm * mins, 0, c.thirst.max or 100)
     end
 
-    -- Cleanliness: gets dirty while active; the stable grooms it while stored.
-    if c.cleanliness and c.cleanliness.enabled ~= false then
-        if context == 'active' then
-            m.dirt = clamp(m.dirt + (c.cleanliness.gainPerMinute or 0) * mins, 0, c.cleanliness.max or 100)
-        else
-            local overMin = c.cleanliness.stableAutoCleanMinutes or 30
-            if overMin > 0 then
-                -- clean the full range over `overMin` minutes
-                local per = (c.cleanliness.max or 100) / overMin
-                m.dirt = clamp(m.dirt - per * mins, 0, c.cleanliness.max or 100)
-            end
+    -- Cleanliness while STORED only: the stablehand grooms a stored horse clean
+    -- over stableAutoCleanMinutes. We NO LONGER simulate dirt gain while active —
+    -- the engine paints the dirt and the client reports the real level every 10s,
+    -- so adding a made-up gain here would double-count against that reading.
+    if c.cleanliness and c.cleanliness.enabled ~= false and context ~= 'active' then
+        local overMin = c.cleanliness.stableAutoCleanMinutes or 30
+        if overMin > 0 then
+            local per = (c.cleanliness.max or 100) / overMin
+            m.dirt = clamp(m.dirt - per * mins, 0, c.cleanliness.max or 100)
         end
     end
 
@@ -282,9 +280,15 @@ end)
 -- /sovfeed command and anything later. It is what made brush durability behave
 -- identically through every door (R5 Art. IV passed 5/5).
 
--- Client periodically reports how dirty the out-horse got, so dirt persists even
--- if the horse is dismissed rather than stored through the menu. Clamped; the
--- client can only ever make a horse dirtier this way, never cleaner.
+-- The client reads the ENGINE's dirt level off the horse every 10s and reports
+-- it, so a stored horse remembers how dirty it was and comes back the same.
+--
+-- ⚠️ ACCEPTS BOTH DIRECTIONS now. The old rule ("never accept a cleaner value,
+-- or a client scrubs its horse for free") existed when WE simulated dirt and a
+-- separate ReportWashed handled cleaning. The engine now owns the visual and the
+-- client is only MIRRORING what the engine painted — including rain washing the
+-- horse cleaner — so refusing a lower value would freeze a rained-on horse dirty.
+-- Dirt is purely cosmetic (no gameplay penalty), so there's nothing to cheat.
 RegisterNetEvent(Events.ReportDirt, function(horseId, dirt)
     local src = source
     if not horseId then return end
@@ -293,52 +297,8 @@ RegisterNetEvent(Events.ReportDirt, function(horseId, dirt)
         if not charid then return end
         local m = loadBlob(charid, horseId); if not m then return end
         dirt = clamp(tonumber(dirt) or m.dirt, 0, (mcfg().cleanliness and mcfg().cleanliness.max) or 100)
-        if dirt > m.dirt then m.dirt = dirt; m.ts = os.time(); saveBlob(charid, horseId, m) end
-    end)
-end)
-
--- WASHED by rain or water [owner ruling 2026-07-25]. This needs its own event
--- because ReportDirt deliberately refuses any value that would make a horse
--- CLEANER — otherwise a client could scrub its horse for free. Here the server
--- does the cleaning itself from elapsed time, and the client's number is only a
--- hint about which source applied; it can't dictate the result.
-local lastWash = {}   -- [src] = os.time() of the previous accepted wash tick
-
--- NOTE the parameter is `washSource`, NOT `source`: naming it `source` would
--- shadow FiveM's `source` global, and `local src = source` would then read the
--- string "rain" instead of the player id.
-RegisterNetEvent(Events.ReportWashed, function(horseId, _clientDirt, washSource)
-    local src = source
-    if not horseId then return end
-    CreateThread(function()
-        local charid = Bridge.getCharId(src)
-        if not charid then return end
-        local cl = (mcfg().cleanliness or {})
-        local rate
-        if washSource == 'rain' then
-            if not (cl.rain and cl.rain.enabled ~= false) then return end
-            rate = cl.rain.cleanPerMinute or 60.0
-        elseif washSource == 'water' then
-            if not (cl.water and cl.water.enabled ~= false) then return end
-            rate = cl.water.cleanPerMinute or 25.0
-        else
-            return
-        end
-
-        -- Time-based, so spamming the event can't scrub a horse instantly.
-        local now = os.time()
-        local since = math.min(60, now - (lastWash[src] or now - 15))
-        lastWash[src] = now
-        if since <= 0 then return end
-
-        local m = loadBlob(charid, horseId); if not m then return end
-        local floor = (washSource == 'water') and (cl.water.floor or 20.0) or 0.0
-        local washed = rate * (since / 60.0)
-        local newDirt = math.max(floor, m.dirt - washed)
-        if newDirt < m.dirt then
-            m.dirt = newDirt
-            m.ts = now
-            saveBlob(charid, horseId, m)
+        if math.abs(dirt - (m.dirt or 0)) >= 1 then
+            m.dirt = dirt; m.ts = os.time(); saveBlob(charid, horseId, m)
         end
     end)
 end)

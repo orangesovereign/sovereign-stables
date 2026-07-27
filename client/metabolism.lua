@@ -16,47 +16,46 @@ local function mcfg() return Config.Metabolism or {} end
 local current = nil   -- the active horse's live card { hunger, thirst, dirt, golden, ... }
 
 --------------------------------------------------------------------------------
--- Dirt on the ped
+-- Dirt on the ped — REAL RDR3 NATIVES (alloc8or nativedb, confirmed 2026-07-27)
 --------------------------------------------------------------------------------
--- Our 0-100 dirt -> the game's 0.0-1.0 level, WITH A GRACE THRESHOLD.
+-- ⚠️ THE MYSTERY, SOLVED. Every "set dirt" we ever wrote used 0x7A56D66C78D1AAB7,
+-- which is a GTA V native that DOES NOT EXIST in RDR3 — so every call was a silent
+-- no-op. The horse got dirty entirely from the ENGINE's own environmental grime,
+-- and the only real native in our old clear-pass was CLEAR_PED_ENV_DIRT — which is
+-- why we could only ever CLEAN a horse, never dirty one, and why the guard's
+-- every-2-seconds clear killed the natural dirt the owner watched appear early on.
 --
--- Owner, 2026-07-26: "I don't think dirty should begin to show until a certain
--- threshold. As a player if I brush my horse and then ride out of Valentine and
--- see dirt I would lose it."
---
--- Dead right. A freshly brushed horse should LOOK freshly brushed for a good
--- while. So `visibleAbove` is a grace band: below it the coat renders perfectly
--- clean, and above it the remaining range is rescaled across the full 0-1 so you
--- still get the whole span of filth. The stored number keeps ticking up either
--- way — this is about when it starts to SHOW, not when it starts to count.
-local function dirtToLevel(dirt0to100)
-    local c = (mcfg().cleanliness or {})
-    local maxD  = c.max or 100
-    local grace = c.visibleAbove or 0
-    local d = math.max(0, math.min(maxD, tonumber(dirt0to100) or 0))
-    if d <= grace then return 0.0 end
-    return math.max(0.0, math.min(1.0, (d - grace) / math.max(1, maxD - grace)))
+-- The real system: the engine paints dirt automatically; we READ it, PERSIST it,
+-- and RESTORE it. Dirt is a float 0.0-1.0; our number is that × 100.
+local N_GET_DIRT  = 0x0105FEE8F9091255  -- _GET_PED_DIRT_LEVEL(ped, useComposite) -> float
+local N_SET_DIRT  = 0xE3144B932DFDFF65  -- _SET_PED_DIRT_CLEANED(ped, lvl, -1, true, true)
+local N_CLEAR_ENV = 0x6585D955A68452A5  -- CLEAR_PED_ENV_DIRT(ped)
+
+-- Read the engine's current dirt as 0-100, or nil if the native won't answer.
+function Metabolism.readDirt(ped)
+    if not (ped and DoesEntityExist(ped)) then return nil end
+    local ok, v = pcall(function()
+        return Citizen.InvokeNative(N_GET_DIRT, ped, true, Citizen.ResultAsFloat())
+    end)
+    if ok and type(v) == 'number' then return math.max(0, math.min(100, math.floor(v * 100 + 0.5))) end
+    return nil
 end
 
+-- Write a 0-100 dirt value onto the horse. The nativedb's own read-add-write
+-- example shows this native SETTING the level (not just zeroing), so this is how
+-- we restore a stored dirty coat on spawn.
 function Metabolism.applyDirt(ped, dirt0to100)
     if not (ped and DoesEntityExist(ped)) then return end
-    Citizen.InvokeNative(0x7A56D66C78D1AAB7, ped, dirtToLevel(dirt0to100) + 0.0)  -- SET_PED_DIRT_LEVEL
+    local f = math.max(0.0, math.min(1.0, (tonumber(dirt0to100) or 0) / 100.0))
+    pcall(function() Citizen.InvokeNative(N_SET_DIRT, ped, f + 0.0, -1, true, true) end)
 end
 
--- Scrub a ped spotless — the full clear-pass. Used for the storefront preview
--- [L9] and after a grooming brush.
---
--- ⚠️ A ONE-SHOT CLEAR DOESN'T STICK. RDR3 re-applies environmental grime over the
--- next few frames after a horse renders, so a single call cleans it and then it
--- dirties right back up — which is exactly why the preview still showed dirt
--- (2.1 ledger S2). coal_stables hit the same thing and solved it by re-running
--- the clear a handful of times over ~800ms. We do the same.
+-- Groom a horse fully clean: zero the dirt level AND clear the accumulated
+-- environmental layer, or the engine repaints grime within a few frames.
 local function clearPass(ped)
-    Citizen.InvokeNative(0x7A56D66C78D1AAB7, ped, 0.0)   -- SET_PED_DIRT_LEVEL 0
-    Citizen.InvokeNative(0x6585D955A68452A5, ped)         -- CLEAR_PED_ENV_DIRT
-    Citizen.InvokeNative(0x9C720776DAA43E7E, ped)         -- CLEAR_PED_DAMAGE_DECAL
-    Citizen.InvokeNative(0xB63B9178D0F58D82, ped)         -- _CLEAR_PED_TEXTURE
-    if ClearPedWetness then ClearPedWetness(ped) end
+    pcall(function() Citizen.InvokeNative(N_SET_DIRT, ped, 0.0, -1, true, true) end)
+    pcall(function() Citizen.InvokeNative(N_CLEAR_ENV, ped) end)
+    if ClearPedWetness then pcall(ClearPedWetness, ped) end
 end
 
 function Metabolism.forceClean(ped)
@@ -71,143 +70,72 @@ function Metabolism.forceClean(ped)
     end)
 end
 
--- Immediate clean-and-set, for the instant a value changes.
+-- Set the coat to a specific 0-100 value. 0 fully grooms (clear-pass); anything
+-- above just writes the level and lets the engine keep it.
 function Metabolism.setDirt(ped, dirt0to100)
     if not (ped and DoesEntityExist(ped)) then return end
-    local lvl = dirtToLevel(dirt0to100)
-    clearPass(ped)                                              -- wipe env dirt + decals
-    Citizen.InvokeNative(0x7A56D66C78D1AAB7, ped, lvl + 0.0)
+    local d = tonumber(dirt0to100) or 0
+    if d <= 0 then clearPass(ped); return end
+    pcall(function() Citizen.InvokeNative(N_SET_DIRT, ped, (d / 100.0) + 0.0, -1, true, true) end)
 end
 
 --------------------------------------------------------------------------------
--- ⚠️ THE DIRT GUARD — why brushing failed THREE rounds running.
+-- THE DIRT SYNC — the engine dirties the horse; we read it and persist it.
 --------------------------------------------------------------------------------
--- R1/R2 failed again in the 2.1 R3 ledger: "Does nothing to the horse after the
--- brushing animation. Still dirty." Both on foot and mounted.
+-- The whole three-round fight with "the guard" is over, because it was built on a
+-- native that did nothing (see above). No more holding the coat at our number, no
+-- more clearing every two seconds — THAT was what scrubbed the engine's dirt off
+-- and stopped horses getting dirty at all.
 --
--- Everything upstream was correct and I kept re-checking it: the item is taken,
--- the server sets dirt to 0, the card comes back clean, the client calls the
--- clearing setter. The bug was never in the LOGIC — it was in HOW LONG we held
--- the result. Each fix re-asserted the value for a fixed burst (~800ms), and the
--- brushing animation runs for SEVERAL SECONDS. The engine repaints environmental
--- grime after our burst has already finished, so the horse is genuinely clean
--- for a moment you never see, then dirty again by the time the animation ends.
---
--- Chasing that with a longer burst is the same bug with a bigger number. The
--- real problem is that a one-shot write is a GUESS about when the engine will
--- next disagree with us. So: stop guessing, and hold the value continuously.
---
--- ❌ AND THAT INVARIANT WAS WRONG. (Corrected 2026-07-27 after R5.)
---
--- The first version of this guard held the coat at EXACTLY our number every
--- 500ms, in both directions — asserting dirt as confidently as it asserted
--- clean. Owner, R5: "It seems you've removed or disabled the visible dirty
--- entirely. Shows no dirty at any time." Six checks failed on it.
---
--- The mistake was assuming SET_PED_DIRT_LEVEL is symmetrical. Everything we
--- actually PROVED about it (PHASE1_SPIKE_FINDINGS) was in the clean direction —
--- coal uses it as `0.0` plus a clear-pass, and that is the only use we ever
--- verified. I extended it to mean "and 1.0 makes a horse filthy", which nothing
--- established. So the guard suppressed the engine's own environmental grime —
--- the thing that was ACTUALLY making horses look dirty all along — and put
--- nothing in its place. A horse could no longer get dirty at all.
---
--- Worse, R4 passed it. Every dirt check that round tested CLEANING, so the half
--- that worked was the only half under test.
---
--- SO THE GUARD IS NOW ONE-DIRECTIONAL: it asserts CLEAN and never asserts DIRT.
--- Below the visible threshold we hold the horse spotless, which is what keeps a
--- brushed horse brushed. Above it we take our hands off entirely and let the
--- world dirty the horse the way it always did. We decide when a horse is CLEAN;
--- the engine decides what dirty looks like. That's the half of the split each
--- side can actually deliver.
--- Set true by /sovdirtprobe so the guard stops fighting the probe. THIS is why
--- R6 D3 read "none" for every candidate: the guard below runs twice a second and,
--- whenever stored dirt is under the grace band, calls SET_PED_DIRT_LEVEL(0.0) and
--- a full clearPass — so a probe that dirtied the horse was scrubbed clean before
--- the owner could look. The probe was never testing the native; it was racing our
--- own cleaner and losing.
-Metabolism._probing = false
+-- Now the engine owns the visual: it dirties the horse as it rides through the
+-- world, and washes it in rain, exactly as it did before we ever interfered. Our
+-- only jobs are to READ what the engine has painted so it can be saved, and to
+-- RESTORE it when the horse comes back out. A freshly brushed horse starts clean
+-- and the world dirties it again naturally — no grace band needed, because the
+-- engine doesn't slap dirt on the instant you leave town.
+Metabolism._probing = false   -- still honoured by the probe below
 
 CreateThread(function()
-    local tick = 0
     while true do
-        Wait(500)
+        Wait(10000)   -- every 10s: read the engine's dirt and persist if it moved
         local a = Horse and Horse.active and Horse.active()
-        if Metabolism._probing then
-            -- hands entirely off while probing
-        elseif current and a and a.ent and DoesEntityExist(a.ent) then
-            local lvl = dirtToLevel(current.dirt or 0)
-            if lvl <= 0.0 then
-                -- Below the threshold: hold it spotless. The level alone isn't
-                -- enough — env dirt and decals are separate layers — so the full
-                -- clear runs every 2s.
-                Citizen.InvokeNative(0x7A56D66C78D1AAB7, a.ent, 0.0)
-                tick = tick + 1
-                if (tick % 4) == 0 then clearPass(a.ent) end
-            else
-                -- Above it: hands off. We still nudge the level up, because if
-                -- SET_PED_DIRT_LEVEL does paint dirt it costs nothing — but we
-                -- no longer CLEAR anything, so engine grime is free to build.
-                Citizen.InvokeNative(0x7A56D66C78D1AAB7, a.ent, lvl + 0.0)
-                tick = 0
+        if not Metabolism._probing and current and a and a.ent and DoesEntityExist(a.ent) then
+            local lvl = Metabolism.readDirt(a.ent)
+            if lvl and math.abs(lvl - (current.dirt or 0)) >= 2 then
+                current.dirt = lvl
+                TriggerServerEvent(Events.ReportDirt, a.id, lvl)   -- server clamps; see note
             end
         end
     end
 end)
 
 --------------------------------------------------------------------------------
--- ⚠️ TEMPORARY: WHICH NATIVE ACTUALLY PAINTS DIRT?  (remove once answered)
+-- ⚠️ TEMPORARY: prove the REAL dirt native paints and reads.  (remove once green)
 --------------------------------------------------------------------------------
--- ⚠️ FINDING (R7 D2/D3): even with the guard fully suspended and the value held
--- for six seconds, NONE of these five visibly dirty a horse. So this is settled:
--- SET_PED_DIRT_LEVEL is a one-way native — it CLEANS a horse (0.0 works, proven)
--- but does not paint mud onto one, and the wetness/cleanliness candidates don't
--- either. Visible dirt via a ped native is a dead end. The dirt NUMBER still
--- works end to end (climbs while ridden, persists, brush lowers it, coat shows
--- CLEAN when brushed) — only the DIRTY visual is unreachable this way. Kept as a
--- probe for now in case a horse-specific mud native surfaces; not a live path.
-local DIRT_CANDIDATES = {
-    { name = 'SET_PED_DIRT_LEVEL 1.0',    fn = function(e) Citizen.InvokeNative(0x7A56D66C78D1AAB7, e, 1.0) end },
-    { name = 'SET_PED_DIRT_LEVEL 5.0',    fn = function(e) Citizen.InvokeNative(0x7A56D66C78D1AAB7, e, 5.0) end },
-    { name = 'SET_PED_DIRT_LEVEL 100.0',  fn = function(e) Citizen.InvokeNative(0x7A56D66C78D1AAB7, e, 100.0) end },
-    { name = '_SET_PED_DAMAGE_CLEANLINESS 3', fn = function(e) Citizen.InvokeNative(0x397CF3E1E2947A62, e, 3) end },
-    { name = 'SET_PED_WETNESS_HEIGHT 1.0',fn = function(e) Citizen.InvokeNative(0x9B0D4B9B3C2D6B5F, e, 1.0) end },
-}
-
-RegisterCommand('sovdirtprobe', function(_, args)
+-- The R6/R7 probes tested a GTA V native that doesn't exist in RDR3, so of course
+-- nothing happened. This one uses the confirmed RDR3 native
+-- _SET_PED_DIRT_CLEANED, which the nativedb's own example uses to RAISE dirt, not
+-- just zero it. `/sovdirtset 25|50|100` writes that level and reads it straight
+-- back so we can see the coat AND confirm the value stuck; `/sovdirtset 0` grooms.
+RegisterCommand('sovdirtset', function(_, args)
     local a = Horse and Horse.active and Horse.active()
     if not (a and a.ent and DoesEntityExist(a.ent)) then
         Bridge.notify('Bring your horse out first.'); return
     end
-    local first = args and args[1]
-    if first == 'off' then
-        Metabolism._probing = false
-        Bridge.notify('Dirt guard back on.')
+    local n = tonumber(args and args[1])
+    if n == nil then
+        Bridge.notify('Usage: /sovdirtset 0 | 25 | 50 | 100')
         return
     end
-    local n = tonumber(first)
-    if not n then
-        print('^3[sov_dirt]^7 candidates (the guard is suspended while probing):')
-        for i, c in ipairs(DIRT_CANDIDATES) do print(('  %d = %s'):format(i, c.name)) end
-        print('  off = re-enable the coat guard')
-        Bridge.notify('See F8 — then /sovdirtprobe <number>, /sovdirtprobe off when done')
-        return
-    end
-    local c = DIRT_CANDIDATES[n]
-    if not c then Bridge.notify('No such candidate.'); return end
-    -- Suspend the guard, then re-assert the native for a few seconds so a
-    -- one-shot that the engine repaints over still has time to be seen.
-    Metabolism._probing = true
+    n = math.max(0, math.min(100, n))
+    Metabolism.setDirt(a.ent, n)
+    -- Hold it a moment, then read it back so we see whether it stuck.
     CreateThread(function()
-        for _ = 1, 30 do            -- ~6s of holding the dirty value
-            if not Metabolism._probing then break end
-            if a.ent and DoesEntityExist(a.ent) then c.fn(a.ent) end
-            Wait(200)
-        end
+        Wait(300)
+        local got = Metabolism.readDirt(a.ent)
+        print(('^3[sov_dirt]^7 set %d%% -> engine now reads %s%%. Does the horse LOOK it?'):format(n, tostring(got)))
+        Bridge.notify(('Set dirt %d%% — engine reads %s%%'):format(n, tostring(got)))
     end)
-    print(('^3[sov_dirt]^7 applied #%d — %s (guard suspended, held ~6s). Does the horse LOOK dirty?'):format(n, c.name))
-    Bridge.notify(('Tried: %s — /sovdirtprobe off to restore'):format(c.name))
 end, false)
 
 --------------------------------------------------------------------------------
@@ -334,26 +262,14 @@ end
 function Metabolism.card() return current end
 
 --------------------------------------------------------------------------------
--- Dirt accrual while the horse is out — reported up so it persists on dismiss.
--- The server clamps and only ever accepts a DIRTIER value, so this can't be used
--- to clean a horse for free.
+-- Helpers shared with the drinking check below.
 --------------------------------------------------------------------------------
---------------------------------------------------------------------------------
--- WHAT DIRTIES AND WHAT WASHES  (owner ruling 2026-07-25)
---------------------------------------------------------------------------------
--- Hard riding dirties. Water rinses some off. Rain washes it clean and leaves
--- the coat shining. (An earlier version had water and rain DIRTYING the horse —
--- backwards, and the owner corrected it.)
-local RAINY = { RAIN = true, DRIZZLE = true, SHOWER = true, THUNDER = true,
-                THUNDERSTORM = true, SLEET = true, SNOW = true }
-
-local function isRaining()
-    local ok, w = pcall(function()
-        return Citizen.InvokeNative(0x564B884A05EC45A3, Citizen.ResultAsString())  -- GetPrevWeatherTypeHashName
-    end)
-    return ok and type(w) == 'string' and RAINY[w:upper()] or false
-end
-
+-- ⚠️ The whole "dirtDelta / applyShine / what-dirties-what-washes" simulation
+-- that lived here is GONE (2026-07-27). It existed to dirty and wash the horse
+-- ourselves — but the engine already does BOTH: it muddies a horse as it rides
+-- and rinses it in the rain, with its own shine. We were duplicating the engine
+-- with a fake native that did nothing, and the real halves fought it. The engine
+-- owns the visual now; the sync thread above just reads and persists the result.
 local function inWater(ent)
     local ok, v = pcall(function() return IsEntityInWater(ent) end)
     return ok and v or false
@@ -366,52 +282,8 @@ local function speedOf(ent)
     return ok and (s or 0.0) or 0.0
 end
 
--- Net change in dirt over `minutes`. Positive = dirtier, negative = cleaner.
--- Cleaning WINS over dirtying when both apply — you can't get muddier while
--- standing in a rainstorm.
-local function dirtDelta(ent, dirt, minutes)
-    local cl = mcfg().cleanliness or {}
-    local raining = (cl.rain and cl.rain.enabled ~= false) and isRaining()
-    local wet     = (cl.water and cl.water.enabled ~= false) and inWater(ent)
-
-    if raining then
-        return -((cl.rain.cleanPerMinute or 60.0) * minutes), 'rain'
-    end
-    if wet then
-        -- Water only rinses down to its floor; it's not a proper wash.
-        local floor = cl.water.floor or 20.0
-        if dirt > floor then
-            local wash = (cl.water.cleanPerMinute or 25.0) * minutes
-            return -math.min(wash, dirt - floor), 'water'
-        end
-        return 0.0, 'water'
-    end
-
-    -- Otherwise it dirties, faster if you're riding hard.
-    local base = (cl.gainPerMinute or 0) * minutes
-    local d = cl.dirtying
-    if d and d.enabled ~= false and speedOf(ent) >= (d.gallopSpeed or 9.0) then
-        base = base * (d.galloping or 1.0)
-    end
-    return base, nil
-end
-
--- Shine [M3]: rain that gets a horse spotless leaves the coat gleaming, and it
--- fades as the horse dirties again. Applied via the wetness native — a clean wet
--- coat IS the shine, which is why rain gives it and a brush doesn't.
-local function applyShine(ent, dirt)
-    local cl = mcfg().cleanliness or {}
-    if not (cl.rain and cl.rain.shine) then return end
-    if not (ent and DoesEntityExist(ent)) then return end
-    if dirt <= (cl.rain.shineFadesAt or 10.0) then
-        pcall(function() Citizen.InvokeNative(0x9B0D4B9B3C2D6B5F, ent, 1.0) end)  -- SET_PED_WETNESS_HEIGHT
-    else
-        pcall(function() if ClearPedWetness then ClearPedWetness(ent) end end)
-    end
-end
-
 --------------------------------------------------------------------------------
--- DRINKING  [H2] — a horse at water drinks by itself (owner ruling 2026-07-25)
+-- DRINKING  [H2] — offered in the lock-on menu; the horse never drinks unprompted
 --------------------------------------------------------------------------------
 -- No prompt, no item: stand the horse at a river or a trough and its thirst
 -- fills. The server decides how much from elapsed time; this only reports that
@@ -435,46 +307,11 @@ function Metabolism.atWater(ent)
     return false
 end
 
--- ⚠️ The automatic "drink a little every five seconds while stood at water"
--- thread lived here and is GONE (owner ruling 2026-07-27). That behaviour WAS
--- "the horse drinks by itself", which is exactly what was asked to stop.
--- Watering is now a deliberate Drink entry in the lock-on menu — see
--- client/horsemenu.lua. Metabolism.atWater stays: the menu uses it to decide
--- whether to OFFER Drink, so the option only appears when there's water to hand.
-
-CreateThread(function()
-    while true do
-        Wait(15000)   -- 15s: rain should visibly clean within a minute or two
-        local c = mcfg()
-        if c.enabled ~= false and current and Horse and Horse.active then
-            local a = Horse.active()
-            if a and a.ent and DoesEntityExist(a.ent) and c.cleanliness and c.cleanliness.enabled ~= false then
-                local minutes = 0.25   -- 15s
-                local delta, source = dirtDelta(a.ent, current.dirt or 0, minutes)
-                local before = current.dirt or 0
-                current.dirt = math.max(0, math.min(c.cleanliness.max or 100, before + delta))
-                -- Going DOWN (rain/water) needs the re-asserting setter, or the
-                -- engine paints the grime straight back on. Going up is fine
-                -- with a single set.
-                if current.dirt < before then
-                    Metabolism.setDirt(a.ent, current.dirt)
-                else
-                    Metabolism.applyDirt(a.ent, current.dirt)
-                end
-                applyShine(a.ent, current.dirt)
-
-                -- Tell the server. Dirt going UP uses the clamped report; going
-                -- DOWN is a real clean and needs the authoritative path, or the
-                -- server's "never accept a cleaner value" rule would discard it.
-                if current.dirt > before then
-                    TriggerServerEvent(Events.ReportDirt, a.id, math.floor(current.dirt + 0.5))
-                elseif current.dirt < before then
-                    TriggerServerEvent(Events.ReportWashed, a.id, math.floor(current.dirt + 0.5), source)
-                end
-            end
-        end
-    end
-end)
+-- ⚠️ Two threads used to live here — the auto-drink trickle and the rain/water
+-- dirt simulation — and BOTH are gone (2026-07-27). Drinking is now the deliberate
+-- menu action; dirtying and washing are the engine's own, read and persisted by
+-- the sync thread near the top of this file. Metabolism.atWater stays because the
+-- Give Water prompt uses it to know whether a drink is possible right now.
 
 --------------------------------------------------------------------------------
 -- Server → client
@@ -503,7 +340,7 @@ RegisterNetEvent(Events.CareResult, function(res)
                     Metabolism.applyDirt(a.ent, prevDirt)   -- keep looking dirty for now
                     local horseEnt = a.ent
                     CreateThread(function()
-                        Wait(((cfg().brushAnimSeconds) or 4) * 1000)
+                        Wait((((Config.UI and Config.UI.horseMenu and Config.UI.horseMenu.brushAnimSeconds)) or 4) * 1000)
                         if horseEnt and DoesEntityExist(horseEnt) then
                             -- setDirt, NOT applyDirt: cleaning is a DECREASE and a
                             -- single set gets repainted within a few frames (the
@@ -550,12 +387,13 @@ end, false)
 RegisterCommand('sovcare', function()
     local c = current
     if not c then Bridge.notify('No care data — bring your horse out.'); return end
-    -- Golden was switched off (ruled 2026-07-27), so it no longer appears here.
-    -- `shows=` is the coat's rendered level vs the stored number — the two differ
-    -- by the grace band, and seeing both is how you tell "brush didn't work" from
-    -- "brush worked and the dirt is simply below the visible threshold".
-    print(('^2[sov_care]^7 hunger=%s thirst=%s dirt=%s shows=%.2f')
-        :format(tostring(c.hunger), tostring(c.thirst), tostring(c.dirt), dirtToLevel(c.dirt or 0)))
+    -- `engine=` is what _GET_PED_DIRT_LEVEL reports on the horse right now, vs our
+    -- stored `dirt=`. They should track: the engine paints dirt, we read it. If
+    -- they diverge, the sync thread hasn't caught up (it runs every 10s).
+    local a = Horse and Horse.active and Horse.active()
+    local engine = a and a.ent and Metabolism.readDirt(a.ent)
+    print(('^2[sov_care]^7 hunger=%s thirst=%s dirt=%s engine=%s')
+        :format(tostring(c.hunger), tostring(c.thirst), tostring(c.dirt), tostring(engine)))
     Bridge.notifyCard('info', 'Your Horse',
         ('Hunger %s%% · Thirst %s%% · Dirt %s%%')
         :format(tostring(c.hunger), tostring(c.thirst), tostring(c.dirt)))
