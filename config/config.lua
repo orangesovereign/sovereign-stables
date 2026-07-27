@@ -411,11 +411,20 @@ Config.UI = {
     -- the owner asked for ("next to the horse's name") and the thing that
     -- actually works. No x/y/width here on purpose: the game positions it.
     --
-    -- Courage joins this readout in Phase 3 — one line in conditionLabel().
+    -- ⚠️ THE MENU IS NOT AMBIENT (ruled 2026-07-27). Walk up and you see only the
+    -- horse's NAME. The stats AND the actions — Hunger/Thirst/Stamina, Lead,
+    -- Let It Drink — appear when you stand close and HOLD RIGHT-CLICK, the same
+    -- lock-on gesture vanilla RDR2 uses on animals. Only "Stop Leading" ignores
+    -- the gate, so a player can always put the reins back down.
+    -- Courage joins that same readout in Phase 3, behind the same gesture, which
+    -- is how the owner ruled it: visible when "standing at the horse and right
+    -- clicking".
     horseMenu = {
-        enabled      = true,
-        distance     = 5.0,   -- how near you must be on foot (riding always counts)
-        drinkSeconds = 8,     -- how long the drinking animation runs
+        enabled        = true,
+        distance       = 5.0,   -- how near you must be on foot for the prompts at all
+        revealDistance = 2.0,   -- how near you must be for right-click to show the stats
+        revealSeconds  = 5,     -- a tap keeps the readout up this long; holding also works
+        drinkSeconds   = 8,     -- how long the drinking animation runs
     },
 
     -- 'circular' or 'arrows' — how horse components are cycled in the customizer. [S15]
