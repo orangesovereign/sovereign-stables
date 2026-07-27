@@ -58,8 +58,11 @@ local function drift(m, context, now)
     local drainsNow = (context == 'active') or (c.drainWhile == 'always')
 
     if drainsNow then
-        -- golden horses drain slower
-        local gm = (m.golden and c.golden and c.golden.drainMultiplier) or 1.0
+        -- golden horses drain slower — but only while the feature is ON, or a
+        -- stale golden flag would keep paying out for one more interval before
+        -- the bookkeeping below clears it.
+        local goldenOn = c.golden and c.golden.enabled
+        local gm = (m.golden and goldenOn and c.golden.drainMultiplier) or 1.0
         m.hunger = clamp(m.hunger - (c.hunger.drainPerMinute or 0) * gm * mins, 0, c.hunger.max or 100)
         m.thirst = clamp(m.thirst - (c.thirst.drainPerMinute or 0) * gm * mins, 0, c.thirst.max or 100)
     end
@@ -79,7 +82,16 @@ local function drift(m, context, now)
     end
 
     -- Golden bookkeeping: both cores above the line long enough => golden.
-    if c.golden and c.golden.enabled then
+    --
+    -- ⚠️ THE OFF-SWITCH HAS TO UNDO, NOT JUST STOP. Golden was disabled on
+    -- 2026-07-27, and simply skipping this block would have left every horse that
+    -- was ALREADY golden stuck that way — including its 0.5x drain bonus, for
+    -- good, because the branch that clears the flag lives in here too. Turning a
+    -- feature off must retire the state it created, or you ship a perk that only
+    -- the players who happened to be golden that week will ever have.
+    if not (c.golden and c.golden.enabled) then
+        m.golden, m.goldenTs = false, 0
+    else
         local above = m.hunger >= (c.golden.goldenAbove or 80) and m.thirst >= (c.golden.goldenAbove or 80)
         if above then
             if (m.goldenTs or 0) == 0 then m.goldenTs = now end

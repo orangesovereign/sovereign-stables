@@ -77,24 +77,30 @@ check("clamp: hunger floors at 0", b.hunger == 0)
 check("clamp: thirst floors at 0", b.thirst == 0)
 check("clamp: dirt ceils at 100",  b.dirt == 100)
 
-# 5) golden: both cores stay >=80 for >=20 min -> golden becomes true
+# 5-7) GOLDEN IS OFF (owner ruling 2026-07-27): "Do not want it to show golden
+# state. Actually remove Golden state altogether or just turn it off."
+#
+# These used to assert the mechanic worked. They now assert the RULING holds —
+# and specifically that switching it off UNDOES the state it created, rather than
+# merely stopping new ones. That distinction is the whole reason these three are
+# still here: an off-switch that only stops accrual leaves every horse that went
+# golden before the change holding a permanent 0.5x drain bonus that nobody else
+# on the server can ever get.
+golden_on = L.eval("Config.Metabolism.golden.enabled") is True
+check("golden is switched OFF in config", golden_on is False)
+
+# A horse that would qualify never becomes golden.
 b = L.table_from({"hunger":100,"thirst":100,"dirt":0,"golden":False,"goldenTs":0,"ts":0})
-drift(b, "stored", 60)          # t=60: above line, goldenTs set, not yet golden
-check("golden: not yet at 1 min", b.golden is False and b.goldenTs > 0)
-drift(b, "stored", 60 + 20*60)  # +20 min above line
-check("golden: turns golden after 20m above line", b.golden is True)
+drift(b, "stored", 60 + 40*60)   # twice the old threshold, well above the line
+check("no horse turns golden while off", b.golden is False and b.goldenTs == 0)
 
-# 6) golden lost when a core drops below the line. NOTE the golden 0.5 drain
-# mult: thirst falls 0.5/min, so it takes 45 min (not 25) to cross 100 -> <80.
-# 45 min: thirst 100 - 0.5*45 = 77.5 < 80 -> golden lost.
-b = L.table_from({"hunger":100,"thirst":100,"dirt":0,"golden":True,"goldenTs":1,"ts":0})
-drift(b, "active", 45*60)
-check("golden: lost when a core dips below the line", b.golden is False and b.goldenTs == 0)
-
-# 7) golden drains slower: a golden horse loses half the cores over the same time
+# An ALREADY-golden horse (a row written before the switch-off) is retired on its
+# very next drift, and gets no slow-drain even for that first interval:
+# hunger 100 - 0.7*10 = 93, NOT the golden 96.5.
 bg = L.table_from({"hunger":100,"thirst":100,"dirt":0,"golden":True,"goldenTs":1,"ts":0})
-drift(bg, "active", 600)   # 10 min; golden mult 0.5 -> hunger -0.7*0.5*10 = 3.5 -> 96.5
-check("golden drains slower: ~96/97 not 93", round(bg.hunger) in (96, 97))
+drift(bg, "active", 600)
+check("a pre-existing golden horse is retired", bg.golden is False and bg.goldenTs == 0)
+check("and loses the slow drain immediately: 93 not 96", round(bg.hunger) == 93)
 
 # 8) zero elapsed time is a no-op
 b = fresh(1000); before = (b.hunger, b.thirst, b.dirt)

@@ -87,54 +87,60 @@ end)
 -- This is also the shape Phase 3's courage number needs: courage was ruled
 -- "visible to the OWNER when standing at the horse and right clicking" — the
 -- same gesture, the same gate. Add the line inside the `revealed` branch.
--- Live stamina is a CORE, not the trained stat on the storefront card. Index
--- 1 = stamina, the same attribute cores a player carries.
-local function staminaPct(ped)
-    local ok, v = pcall(function()
-        return Citizen.InvokeNative(0x36731AC041289BB1, ped, 1)   -- GET_ATTRIBUTE_CORE_VALUE
-    end)
-    if ok and type(v) == 'number' then return math.max(0, math.min(100, math.floor(v))) end
-    return nil
-end
-
+-- ⚠️ WHAT THIS DELIBERATELY DOESN'T SAY (ruled 2026-07-27):
+--   • STAMINA — cut. The game already draws the horse's stamina core on screen
+--     while you ride; repeating it here was duplicate information dressed up as
+--     a feature.
+--   • GOLDEN — cut, and switched off in config/metabolism.lua besides.
+--   • The TRAINING REPERTOIRE — never shown, ruled long before either of these.
+-- Courage joins this in Phase 3, behind the same gesture.
 local function conditionLabel(a, revealed)
     local name = a.name or 'Your Horse'
     if not revealed then return name end
 
     local c = Metabolism and Metabolism.card and Metabolism.card()
-    local bits = {}
+    if not c then return name end
 
-    if c then
-        bits[#bits + 1] = ('Hunger %d%%'):format(c.hunger or 0)
-        bits[#bits + 1] = ('Thirst %d%%'):format(c.thirst or 0)
-    end
-    local st = staminaPct(a.ent)
-    if st then bits[#bits + 1] = ('Stamina %d%%'):format(st) end
-
-    if c and c.golden then bits[#bits + 1] = 'GOLDEN' end
-
-    if #bits == 0 then return name end
-    return name .. '   ' .. table.concat(bits, '  ·  ')
+    return ('%s   Hunger %d%%  ·  Thirst %d%%'):format(name, c.hunger or 0, c.thirst or 0)
 end
 
 --------------------------------------------------------------------------------
 -- Leading
 --------------------------------------------------------------------------------
--- ⚠️ HONEST NOTE: RDR2 has native horse leading (there's a PCF_DisablePlayerHorse
--- Leading flag and a HorseLeadingActive blackboard), but no documented native to
--- START it from script. So this is a SIMULATED lead: the horse follows at a
--- close offset at walking pace, which looks and plays like leading. If the real
--- native surfaces, swap it in here and nothing else changes.
+-- ✅ CORRECTION (2026-07-27). The first version of this was a SIMULATED lead —
+-- TaskFollowToOffsetOfEntity at walking pace — because I looked for a "start
+-- leading" native, didn't find one, and settled. The owner caught what that
+-- actually looks like: "Unable to see when someone is leading a horse. It just
+-- shows their horse following them." Which is precisely what it was.
+--
+-- The native exists: TASK_LEAD_HORSE(ped, horse). It is tasked on the PLAYER,
+-- not the horse — which is why I never found it looking through horse tasks —
+-- and it gives the real thing: rope in hand, horse at your shoulder, visible to
+-- everyone around you.
+--
+-- Found by reading a shipping resource (cryptos_horses) rather than guessing,
+-- then confirmed against the RDR3 native DB before wiring it. ⚠️ That resource
+-- is GPL-3.0, which the owner has ruled out: NOTHING was copied from it. A
+-- native hash is a fact about the game, not authorship — the code below is ours.
+local LEAD_NATIVE = 0x9A7A4A54596FE09D   -- TASK_LEAD_HORSE(Ped ped, Ped horse)
+
 function HorseMenu.startLead(a)
     if not (a and a.ent and DoesEntityExist(a.ent)) then return end
+    local ped = PlayerPedId()
     leading = true
-    ClearPedTasks(a.ent)
-    TaskFollowToOffsetOfEntity(a.ent, PlayerPedId(), 0.8, -1.2, 0.0, 1.0, -1, 0.6, true)
+    ClearPedTasks(a.ent)          -- drop any wander/follow the horse was doing
+    Citizen.InvokeNative(LEAD_NATIVE, ped, a.ent)
     Bridge.notify(('You take %s by the reins.'):format(a.name or 'the horse'))
 end
 
+-- Leading is a task on the PLAYER, so that's what has to be cleared. Secondary
+-- first — it's the gentler cancel and leaves you walking — then the horse's own
+-- tasks so it doesn't keep trailing you afterwards.
 function HorseMenu.stopLead(a)
     leading = false
+    local ped = PlayerPedId()
+    pcall(function() ClearPedSecondaryTask(ped) end)
+    pcall(function() ClearPedTasks(ped) end)
     if a and a.ent and DoesEntityExist(a.ent) then ClearPedTasks(a.ent) end
     Bridge.notify('You let the reins go.')
 end

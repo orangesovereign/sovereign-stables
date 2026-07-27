@@ -71,30 +71,52 @@ function Metabolism.forceClean(ped)
     end)
 end
 
--- ⚠️ USE THIS WHENEVER DIRT GOES **DOWN** (brushing, rain, fording a river).
---
--- The 2.1 R3 brush bug: the animation played, the server correctly cleaned the
--- horse, uses counted down — and the coat stayed filthy. Cause: a single
--- SET_PED_DIRT_LEVEL is overwritten within a few frames as the engine re-applies
--- environmental grime. It's the same thing that made the storefront preview
--- stay dirty, and the same reason forceClean loops. Setting it once is only ever
--- reliable when dirt is going UP (the engine agrees with you).
---
--- So: clear properly first, then re-assert the target over ~800ms.
+-- Immediate clean-and-set, for the instant a value changes.
 function Metabolism.setDirt(ped, dirt0to100)
     if not (ped and DoesEntityExist(ped)) then return end
     local lvl = dirtToLevel(dirt0to100)
     clearPass(ped)                                              -- wipe env dirt + decals
     Citizen.InvokeNative(0x7A56D66C78D1AAB7, ped, lvl + 0.0)
-    CreateThread(function()
-        for _ = 1, 8 do
-            Wait(100)
-            if not (ped and DoesEntityExist(ped)) then return end
-            if lvl <= 0.0 then clearPass(ped) end
-            Citizen.InvokeNative(0x7A56D66C78D1AAB7, ped, lvl + 0.0)
-        end
-    end)
 end
+
+--------------------------------------------------------------------------------
+-- ⚠️ THE DIRT GUARD — why brushing failed THREE rounds running.
+--------------------------------------------------------------------------------
+-- R1/R2 failed again in the 2.1 R3 ledger: "Does nothing to the horse after the
+-- brushing animation. Still dirty." Both on foot and mounted.
+--
+-- Everything upstream was correct and I kept re-checking it: the item is taken,
+-- the server sets dirt to 0, the card comes back clean, the client calls the
+-- clearing setter. The bug was never in the LOGIC — it was in HOW LONG we held
+-- the result. Each fix re-asserted the value for a fixed burst (~800ms), and the
+-- brushing animation runs for SEVERAL SECONDS. The engine repaints environmental
+-- grime after our burst has already finished, so the horse is genuinely clean
+-- for a moment you never see, then dirty again by the time the animation ends.
+--
+-- Chasing that with a longer burst is the same bug with a bigger number. The
+-- real problem is that a one-shot write is a GUESS about when the engine will
+-- next disagree with us. So: stop guessing, and hold the value continuously.
+--
+-- The invariant this buys is worth more than the bug it fixes: THE COAT ALWAYS
+-- SHOWS EXACTLY WHAT THE NUMBER SAYS. Our model is the only thing that decides
+-- how dirty a horse looks — engine grime can no longer add dirt behind our back,
+-- which is also what made a freshly-brushed horse look grubby on the ride out of
+-- town. One native call twice a second, on one horse. Nothing.
+CreateThread(function()
+    local tick = 0
+    while true do
+        Wait(500)
+        local a = Horse and Horse.active and Horse.active()
+        if current and a and a.ent and DoesEntityExist(a.ent) then
+            local lvl = dirtToLevel(current.dirt or 0)
+            Citizen.InvokeNative(0x7A56D66C78D1AAB7, a.ent, lvl + 0.0)   -- SET_PED_DIRT_LEVEL
+            -- At spotless, the level alone isn't enough: env dirt and decals are
+            -- separate layers and need the full clear. Every 2s is plenty.
+            tick = tick + 1
+            if lvl <= 0.0 and (tick % 4) == 0 then clearPass(a.ent) end
+        end
+    end
+end)
 
 --------------------------------------------------------------------------------
 -- Penalties — a starving/parched horse is sluggish (never frozen).
@@ -424,10 +446,13 @@ end, false)
 RegisterCommand('sovcare', function()
     local c = current
     if not c then Bridge.notify('No care data — bring your horse out.'); return end
-    print(('^2[sov_care]^7 hunger=%s thirst=%s dirt=%s golden=%s')
-        :format(tostring(c.hunger), tostring(c.thirst), tostring(c.dirt), tostring(c.golden)))
-    Bridge.notifyCard(c.golden and 'complete' or 'info', 'Your Horse',
-        ('Hunger %s%% · Thirst %s%% · Dirt %s%%%s')
-        :format(tostring(c.hunger), tostring(c.thirst), tostring(c.dirt),
-                c.golden and ' · GOLDEN' or ''))
+    -- Golden was switched off (ruled 2026-07-27), so it no longer appears here.
+    -- `shows=` is the coat's rendered level vs the stored number — the two differ
+    -- by the grace band, and seeing both is how you tell "brush didn't work" from
+    -- "brush worked and the dirt is simply below the visible threshold".
+    print(('^2[sov_care]^7 hunger=%s thirst=%s dirt=%s shows=%.2f')
+        :format(tostring(c.hunger), tostring(c.thirst), tostring(c.dirt), dirtToLevel(c.dirt or 0)))
+    Bridge.notifyCard('info', 'Your Horse',
+        ('Hunger %s%% · Thirst %s%% · Dirt %s%%')
+        :format(tostring(c.hunger), tostring(c.thirst), tostring(c.dirt)))
 end, false)

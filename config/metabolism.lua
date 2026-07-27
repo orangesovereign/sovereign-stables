@@ -77,8 +77,15 @@ Config.Metabolism = {
     -- golden — it drains slower and (Phase 3) bonds faster. Let it slip and the
     -- glow fades. A reward for good husbandry, not a grind.
     ----------------------------------------------------------------------------
+    --
+    -- ⚠️ SWITCHED OFF (owner ruling 2026-07-27): "Do not want it to show golden
+    -- state. Actually remove Golden state altogether or just turn it off."
+    -- Off rather than deleted, because the mechanic is sound and costs nothing
+    -- while dormant — flip `enabled` back to true and it returns intact, cores,
+    -- drain bonus and all. With it off, no horse ever becomes golden, so the
+    -- slower drain never applies and nothing displays it.
     golden = {
-        enabled           = true,
+        enabled           = false,
         goldenAbove       = 80,
         goldenAfterMinutes = 20,
         drainMultiplier   = 0.5,   -- golden horses get hungry/thirsty half as fast
