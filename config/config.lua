@@ -453,6 +453,18 @@ Config.UI = {
         -- letting go of one. Change this if E turns out to collide with
         -- something in the native list.
         leadControl = 0xF5C4701B,   -- INPUT_INTERACT_LOCKON_DETACH_HORSE (E)
+
+        -- Give Water's key. INPUT_INTERACT_OPTION2 (H) because every obvious horse
+        -- key is already a vanilla lock-on entry — Feed sits on R, which is why
+        -- our drink prompt ON R never drew at all (R7 A1). Change here if H
+        -- clashes with something on your setup.
+        drinkControl = 0x84543902,  -- INPUT_INTERACT_OPTION2
+
+        -- The brush cleans the COAT only after the grooming animation has run this
+        -- long (owner R7 Q1). The dirt NUMBER updates at once; only the visible
+        -- coat waits, so the horse is seen to get groomed rather than snapping
+        -- clean the instant you press.
+        brushAnimSeconds = 4,
     },
 
     -- 'circular' or 'arrows' — how horse components are cycled in the customizer. [S15]

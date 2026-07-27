@@ -45,9 +45,18 @@ local pLead, pStop, pDrink
 local leadGroup = nil     -- the group our prompts are currently attached to
 local leading = false
 
--- Drink shares no control with Lead, so it needs its own. R is the horse-feed
--- input — the closest native meaning to "give the horse something".
-local function ctrlDrink() return cfg().drinkControl or 0x0D55A0F0 end  -- INPUT_INTERACT_HORSE_FEED (R)
+-- ⚠️ R7 A1/A2: Give Water never appeared. The cause was a CONTROL COLLISION.
+-- Our Drink prompt used INPUT_INTERACT_HORSE_FEED (0x0D55A0F0), which is the
+-- EXACT control the vanilla "Feed" entry already holds in this same lock-on
+-- group. Two prompts, one control, one group: the native one wins and ours never
+-- draws. Lead works precisely because its control isn't a visible native entry.
+--
+-- So Drink moves to INPUT_INTERACT_OPTION2 (0x84543902), which no native horse
+-- entry uses. Its key is H; while you're locked on to a horse standing right
+-- next to you, the whistle that key normally does is moot. If it still clashes
+-- with anything on your setup, this is one config line — Config.UI.horseMenu
+-- .drinkControl — and I'll rebind it.
+local function ctrlDrink() return cfg().drinkControl or 0x84543902 end  -- INPUT_INTERACT_OPTION2
 
 --------------------------------------------------------------------------------
 -- Prompts, attached to the HORSE rather than to a group of our own
@@ -173,7 +182,12 @@ CreateThread(function()
 
                     local canLead  = not leading
                     local canStop  = leading
-                    local canDrink = atWater(a.ent)   -- offered only when there IS water
+                    -- Give Water is ALWAYS shown when you're locked on, not gated
+                    -- on being at water. R7 hid the whole feature behind an
+                    -- atWater check that could silently say "no"; a prompt that
+                    -- vanishes teaches the player nothing. Now the check moves to
+                    -- the PRESS: no water, and it says so.
+                    local canDrink = not leading
                     UiPromptSetEnabled(pLead,  canLead);  UiPromptSetVisible(pLead,  canLead)
                     UiPromptSetEnabled(pStop,  canStop);  UiPromptSetVisible(pStop,  canStop)
                     UiPromptSetEnabled(pDrink, canDrink); UiPromptSetVisible(pDrink, canDrink)
@@ -181,9 +195,13 @@ CreateThread(function()
                     if canLead and UiPromptHasStandardModeCompleted(pLead) then HorseMenu.startLead(a) end
                     if canStop and UiPromptHasStandardModeCompleted(pStop) then HorseMenu.stopLead(a) end
                     if canDrink and UiPromptHasStandardModeCompleted(pDrink) then
-                        -- The server decides the outcome: a full drink, or the
-                        -- "not thirsty" chip. Name goes along for that chip.
-                        TriggerServerEvent(Events.RequestDrink, a.id, a.name)
+                        if atWater(a.ent) then
+                            -- The server decides the rest: a full drink, or the
+                            -- "not thirsty" chip. Name goes along for the chip.
+                            TriggerServerEvent(Events.RequestDrink, a.id, a.name)
+                        else
+                            Bridge.notify(('There is no water here for %s.'):format(a.name or 'your horse'))
+                        end
                     end
                 else
                     UiPromptSetVisible(pLead,  false)
@@ -213,10 +231,13 @@ end)
 -- called EVERY FRAME to suppress a prompt type. Type 12 is the mount prompt; the
 -- brush and feed type numbers are not documented anywhere I can find.
 --
--- R5's probe called it once and nothing happened — because once is not enough,
--- it has to be per-frame. This one holds the numbers and disables them every
--- frame in the loop below, so the answer comes from the game, exactly like the
--- dirt and wagon-health probes did.
+-- ⚠️ FINDING (R7 P2): a per-frame sweep of types 0-40 removed NOTHING from the
+-- horse lock-on list. So UiPromptDisablePromptTypeThisFrame does not govern the
+-- vanilla Brush/Feed/Pat entries — they aren't "prompt types" in the sense this
+-- native disables. Removing them needs a different lever (a ped config flag, most
+-- likely) which I haven't found a confirmed number for. Left in for now, but this
+-- route is ruled out. The native Brush/Feed do no harm; they're just redundant
+-- next to item-based care, so this is cosmetic, not a blocker.
 --
 --   /sovpromptprobe 1 2 3 ...   disable these type numbers each frame
 --   /sovpromptprobe sweep       walk 0-40 automatically, ~2s each, printing each

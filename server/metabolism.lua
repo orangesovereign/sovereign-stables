@@ -178,13 +178,12 @@ function Metabolism.applyItem(charid, horseId, itemDef)
     if not changed then return false, 'Nothing to do.' end
 
     saveBlob(charid, horseId, m)
-    -- Brushing gets NO message (owner ruling 2026-07-27, R6 F4) — the coat
-    -- changing is feedback enough, and a chip every brush is noise. Feed still
-    -- confirms, because a fed horse shows nothing visible. `quiet` suppresses the
-    -- chip client-side without hiding the animation or the card update.
-    local isBrush = itemDef.dirt and not (itemDef.hunger or itemDef.thirst)
-    local msg = isBrush and nil or ('%s given.'):format(itemDef.label or 'Feed')
-    return true, msg, Metabolism.card(m)
+    -- No chip for brushing OR feeding (owner rulings R6 F4, R7 Q2). The animation
+    -- and the moving bars are feedback enough; a chip on every care action is
+    -- noise. Watering keeps its chip because it has meaningful outcomes to report
+    -- ("not thirsty", "had enough") — that lives in the RequestDrink handler, not
+    -- here. Message is nil; the card and animation still come back.
+    return true, nil, Metabolism.card(m)
 end
 
 --------------------------------------------------------------------------------

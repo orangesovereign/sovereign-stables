@@ -159,12 +159,14 @@ end)
 --------------------------------------------------------------------------------
 -- ⚠️ TEMPORARY: WHICH NATIVE ACTUALLY PAINTS DIRT?  (remove once answered)
 --------------------------------------------------------------------------------
--- ⚠️ R6 D3 returned "none" for all five, but that test was INVALID: the dirt
--- guard above was scrubbing the horse clean twice a second while the probe ran.
--- The probe now SUSPENDS the guard (Metabolism._probing) so the native's effect
--- can survive long enough to see. Candidate 3 (SET_PED_DIRT_LEVEL 100.0) is the
--- one I most expect to work now that nothing is fighting it — the clean
--- direction of this exact native is already proven.
+-- ⚠️ FINDING (R7 D2/D3): even with the guard fully suspended and the value held
+-- for six seconds, NONE of these five visibly dirty a horse. So this is settled:
+-- SET_PED_DIRT_LEVEL is a one-way native — it CLEANS a horse (0.0 works, proven)
+-- but does not paint mud onto one, and the wetness/cleanliness candidates don't
+-- either. Visible dirt via a ped native is a dead end. The dirt NUMBER still
+-- works end to end (climbs while ridden, persists, brush lowers it, coat shows
+-- CLEAN when brushed) — only the DIRTY visual is unreachable this way. Kept as a
+-- probe for now in case a horse-specific mud native surfaces; not a live path.
 local DIRT_CANDIDATES = {
     { name = 'SET_PED_DIRT_LEVEL 1.0',    fn = function(e) Citizen.InvokeNative(0x7A56D66C78D1AAB7, e, 1.0) end },
     { name = 'SET_PED_DIRT_LEVEL 5.0',    fn = function(e) Citizen.InvokeNative(0x7A56D66C78D1AAB7, e, 5.0) end },
@@ -485,15 +487,33 @@ RegisterNetEvent(Events.CareResult, function(res)
     if res.ok then
         if res.animate then playCareAnim(res.animate) end
         if res.card then
+            local prevDirt = current and current.dirt
             current = res.card
             local a = Horse and Horse.active and Horse.active()
             if a and a.ent and DoesEntityExist(a.ent) then
-                -- setDirt, NOT applyDirt: an item that cleans (the brush) is a
-                -- dirt DECREASE, and a single set gets painted over within a few
-                -- frames. This was the R1/R2 bug — animation played, uses counted
-                -- down, server cleaned the horse, and the coat stayed filthy.
-                Metabolism.setDirt(a.ent, res.card.dirt)
                 applyPenalties(a.ent, res.card)
+
+                -- R7 Q1: "The cleaning shouldn't occur until the brushing
+                -- animation is done." So when a brush LOWERS the dirt, we hold the
+                -- old coat until the animation has played out, THEN clean — the
+                -- horse visibly gets groomed rather than snapping clean the instant
+                -- you press. The number is already updated; only the coat waits.
+                local cleaned = res.animate == 'brush' and prevDirt and res.card.dirt < prevDirt
+                if cleaned then
+                    Metabolism.applyDirt(a.ent, prevDirt)   -- keep looking dirty for now
+                    local horseEnt = a.ent
+                    CreateThread(function()
+                        Wait(((cfg().brushAnimSeconds) or 4) * 1000)
+                        if horseEnt and DoesEntityExist(horseEnt) then
+                            -- setDirt, NOT applyDirt: cleaning is a DECREASE and a
+                            -- single set gets repainted within a few frames (the
+                            -- original R1/R2 bug). setDirt runs the full clear pass.
+                            Metabolism.setDirt(horseEnt, res.card.dirt)
+                        end
+                    end)
+                else
+                    Metabolism.setDirt(a.ent, res.card.dirt)
+                end
             end
         end
     end
