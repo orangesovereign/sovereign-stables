@@ -52,11 +52,15 @@ local leading = false
 -- inside the game's lock-on list instead of beside it. A group of our own is
 -- what produced the second floating menu in R5.
 --
--- ⚠️ UNVERIFIED UNTIL YOU TELL ME: this is the documented way to attach a prompt
--- to an entity, but whether it lands INSIDE the vanilla horse list or merely
--- next to it is something only the game can answer. If Lead still appears
--- separately, say so — the fallback is to hold the prompt on the native group id
--- rather than the entity handle, and that's a one-line change.
+-- R5 said "Lead is still not in the native list... That and Pat are on the
+-- outside", and my own note in this file predicted the cause: the prompt was
+-- held on the ENTITY HANDLE rather than on the entity's real group id. See
+-- attachTo below — that is now looked up properly.
+--
+-- If Lead STILL renders outside after this, the next lever is
+-- SetPedConfigFlag(horse, 297, true) — "enable leading" — which makes the game
+-- draw its OWN lead prompt instead of ours. That would be strictly better, and
+-- our prompt would then be deleted rather than kept alongside it.
 local function newPrompt(control, label)
     local p = UiPromptRegisterBegin()
     UiPromptSetControlAction(p, control)
@@ -71,12 +75,38 @@ CreateThread(function()
     pStop = newPrompt(ctrlLead(), 'Stop Leading')
 end)
 
+-- ⚠️ THE ENTITY HANDLE IS NOT THE GROUP ID. This is what R5 got wrong.
+--
+-- I passed the horse's entity handle straight to UiPromptSetGroup and reasoned
+-- that "attached to the entity" meant "in the entity's list". It doesn't: an
+-- entity's prompt group has its own id, and there is a native whose entire job
+-- is to hand it to you. Passing the handle instead quietly creates a group that
+-- happens to be numbered after the entity — which is exactly what a second
+-- floating menu beside the real one looks like.
+--
+-- _UI_PROMPT_GET_GROUP_ID_FOR_TARGET_ENTITY is the missing step. With the real
+-- id, our entry goes in the vanilla lock-on list next to Show Info / Brush /
+-- Feed / Pat, which is what was asked for both times.
+local GET_GROUP_FOR_ENTITY = 0xB796970BD125FCE8
+
+local function groupIdFor(ent)
+    local ok, g = pcall(function()
+        return Citizen.InvokeNative(GET_GROUP_FOR_ENTITY, ent, Citizen.ResultAsInteger())
+    end)
+    if ok and g and g ~= 0 then return g end
+    return nil
+end
+
 local function attachTo(ent)
-    if leadGroup == ent then return end
-    leadGroup = ent
     if not (pLead and pStop) then return end
-    UiPromptSetGroup(pLead, ent, 0)
-    UiPromptSetGroup(pStop, ent, 0)
+    -- Re-asked every pass rather than cached against the entity: the group id
+    -- belongs to the game's targeting, not to us, and it is not ours to assume
+    -- stays put.
+    local g = groupIdFor(ent)
+    if not g or g == leadGroup then return end
+    leadGroup = g
+    UiPromptSetGroup(pLead, g, 0)
+    UiPromptSetGroup(pStop, g, 0)
 end
 
 --------------------------------------------------------------------------------
