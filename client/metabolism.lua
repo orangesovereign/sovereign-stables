@@ -349,7 +349,7 @@ CreateThread(function()
         local c = mcfg()
         if c.enabled ~= false and current and Horse and Horse.active then
             local a = Horse.active()
-            if a and a.ent and DoesEntityExist(a.ent) and atWater(a.ent) then
+            if a and a.ent and DoesEntityExist(a.ent) and Metabolism.atWater(a.ent) then
                 TriggerServerEvent(Events.ReportDrank, a.id)
             end
         end
