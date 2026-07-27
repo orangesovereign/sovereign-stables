@@ -53,6 +53,20 @@ Config.Summon = {
     recallCooldownSeconds   = 30,    -- wait after dismissing before you can recall
     deadRespawnSeconds      = 120,   -- wait after a horse dies before it can return
     autoRecallDistance      = 200.0, -- a stray, unused ride further than this is respawned near you
+
+    -- TELEPORTS DESPAWN THE HORSE (owner ruling 2026-07-27).
+    --
+    -- ⚠️ This has to be told apart from ordinary straying, because the two want
+    -- OPPOSITE answers: a strayed horse is respawned beside you (above), but a
+    -- teleported player who got the same treatment would have their horse follow
+    -- them across the map and pop into existence wherever they land.
+    --
+    -- The tell is the PLAYER's own movement, not the horse's distance: nobody
+    -- covers this many metres in the two seconds between checks, so a jump that
+    -- big is a teleport and the horse gets left behind. Lower it and fast travel
+    -- or a long fall might count; raise it and short admin hops won't.
+    -- Riding through it is fine — a mounted horse came with you.
+    teleportJumpDistance    = 100.0,
 }
 
 --------------------------------------------------------------------------------

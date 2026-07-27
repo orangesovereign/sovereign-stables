@@ -221,8 +221,29 @@ end)
 --------------------------------------------------------------------------------
 -- Watchdog: death reporting + auto-recall of a strayed horse
 --------------------------------------------------------------------------------
+-- ⚠️ TELEPORTING IS NOT STRAYING, AND THEY NEED OPPOSITE ANSWERS.
+-- (Owner ruling 2026-07-27: "when teleporting away from the area horse should
+-- also despawn.")
+--
+-- The strayed-horse case below RE-SPAWNS the horse beside you, which is right
+-- when it has wandered off — but applied to a teleport it means your horse
+-- follows you across the map and pops into existence wherever you land. Same
+-- distance check, wrong answer.
+--
+-- We can tell them apart by watching the PLAYER rather than the horse: nobody
+-- covers 100 metres in two seconds on foot, so a jump that large is a teleport.
+-- A teleport leaves the horse behind, exactly as if you had walked away and left
+-- it — and since you are now nowhere near it, it goes.
+local lastPos = nil
+
 CreateThread(function()
     while true do
+        local ped = PlayerPedId()
+        local pos = GetEntityCoords(ped)
+        -- Seed on the first pass, or a resource restart reads as a teleport.
+        local jumped = lastPos and (#(pos - lastPos) > ((Config.Summon and Config.Summon.teleportJumpDistance) or 100.0))
+        lastPos = pos
+
         if active and active.ent then
             if not DoesEntityExist(active.ent) then
                 active, following = nil, false
@@ -230,11 +251,17 @@ CreateThread(function()
                 Util.log(('horse #%s died'):format(tostring(active.id)))
                 TriggerServerEvent(Events.ReportDeath, active.id)
                 Horse.despawn(true)
+            elseif jumped and not isMounted() then
+                -- You teleported and left it behind. Mounted is excluded on
+                -- purpose: the horse came WITH you, so there is nothing stranded.
+                Util.log(('horse #%s left behind by a teleport — despawning'):format(tostring(active.id)))
+                Horse.despawn(true)
+                Bridge.notify('Your horse is no longer with you.')
             else
                 local maxD = (Config.Summon and Config.Summon.autoRecallDistance) or 200.0
-                local d = #(GetEntityCoords(PlayerPedId()) - GetEntityCoords(active.ent))
+                local d = #(pos - GetEntityCoords(active.ent))
                 if d > maxD and not isMounted() then
-                    -- Too far and nobody's on it: quietly bring it back.
+                    -- Strayed, not teleported: quietly bring it back.
                     local data = { id = active.id, name = active.name, model = active.model }
                     Horse.despawn(true)
                     Horse.spawn(data)
