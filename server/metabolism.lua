@@ -346,12 +346,15 @@ RegisterNetEvent(Events.RequestDrink, function(horseId, horseName)
         lastDrink[src] = now
 
         -- One press = a proper drink. `drinkFill` points, capped at max.
+        -- NO success chip (owner R9 G1): the drinking animation is the feedback,
+        -- and a chip on top is noise — same call as brush and feed. The
+        -- "not thirsty" / "had enough" chips stay, because those are no-ops with
+        -- nothing else to show for them.
         m.thirst = clamp(m.thirst + (d.drinkFill or 100), 0, maxT)
         m.ts = now
         saveBlob(charid, horseId, m)
         TriggerClientEvent(Events.CareResult, src,
-            { ok = true, horseId = horseId, card = Metabolism.card(m),
-              message = ('%s takes a long drink.'):format(name) })
+            { ok = true, horseId = horseId, card = Metabolism.card(m) })
     end)
 end)
 

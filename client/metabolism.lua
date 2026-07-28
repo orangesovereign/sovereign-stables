@@ -32,10 +32,14 @@ local N_SET_DIRT  = 0xE3144B932DFDFF65  -- _SET_PED_DIRT_CLEANED(ped, lvl, -1, t
 local N_CLEAR_ENV = 0x6585D955A68452A5  -- CLEAR_PED_ENV_DIRT(ped)
 
 -- Read the engine's current dirt as 0-100, or nil if the native won't answer.
-function Metabolism.readDirt(ped)
+-- `composite` selects which of RDR3's two dirt slots to read; R9 showed the two
+-- do NOT mirror each other (the clean moved the coat but not the composite read),
+-- so the layer matters and is a parameter.
+function Metabolism.readDirt(ped, composite)
     if not (ped and DoesEntityExist(ped)) then return nil end
+    if composite == nil then composite = true end
     local ok, v = pcall(function()
-        return Citizen.InvokeNative(N_GET_DIRT, ped, true, Citizen.ResultAsFloat())
+        return Citizen.InvokeNative(N_GET_DIRT, ped, composite, Citizen.ResultAsFloat())
     end)
     if ok and type(v) == 'number' then return math.max(0, math.min(100, math.floor(v * 100 + 0.5))) end
     return nil
@@ -129,12 +133,16 @@ RegisterCommand('sovdirtset', function(_, args)
     end
     n = math.max(0, math.min(100, n))
     Metabolism.setDirt(a.ent, n)
-    -- Hold it a moment, then read it back so we see whether it stuck.
+    -- Read BOTH layers back. R9 proved the clean moved the coat but not the
+    -- layer we were reading, so the two dirt slots are different things. Whichever
+    -- of these tracks what you SEE is the one we should persist.
     CreateThread(function()
         Wait(300)
-        local got = Metabolism.readDirt(a.ent)
-        print(('^3[sov_dirt]^7 set %d%% -> engine now reads %s%%. Does the horse LOOK it?'):format(n, tostring(got)))
-        Bridge.notify(('Set dirt %d%% — engine reads %s%%'):format(n, tostring(got)))
+        local comp = Metabolism.readDirt(a.ent, true)
+        local base = Metabolism.readDirt(a.ent, false)
+        print(('^3[sov_dirt]^7 set %d%% -> composite=%s%%  base=%s%%. Which matches what the horse LOOKS like?')
+            :format(n, tostring(comp), tostring(base)))
+        Bridge.notify(('Set %d%% — composite %s / base %s'):format(n, tostring(comp), tostring(base)))
     end)
 end, false)
 
