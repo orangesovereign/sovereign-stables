@@ -130,6 +130,15 @@ Config.WagonBlip = {
     label   = 'Wagon',      -- fallback name; the wagon's own name is used if set
 }
 
+-- PUT THE WAGON AWAY AT ITS SPAWN POINT (owner 2026-07-28).
+-- Drive the wagon back to the stable's retrieve.wagonPos and a prompt offers to
+-- stable it — the mirror of collecting it. `control` is the key; default R.
+Config.WagonPutAway = {
+    enabled  = true,
+    control  = 0x0D55A0F0,   -- INPUT_INTERACT_HORSE_FEED (R)
+    distance = 6.0,          -- how near the spawn point the wagon must be parked
+}
+
 --------------------------------------------------------------------------------
 -- WAGON CONDITION  [WG9] — modelled on bcc-wagons' Condition feature
 --------------------------------------------------------------------------------

@@ -83,6 +83,11 @@ RegisterCommand('sovwagonhp', function()
         :format(tostring(p.body), tostring(p.engine), tostring(p.petrol),
                 tostring(p.entity), tostring(p.entityMax), tostring(IsEntityDead(veh))))
     print(('    stored condition = %s / %d'):format(tostring(active and active.condition), condMax()))
+    -- Entry diagnostics: if you STILL can't climb in, these say why.
+    local ok, lock = pcall(function() return Citizen.InvokeNative(0xC867FD144F2469D3, veh, Citizen.ResultAsInteger()) end)  -- GET_VEHICLE_DOOR_LOCK_STATUS
+    local haveCtrl = pcall(function() return Citizen.InvokeNative(0xB2E1E1FB4B0FEAAF, veh) end)   -- NETWORK_HAS_CONTROL_OF_ENTITY
+    print(('    lockStatus=%s (1=unlocked, 2=locked)  hasNetControl=%s')
+        :format(ok and tostring(lock) or '?', tostring(haveCtrl)))
 end, false)
 
 -- Is the wagon actually moving? Wear only accrues in use (bcc onlyWhileMoving).
@@ -152,6 +157,20 @@ local function place(model, x, y, z, heading, name)
     SetEntityVisible(veh, true, false)
     SetEntityAsMissionEntity(veh, true, true)
     SetVehicleHasBeenOwnedByPlayer(veh, true)
+
+    -- ⚠️ THE ENTRY FIX (owner 2026-07-28: "unable to get in wagon after purchase").
+    -- The wagon spawned complete, horses hitched, but no ride prompt. Cause: a
+    -- CreateVehicle wagon is not automatically "considered by the player", so the
+    -- game never offers the climb-in — no error, just nothing. These three, all
+    -- RDR3-VERIFIED hashes (alloc8or nativedb, NOT GTA V), make it enterable:
+    --   • request control so we may touch a networked entity
+    --   • mark it considered-by-player (the missing piece — false here = no prompt)
+    --   • unlock the doors with the RDR3 hash 0x96F7… (the GTA V lock hash
+    --     0xB664292EAECF7FA6 silently no-ops in RedM — do not use it)
+    pcall(function() Citizen.InvokeNative(0xB69317BF5E782347, veh) end)        -- NETWORK_REQUEST_CONTROL_OF_ENTITY
+    pcall(function() Citizen.InvokeNative(0x54800D386C5825E5, veh, true) end)  -- SET_VEHICLE_IS_CONSIDERED_BY_PLAYER
+    pcall(function() Citizen.InvokeNative(0x96F78A6A075D55D9, veh, 1) end)     -- SET_VEHICLE_DOORS_LOCKED (1 = unlocked)
+
     SetModelAsNoLongerNeeded(hash)
     return veh
 end
@@ -190,7 +209,10 @@ function Wagon.spawn(data)
     -- drives the wear loop, the "needs repairs" notice, and what we persist.
     local cond = tonumber(data.health)
     if cond == nil then cond = condMax() end
-    active = { ent = veh, id = data.id, name = data.name, model = data.model, condition = cond }
+    -- stableId is kept so the "park at the spawn point, press R to put away" prompt
+    -- knows WHERE the spawn point is (this stable's retrieve.wagonPos).
+    active = { ent = veh, id = data.id, name = data.name, model = data.model,
+               condition = cond, stableId = data.stableId }
     makeWagonBlip(veh, data.name)
 
     Bridge.notify(('%s is brought round.'):format(data.name or 'Your wagon'))
@@ -340,6 +362,73 @@ CreateThread(function()
                 end
             end
         end
+    end
+end)
+
+--------------------------------------------------------------------------------
+-- PUT AWAY AT THE SPAWN POINT — park the wagon where it came out, press R.
+--------------------------------------------------------------------------------
+-- Owner request 2026-07-28: "when you park your wagon in the wagon spawn point R
+-- lets you put it back into the stable." So this is the mirror of collecting one:
+-- drive it back to its stable's retrieve.wagonPos, and a prompt offers to stable
+-- it. Uses the SAME UiPrompt pattern proven at the stable door (client/stables).
+local function putCfg()     return Config.WagonPutAway or {} end
+local function putControl() return putCfg().control or 0x0D55A0F0 end   -- R (INPUT_INTERACT_HORSE_FEED)
+local putGroup  = GetRandomIntInRange(0, 0xFFFFFF)
+local putPrompt
+
+-- Is the out-wagon parked at (near) its own stable's spawn point?
+local function atSpawnPoint()
+    if not (active and active.ent and DoesEntityExist(active.ent)) then return false end
+    local stable = active.stableId and Config.Stables[active.stableId]
+    local spot = stable and stable.retrieve and stable.retrieve.wagonPos
+    if not spot then return false end
+    local c = GetEntityCoords(active.ent)
+    local dx, dy, dz = c.x - spot[1], c.y - spot[2], c.z - spot[3]
+    return (dx*dx + dy*dy + dz*dz) <= (putCfg().distance or 6.0) ^ 2
+end
+
+-- Put the wagon away. If you're sat on it, step down first, then stable it.
+function Wagon.putAway()
+    if not (active and DoesEntityExist(active.ent)) then return end
+    local ped = PlayerPedId()
+    if IsPedInVehicle(ped, active.ent, false) then
+        local veh = active.ent
+        pcall(function() TaskLeaveVehicle(ped, veh, 0) end)
+        CreateThread(function()
+            local t = GetGameTimer()
+            while IsPedInVehicle(PlayerPedId(), veh, false) and GetGameTimer() - t < 3000 do Wait(50) end
+            Wagon.dismiss()
+        end)
+    else
+        Wagon.dismiss()
+    end
+end
+
+CreateThread(function()
+    putPrompt = UiPromptRegisterBegin()
+    UiPromptSetControlAction(putPrompt, putControl())
+    UiPromptSetText(putPrompt, CreateVarString(10, 'LITERAL_STRING', 'Put Away Wagon'))
+    UiPromptSetStandardMode(putPrompt, true)
+    UiPromptSetGroup(putPrompt, putGroup, 0)
+    UiPromptRegisterEnd(putPrompt)
+
+    while true do
+        local wait = 500
+        if putCfg().enabled ~= false and putPrompt and atSpawnPoint() then
+            wait = 0
+            UiPromptSetEnabled(putPrompt, true)
+            UiPromptSetVisible(putPrompt, true)
+            UiPromptSetActiveGroupThisFrame(putGroup,
+                CreateVarString(10, 'LITERAL_STRING', ('Stable %s'):format(active.name or 'Wagon')), 0, 0, 0, 0)
+            if UiPromptHasStandardModeCompleted(putPrompt) then
+                Wagon.putAway()
+            end
+        elseif putPrompt then
+            UiPromptSetEnabled(putPrompt, false)
+            UiPromptSetVisible(putPrompt, false)
+        end
+        Wait(wait)
     end
 end)
 
