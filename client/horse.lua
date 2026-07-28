@@ -54,18 +54,84 @@ local function place(model, x, y, z, heading, name)
     return horse
 end
 
--- Bring the horse out behind the player and send it to them.
+--------------------------------------------------------------------------------
+-- NO-SPAWN ZONES (owner 2026-07-28): "Buildings and Stables are no spawn zones."
+--------------------------------------------------------------------------------
+-- A whistled horse normally appears 4m in front of you. Indoors or on top of a
+-- stable that drops it through a wall or into the furniture. So if the natural
+-- spot is in a no-spawn zone, we search OUTWARD for clear open ground and bring
+-- the horse out there instead — it arrives outside, and you walk to it.
+-- GET_INTERIOR_AT_COORDS asks "is this point inside a building?" — returns an
+-- interior handle, 0 = outdoors. This is the RDR3 hash (alloc8or nativedb); the
+-- GTA V hash is different and would silently no-op, letting horses spawn indoors.
+local INTERIOR_AT_COORDS = 0xCDD36C9E5C469070
+
+-- Within the no-spawn radius of any stable?
+local function nearStable(x, y, z)
+    local r = (Config.Summon and Config.Summon.noSpawnStableRadius) or 15.0
+    if r <= 0 then return false end
+    for _, s in pairs(Config.Stables or {}) do
+        local p = (s.prompt and s.prompt.coords) or (s.ped and s.ped.coords)
+        if p then
+            local dx, dy, dz = x - p[1], y - p[2], z - (p[3] or z)
+            if (dx*dx + dy*dy + dz*dz) <= r*r then return true end
+        end
+    end
+    return false
+end
+
+-- Inside a building? interior id 0 = outdoors. Wrapped: if the native is
+-- unavailable the stable check still protects the common case.
+local function inInterior(x, y, z)
+    if type(INTERIOR_AT_COORDS) ~= 'number' then return false end
+    local ok, id = pcall(function()
+        return Citizen.InvokeNative(INTERIOR_AT_COORDS, x + 0.0, y + 0.0, z + 0.0, Citizen.ResultAsInteger())
+    end)
+    return ok and id and id ~= 0 or false
+end
+
+local function isNoSpawn(x, y, z)
+    return nearStable(x, y, z) or inInterior(x, y, z)
+end
+
+-- Where should the horse come out? The natural spot unless it's a no-spawn zone,
+-- in which case the first clear open-ground point found by spiralling outward.
+local function chooseSpawnPos(ped)
+    local h = GetEntityHeading(ped) + 180.0
+    local infront = GetOffsetFromEntityInWorldCoords(ped, 0.0, 4.0, 0.0)
+    if not isNoSpawn(infront.x, infront.y, infront.z) then
+        return infront.x, infront.y, infront.z, h, false
+    end
+
+    local pc = GetEntityCoords(ped)
+    for _, dist in ipairs({ 8.0, 12.0, 16.0, 22.0, 30.0 }) do
+        for i = 0, 7 do
+            local ang = (i / 8) * math.pi * 2
+            local x = pc.x + math.cos(ang) * dist
+            local y = pc.y + math.sin(ang) * dist
+            local found, gz = GetGroundZAndNormalFor_3dCoord(x, y, pc.z + 2.0)
+            local z = found and gz or pc.z
+            if not isNoSpawn(x, y, z) then
+                return x, y, z, h, true
+            end
+        end
+    end
+    -- Nothing clearly outside within reach — fall back rather than fail to summon.
+    Util.warn('no clear spot outside the no-spawn zone; bringing the horse to the default spot')
+    return infront.x, infront.y, infront.z, h, false
+end
+
+-- Bring the horse out near the player (outside any building/stable).
 function Horse.spawn(data)
     if not data or not data.model then return end
     Horse.despawn(true)
 
     local ped = PlayerPedId()
-    -- 4m in front, facing you, and it STAYS THERE. It used to spawn at 8m and
-    -- trot over, which meant it walked into you (1.4 ledger C1) — the horse
-    -- arriving is the moment, not the approach. Owner: "maybe just have the
-    -- horse spawn 4m in front of you stationary."
-    local infront = GetOffsetFromEntityInWorldCoords(ped, 0.0, 4.0, 0.0)
-    local horse = place(data.model, infront.x, infront.y, infront.z, GetEntityHeading(ped) + 180.0, data.name)
+    -- Normally 4m in front, facing you, and it STAYS THERE (1.4 ledger C1 — the
+    -- horse arriving is the moment, not the approach). If that spot is inside a
+    -- building or on a stable, chooseSpawnPos moves it to clear ground outside.
+    local sx, sy, sz, sh, relocated = chooseSpawnPos(ped)
+    local horse = place(data.model, sx, sy, sz, sh, data.name)
     if not horse then
         Util.err(('horse spawn FAILED for model %s'):format(tostring(data.model)))
         Bridge.notify('Your horse could not reach you.')
@@ -100,8 +166,13 @@ function Horse.spawn(data)
         pcall(Metabolism.onHorseOut, horse, data.id, data.care)
     end
 
-    -- It waits. No approach task — see above.
-    Bridge.notify(('%s answers your whistle.'):format(data.name or 'Your horse'))
+    -- It waits. No approach task — see above. If we had to move it out of a
+    -- building/stable, say so, so a horse appearing 20m away doesn't read as a bug.
+    if relocated then
+        Bridge.notify(('%s waits for you outside.'):format(data.name or 'Your horse'))
+    else
+        Bridge.notify(('%s answers your whistle.'):format(data.name or 'Your horse'))
+    end
     local hc = GetEntityCoords(horse)
     Util.log(('horse #%s (%s) spawned at %.1f, %.1f, %.1f (entity %s)'):format(
         tostring(data.id), tostring(data.model), hc.x, hc.y, hc.z, tostring(horse)))
@@ -299,6 +370,45 @@ function Horse.longWhistle()
     Horse.summon()   -- spawns it if it's away, or calls it over if it's already out
 end
 
+-- One place both input paths land, with a short debounce so the native control
+-- and the key mapping can't both fire for a single press.
+local lastWhistleAt = 0
+local function doWhistle(heldMs)
+    local now = GetGameTimer()
+    if now - lastWhistleAt < 300 then return end
+    lastWhistleAt = now
+    Util.log(('whistle: %dms -> %s'):format(heldMs, heldMs >= LONG_WHISTLE_MS and 'LONG' or 'SHORT'))
+    if heldMs >= LONG_WHISTLE_MS then Horse.longWhistle() else Horse.shortWhistle() end
+end
+
+-- ⚠️ WHY A KEY MAPPING AND NOT JUST THE NATIVE CONTROL (owner 2026-07-28:
+-- "Holding H does not work after logging into the server").
+--
+-- RDR2 gates INPUT_WHISTLE (0x24978A28) on the game having a REGISTERED primary
+-- horse. At login you have none — no horse ped exists yet, none is set as your
+-- mount — so that native control is INERT, and holding H does nothing. It only
+-- starts working after you bring a horse out at a stable, because spawning one
+-- registers it as yours. That's exactly the trip the owner hit.
+--
+-- A RegisterKeyMapping command is NOT gated on any of that, so it fires from the
+-- first frame after login. We keep BOTH: the mapping is the reliable path, and
+-- the native control still covers the mounted case cleanly. Your default horse is
+-- whatever the server holds as is_default (persisted until you change it), so
+-- one long whistle from login brings it out — no stable trip required.
+local keyDownAt = nil
+RegisterCommand('+sovwhistle', function() keyDownAt = GetGameTimer() end, false)
+RegisterCommand('-sovwhistle', function()
+    if not keyDownAt then return end
+    local held = GetGameTimer() - keyDownAt
+    keyDownAt = nil
+    doWhistle(held)
+end, false)
+-- Default to H (the game's own whistle key). The two coexist; the mapping is
+-- rebindable in Settings, and it fires even when the native control is inert.
+RegisterKeyMapping('+sovwhistle', 'Whistle / recall your horse', 'keyboard', 'H')
+
+-- The native control, kept for the case it handles best: mounted, where you're
+-- already registered so it always works. Debounced against the mapping above.
 CreateThread(function()
     local downAt = nil
     while true do
@@ -308,8 +418,7 @@ CreateThread(function()
         elseif IsControlJustReleased(0, ctrl) and downAt then
             local held = GetGameTimer() - downAt
             downAt = nil
-            Util.log(('whistle: %dms -> %s'):format(held, held >= LONG_WHISTLE_MS and 'LONG' or 'SHORT'))
-            if held >= LONG_WHISTLE_MS then Horse.longWhistle() else Horse.shortWhistle() end
+            doWhistle(held)
         end
         Wait(0)
     end

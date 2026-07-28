@@ -67,6 +67,12 @@ Config.Summon = {
     -- or a long fall might count; raise it and short admin hops won't.
     -- Riding through it is fine — a mounted horse came with you.
     teleportJumpDistance    = 100.0,
+
+    -- NO-SPAWN ZONES (owner 2026-07-28): "Buildings and Stables are no spawn
+    -- zones." A whistled horse won't drop inside a building (checked via the
+    -- interior native) or within this radius of a stable — it comes out on clear
+    -- ground nearby instead. 0 disables the stable ring (the building check stays).
+    noSpawnStableRadius     = 15.0,
 }
 
 --------------------------------------------------------------------------------
