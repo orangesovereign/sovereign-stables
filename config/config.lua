@@ -73,15 +73,6 @@ Config.Summon = {
     -- interior native) or within this radius of a stable — it comes out on clear
     -- ground nearby instead. 0 disables the stable ring (the building check stays).
     noSpawnStableRadius     = 15.0,
-
-    -- AUTO-SUMMON YOUR DEFAULT HORSE ON LOGIN (owner 2026-07-28: "you don't need
-    -- to go to a stable EVERY TIME YOU LOG IN"). Brings your default horse out a
-    -- few seconds after you spawn, so it's ready without a stable trip AND the
-    -- native H whistle goes live (RDR2 keeps it inert until you have a horse out).
-    -- Set false to spawn without your horse waiting; you'd then fetch it once at a
-    -- stable per session to wake the whistle.
-    autoSummonOnSpawn       = true,
-    autoSummonDelaySeconds  = 3,
 }
 
 --------------------------------------------------------------------------------

@@ -283,35 +283,6 @@ RegisterNetEvent(Events.SummonResult, function(res)
     Horse.spawn(res.horse)
 end)
 
---------------------------------------------------------------------------------
--- AUTO-SUMMON ON SPAWN (owner 2026-07-28): the default horse is ready from login.
---------------------------------------------------------------------------------
--- This is the RIGHT fix for "holding H does nothing until you fetch a horse at a
--- stable." RDR2's native whistle key is inert until the game has a REGISTERED
--- horse, and we can't rebind H (the game owns it — that's what broke R11). So
--- instead we bring your default horse out for you a moment after you load in:
--- once it's out it IS registered, so the native H whistle is live from then on,
--- AND you never had to visit a stable. Config-gated: turn it off if you'd rather
--- spawn without your horse waiting.
-CreateThread(function()
-    if (Config.Summon and Config.Summon.autoSummonOnSpawn) == false then return end
-    -- Wait for the player to actually be in the world and controllable.
-    local tries = 0
-    while tries < 120 do   -- up to ~60s
-        local ped = PlayerPedId()
-        if ped and ped ~= 0 and DoesEntityExist(ped) and not IsEntityDead(ped)
-           and IsPlayerControlOnActive and IsPlayerControlOnActive(PlayerId()) then
-            break
-        end
-        tries = tries + 1
-        Wait(500)
-    end
-    Wait((((Config.Summon and Config.Summon.autoSummonDelaySeconds)) or 3) * 1000)
-    if active then return end                 -- already got one out somehow
-    Horse.suppressSummonFail = true           -- a player with no horse yet: stay quiet
-    Horse.summon()
-end)
-
 -- A ride we no longer own — sold, or handed to someone else. It must leave our
 -- world or the old owner keeps riding a horse that is now legally theirs.
 RegisterNetEvent(Events.SyncOwnedRides, function(data)
@@ -409,23 +380,42 @@ end
 -- H is already the game's own whistle key, so RedM routes the press to the GAME
 -- control and our command never fires — H just played the whistle sound and did
 -- nothing else, taking follow/recall (and the horse ever coming out, hence Flee)
--- down with it. The native control below is the ONLY input path.
+-- down with it.
 --
--- The login problem it was trying to solve — H doing nothing until you've
--- fetched a horse at a stable — is fixed instead by auto-bringing your default
--- horse out shortly after you spawn (see AUTO-SUMMON below), which also registers
--- it with the game so the native whistle is live from then on. No key is hijacked.
+-- THE LOGIN PROBLEM (owner: "Holding H does not work after logging in; I want to
+-- whistle it out without visiting a stable"). RDR2 keeps the native whistle
+-- control (INPUT_WHISTLE) INERT until the game has a registered horse — which
+-- only happens once you've fetched one at a stable. So at login, holding H does
+-- nothing.
+--
+-- The fix without auto-spawning and without touching H: INPUT_INTERACT_OPTION2
+-- (0x84543902) also sits on the H key but is NOT gated on having a horse, so it
+-- fires from login. We listen on it as a SECOND path, but ONLY while no horse is
+-- out — so once you have one, normal follow/recall runs purely off the real
+-- whistle control and this never interferes.
+local H_LOGIN = 0x84543902   -- INPUT_INTERACT_OPTION2 (H) — the ungated login path
+
+local function fireWhistle(heldMs)
+    Util.log(('whistle: %dms -> %s'):format(heldMs, heldMs >= LONG_WHISTLE_MS and 'LONG' or 'SHORT'))
+    if heldMs >= LONG_WHISTLE_MS then Horse.longWhistle() else Horse.shortWhistle() end
+end
+
 CreateThread(function()
     local downAt = nil
     while true do
-        local ctrl = IsPedOnMount(PlayerPedId()) and WHISTLE_MOUNT or WHISTLE_ONFOOT
-        if IsControlJustPressed(0, ctrl) then
+        local mounted = IsPedOnMount(PlayerPedId())
+        local ctrl = mounted and WHISTLE_MOUNT or WHISTLE_ONFOOT
+        -- The login fallback only matters when nothing is out and you're on foot:
+        -- that's the one window where the native whistle control is dead.
+        local useLogin = (not active) and (not mounted)
+        local pressed  = IsControlJustPressed(0, ctrl)  or (useLogin and IsControlJustPressed(0, H_LOGIN))
+        local released = IsControlJustReleased(0, ctrl) or (useLogin and IsControlJustReleased(0, H_LOGIN))
+        if pressed then
             downAt = GetGameTimer()
-        elseif IsControlJustReleased(0, ctrl) and downAt then
+        elseif released and downAt then
             local held = GetGameTimer() - downAt
             downAt = nil
-            Util.log(('whistle: %dms -> %s'):format(held, held >= LONG_WHISTLE_MS and 'LONG' or 'SHORT'))
-            if held >= LONG_WHISTLE_MS then Horse.longWhistle() else Horse.shortWhistle() end
+            fireWhistle(held)
         end
         Wait(0)
     end
