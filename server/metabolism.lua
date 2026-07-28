@@ -359,7 +359,9 @@ RegisterNetEvent(Events.RequestDrink, function(horseId, horseName)
 end)
 
 AddEventHandler('playerDropped', function()
-    lastWash[source], lastDrink[source] = nil, nil
+    -- lastWash was retired with the rain/water simulation (the engine owns dirt
+    -- now); only the drink cooldown remains per-player.
+    lastDrink[source] = nil
 end)
 
 --------------------------------------------------------------------------------
