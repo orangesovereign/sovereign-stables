@@ -192,6 +192,10 @@ end
 
 function Horse.active() return active end
 
+-- Set when an AUTO summon (login) is in flight, so a "you keep no horse" answer
+-- for a player who owns none doesn't pop a chip on every login.
+Horse.suppressSummonFail = false
+
 -- Whistle for your default horse. Server decides if it may come.
 function Horse.summon()
     if active and DoesEntityExist(active.ent) then
@@ -270,11 +274,42 @@ RegisterNetEvent(Events.SummonResult, function(res)
     res = res or {}
     Util.log(('summon result: ok=%s msg=%s horse=%s'):format(
         tostring(res.ok), tostring(res.message), res.horse and tostring(res.horse.model) or 'nil'))
+    local suppress = Horse.suppressSummonFail
+    Horse.suppressSummonFail = false
     if not res.ok then
-        Bridge.notify(res.message or 'No horse answers.')
+        if not suppress then Bridge.notify(res.message or 'No horse answers.') end
         return
     end
     Horse.spawn(res.horse)
+end)
+
+--------------------------------------------------------------------------------
+-- AUTO-SUMMON ON SPAWN (owner 2026-07-28): the default horse is ready from login.
+--------------------------------------------------------------------------------
+-- This is the RIGHT fix for "holding H does nothing until you fetch a horse at a
+-- stable." RDR2's native whistle key is inert until the game has a REGISTERED
+-- horse, and we can't rebind H (the game owns it — that's what broke R11). So
+-- instead we bring your default horse out for you a moment after you load in:
+-- once it's out it IS registered, so the native H whistle is live from then on,
+-- AND you never had to visit a stable. Config-gated: turn it off if you'd rather
+-- spawn without your horse waiting.
+CreateThread(function()
+    if (Config.Summon and Config.Summon.autoSummonOnSpawn) == false then return end
+    -- Wait for the player to actually be in the world and controllable.
+    local tries = 0
+    while tries < 120 do   -- up to ~60s
+        local ped = PlayerPedId()
+        if ped and ped ~= 0 and DoesEntityExist(ped) and not IsEntityDead(ped)
+           and IsPlayerControlOnActive and IsPlayerControlOnActive(PlayerId()) then
+            break
+        end
+        tries = tries + 1
+        Wait(500)
+    end
+    Wait((((Config.Summon and Config.Summon.autoSummonDelaySeconds)) or 3) * 1000)
+    if active then return end                 -- already got one out somehow
+    Horse.suppressSummonFail = true           -- a player with no horse yet: stay quiet
+    Horse.summon()
 end)
 
 -- A ride we no longer own — sold, or handed to someone else. It must leave our
@@ -370,45 +405,16 @@ function Horse.longWhistle()
     Horse.summon()   -- spawns it if it's away, or calls it over if it's already out
 end
 
--- One place both input paths land, with a short debounce so the native control
--- and the key mapping can't both fire for a single press.
-local lastWhistleAt = 0
-local function doWhistle(heldMs)
-    local now = GetGameTimer()
-    if now - lastWhistleAt < 300 then return end
-    lastWhistleAt = now
-    Util.log(('whistle: %dms -> %s'):format(heldMs, heldMs >= LONG_WHISTLE_MS and 'LONG' or 'SHORT'))
-    if heldMs >= LONG_WHISTLE_MS then Horse.longWhistle() else Horse.shortWhistle() end
-end
-
--- ⚠️ WHY A KEY MAPPING AND NOT JUST THE NATIVE CONTROL (owner 2026-07-28:
--- "Holding H does not work after logging into the server").
+-- ⚠️ DO NOT bind a RegisterKeyMapping to H. Tried it R11, it broke everything:
+-- H is already the game's own whistle key, so RedM routes the press to the GAME
+-- control and our command never fires — H just played the whistle sound and did
+-- nothing else, taking follow/recall (and the horse ever coming out, hence Flee)
+-- down with it. The native control below is the ONLY input path.
 --
--- RDR2 gates INPUT_WHISTLE (0x24978A28) on the game having a REGISTERED primary
--- horse. At login you have none — no horse ped exists yet, none is set as your
--- mount — so that native control is INERT, and holding H does nothing. It only
--- starts working after you bring a horse out at a stable, because spawning one
--- registers it as yours. That's exactly the trip the owner hit.
---
--- A RegisterKeyMapping command is NOT gated on any of that, so it fires from the
--- first frame after login. We keep BOTH: the mapping is the reliable path, and
--- the native control still covers the mounted case cleanly. Your default horse is
--- whatever the server holds as is_default (persisted until you change it), so
--- one long whistle from login brings it out — no stable trip required.
-local keyDownAt = nil
-RegisterCommand('+sovwhistle', function() keyDownAt = GetGameTimer() end, false)
-RegisterCommand('-sovwhistle', function()
-    if not keyDownAt then return end
-    local held = GetGameTimer() - keyDownAt
-    keyDownAt = nil
-    doWhistle(held)
-end, false)
--- Default to H (the game's own whistle key). The two coexist; the mapping is
--- rebindable in Settings, and it fires even when the native control is inert.
-RegisterKeyMapping('+sovwhistle', 'Whistle / recall your horse', 'keyboard', 'H')
-
--- The native control, kept for the case it handles best: mounted, where you're
--- already registered so it always works. Debounced against the mapping above.
+-- The login problem it was trying to solve — H doing nothing until you've
+-- fetched a horse at a stable — is fixed instead by auto-bringing your default
+-- horse out shortly after you spawn (see AUTO-SUMMON below), which also registers
+-- it with the game so the native whistle is live from then on. No key is hijacked.
 CreateThread(function()
     local downAt = nil
     while true do
@@ -418,7 +424,8 @@ CreateThread(function()
         elseif IsControlJustReleased(0, ctrl) and downAt then
             local held = GetGameTimer() - downAt
             downAt = nil
-            doWhistle(held)
+            Util.log(('whistle: %dms -> %s'):format(held, held >= LONG_WHISTLE_MS and 'LONG' or 'SHORT'))
+            if held >= LONG_WHISTLE_MS then Horse.longWhistle() else Horse.shortWhistle() end
         end
         Wait(0)
     end

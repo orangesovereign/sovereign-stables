@@ -377,15 +377,20 @@ local function putControl() return putCfg().control or 0x0D55A0F0 end   -- R (IN
 local putGroup  = GetRandomIntInRange(0, 0xFFFFFF)
 local putPrompt
 
--- Is the out-wagon parked at (near) its own stable's spawn point?
+-- Is the out-wagon parked at (near) its own stable's spawn point, AND is the
+-- player nearby? Both matter: the wagon has to be on the spot, and you have to be
+-- with it — otherwise the prompt would hang on screen after you park and walk off.
 local function atSpawnPoint()
     if not (active and active.ent and DoesEntityExist(active.ent)) then return false end
     local stable = active.stableId and Config.Stables[active.stableId]
     local spot = stable and stable.retrieve and stable.retrieve.wagonPos
     if not spot then return false end
-    local c = GetEntityCoords(active.ent)
-    local dx, dy, dz = c.x - spot[1], c.y - spot[2], c.z - spot[3]
-    return (dx*dx + dy*dy + dz*dz) <= (putCfg().distance or 6.0) ^ 2
+    local r = (putCfg().distance or 6.0)
+    local wc = GetEntityCoords(active.ent)
+    local dx, dy, dz = wc.x - spot[1], wc.y - spot[2], wc.z - spot[3]
+    if (dx*dx + dy*dy + dz*dz) > r*r then return false end            -- wagon on the spot?
+    local p = GetEntityCoords(PlayerPedId())
+    return #(p - wc) <= ((putCfg().playerDistance or 8.0))            -- and you're with it?
 end
 
 -- Put the wagon away. If you're sat on it, step down first, then stable it.
@@ -406,6 +411,11 @@ function Wagon.putAway()
 end
 
 CreateThread(function()
+    -- ⚠️ Register AFTER the game has settled, not at raw file-load. The stable
+    -- door prompt registers in its module's onInit (post-boot) and works; this one
+    -- registered at load and never showed (R11 R1-R4 all failed). Same fix: wait,
+    -- then register, so the UiPrompt natives are actually live.
+    Wait(2000)
     putPrompt = UiPromptRegisterBegin()
     UiPromptSetControlAction(putPrompt, putControl())
     UiPromptSetText(putPrompt, CreateVarString(10, 'LITERAL_STRING', 'Put Away Wagon'))
