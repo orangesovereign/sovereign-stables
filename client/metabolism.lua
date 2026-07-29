@@ -84,30 +84,86 @@ function Metabolism.setDirt(ped, dirt0to100)
 end
 
 --------------------------------------------------------------------------------
--- THE DIRT SYNC — the engine dirties the horse; we read it and persist it.
+-- Helpers the dirt simulation and the drinking check both use.
 --------------------------------------------------------------------------------
--- The whole three-round fight with "the guard" is over, because it was built on a
--- native that did nothing (see above). No more holding the coat at our number, no
--- more clearing every two seconds — THAT was what scrubbed the engine's dirt off
--- and stopped horses getting dirty at all.
+local function inWater(ent)
+    local ok, v = pcall(function() return IsEntityInWater(ent) end)
+    return ok and v or false
+end
+
+local function speedOf(ent)
+    local ok, s = pcall(function()
+        return Citizen.InvokeNative(0xFB6BA510A533DF81, ent, Citizen.ResultAsFloat())  -- GetEntitySpeed
+    end)
+    return ok and (s or 0.0) or 0.0
+end
+
+local RAINY = { RAIN = true, DRIZZLE = true, SHOWER = true, THUNDER = true,
+                THUNDERSTORM = true, SLEET = true, SNOW = true, MIST = true, FOG = true }
+local function isRaining()
+    local ok, w = pcall(function()
+        return Citizen.InvokeNative(0x564B884A05EC45A3, Citizen.ResultAsString())  -- GetPrevWeatherTypeHashName
+    end)
+    return ok and type(w) == 'string' and RAINY[w:upper()] or false
+end
+
+--------------------------------------------------------------------------------
+-- THE DIRT SIMULATION — WE own the number, and paint it with the real setter.
+--------------------------------------------------------------------------------
+-- R11 settled how RDR3 dirt actually behaves: _SET_PED_DIRT_CLEANED WRITES the
+-- coat to any level (the owner watched /sovdirtset 100 go filthy and 0 go clean),
+-- but _GET_PED_DIRT_LEVEL reads a DIFFERENT layer and can't see it — so reading
+-- the engine was a dead end. So we go back to owning a dirt NUMBER and WRITING it,
+-- which the working native finally lets us do — and which means we control the
+-- RATE (owner wanted it faster) and the MUD bonus, instead of being stuck with
+-- whatever the engine felt like.
 --
--- Now the engine owns the visual: it dirties the horse as it rides through the
--- world, and washes it in rain, exactly as it did before we ever interfered. Our
--- only jobs are to READ what the engine has painted so it can be saved, and to
--- RESTORE it when the horse comes back out. A freshly brushed horse starts clean
--- and the world dirties it again naturally — no grace band needed, because the
--- engine doesn't slap dirt on the instant you leave town.
+-- Each tick the horse is out and moving, dirt climbs by the config rate, faster
+-- when galloping (kicks up ground). Rain and standing water take it back down.
+-- We CLEAR the engine's own grime and then write OUR value, so the coat shows
+-- exactly the number — no engine dirt sneaking on top, no guessing.
 Metabolism._probing = false   -- still honoured by the probe below
 
 CreateThread(function()
+    local report = 0
     while true do
-        Wait(10000)   -- every 10s: read the engine's dirt and persist if it moved
-        local a = Horse and Horse.active and Horse.active()
-        if not Metabolism._probing and current and a and a.ent and DoesEntityExist(a.ent) then
-            local lvl = Metabolism.readDirt(a.ent)
-            if lvl and math.abs(lvl - (current.dirt or 0)) >= 2 then
-                current.dirt = lvl
-                TriggerServerEvent(Events.ReportDirt, a.id, lvl)   -- server clamps; see note
+        local secs = 2
+        Wait(secs * 1000)
+        local cl = mcfg().cleanliness or {}
+        local a  = Horse and Horse.active and Horse.active()
+        if cl.enabled ~= false and not Metabolism._probing
+           and current and a and a.ent and DoesEntityExist(a.ent) then
+            local ent   = a.ent
+            local mins  = secs / 60.0
+            local before = current.dirt or 0
+            local dirt  = before
+
+            if isRaining() then
+                dirt = dirt - (cl.rainCleanPerMinute or 40.0) * mins            -- rain washes
+            elseif inWater(ent) then
+                dirt = math.max(cl.waterFloor or 15.0, dirt - (cl.waterCleanPerMinute or 25.0) * mins)
+            else
+                -- Dirties while ridden; faster at a gallop, faster again in "mud".
+                local rate = (cl.gainPerMinute or 6.0)
+                local spd  = speedOf(ent)
+                if spd >= (cl.gallopSpeed or 9.0) then rate = rate * (cl.gallopMultiplier or 1.5) end
+                -- MUD: we can't read ground material in RDR3 (confirmed), so "mud"
+                -- is inferred — shallow water's edge / recent rain leaves it. Applied
+                -- while it's wet underfoot, which is the closest signal we get.
+                if cl.mudWhenWet ~= false and isRaining() then rate = rate * (cl.mudMultiplier or 1.25) end
+                dirt = dirt + rate * mins
+            end
+            dirt = math.max(0, math.min(cl.max or 100, dirt))
+            current.dirt = dirt
+
+            -- Paint OUR number: clear the engine grime, then write the level.
+            pcall(function() Citizen.InvokeNative(N_CLEAR_ENV, ent) end)
+            Metabolism.applyDirt(ent, dirt)
+
+            -- Persist now and then (both directions — dirt is cosmetic).
+            report = report + 1
+            if math.abs(dirt - before) >= 1 and (report % 3) == 0 then
+                TriggerServerEvent(Events.ReportDirt, a.id, math.floor(dirt + 0.5))
             end
         end
     end
@@ -133,17 +189,9 @@ RegisterCommand('sovdirtset', function(_, args)
     end
     n = math.max(0, math.min(100, n))
     Metabolism.setDirt(a.ent, n)
-    -- Read BOTH layers back. R9 proved the clean moved the coat but not the
-    -- layer we were reading, so the two dirt slots are different things. Whichever
-    -- of these tracks what you SEE is the one we should persist.
-    CreateThread(function()
-        Wait(300)
-        local comp = Metabolism.readDirt(a.ent, true)
-        local base = Metabolism.readDirt(a.ent, false)
-        print(('^3[sov_dirt]^7 set %d%% -> composite=%s%%  base=%s%%. Which matches what the horse LOOKS like?')
-            :format(n, tostring(comp), tostring(base)))
-        Bridge.notify(('Set %d%% — composite %s / base %s'):format(n, tostring(comp), tostring(base)))
-    end)
+    if current then current.dirt = n end               -- so the sim carries on from here
+    if a.id then TriggerServerEvent(Events.ReportDirt, a.id, n) end
+    Bridge.notify(('Dirt set to %d%%.'):format(n))
 end, false)
 
 --------------------------------------------------------------------------------
@@ -272,23 +320,7 @@ function Metabolism.card() return current end
 --------------------------------------------------------------------------------
 -- Helpers shared with the drinking check below.
 --------------------------------------------------------------------------------
--- ⚠️ The whole "dirtDelta / applyShine / what-dirties-what-washes" simulation
--- that lived here is GONE (2026-07-27). It existed to dirty and wash the horse
--- ourselves — but the engine already does BOTH: it muddies a horse as it rides
--- and rinses it in the rain, with its own shine. We were duplicating the engine
--- with a fake native that did nothing, and the real halves fought it. The engine
--- owns the visual now; the sync thread above just reads and persists the result.
-local function inWater(ent)
-    local ok, v = pcall(function() return IsEntityInWater(ent) end)
-    return ok and v or false
-end
-
-local function speedOf(ent)
-    local ok, s = pcall(function()
-        return Citizen.InvokeNative(0xFB6BA510A533DF81, ent, Citizen.ResultAsFloat())  -- GetEntitySpeed
-    end)
-    return ok and (s or 0.0) or 0.0
-end
+-- (inWater / speedOf / isRaining are defined up near the dirt simulation now.)
 
 --------------------------------------------------------------------------------
 -- DRINKING  [H2] — offered in the lock-on menu; the horse never drinks unprompted
@@ -339,21 +371,21 @@ RegisterNetEvent(Events.CareResult, function(res)
                 applyPenalties(a.ent, res.card)
 
                 -- R7 Q1: "The cleaning shouldn't occur until the brushing
-                -- animation is done." So when a brush LOWERS the dirt, we hold the
-                -- old coat until the animation has played out, THEN clean — the
-                -- horse visibly gets groomed rather than snapping clean the instant
-                -- you press. The number is already updated; only the coat waits.
+                -- animation is done." When a brush LOWERS dirt, hold BOTH the coat
+                -- and the sim number at the old value until the animation plays out,
+                -- then drop to clean — otherwise the simulation (which paints
+                -- current.dirt every couple of seconds) would scrub it clean the
+                -- instant you press.
                 local cleaned = res.animate == 'brush' and prevDirt and res.card.dirt < prevDirt
                 if cleaned then
-                    Metabolism.applyDirt(a.ent, prevDirt)   -- keep looking dirty for now
-                    local horseEnt = a.ent
+                    current.dirt = prevDirt                 -- keep the sim dirty for now
+                    Metabolism.applyDirt(a.ent, prevDirt)
+                    local horseEnt, target = a.ent, res.card.dirt
                     CreateThread(function()
                         Wait((((Config.UI and Config.UI.horseMenu and Config.UI.horseMenu.brushAnimSeconds)) or 4) * 1000)
+                        if current then current.dirt = target end   -- now the sim keeps it clean
                         if horseEnt and DoesEntityExist(horseEnt) then
-                            -- setDirt, NOT applyDirt: cleaning is a DECREASE and a
-                            -- single set gets repainted within a few frames (the
-                            -- original R1/R2 bug). setDirt runs the full clear pass.
-                            Metabolism.setDirt(horseEnt, res.card.dirt)
+                            Metabolism.setDirt(horseEnt, target)    -- full clear pass
                         end
                     end)
                 else

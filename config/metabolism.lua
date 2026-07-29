@@ -102,103 +102,46 @@ Config.Metabolism = {
         start            = 0,
         max              = 100,
 
-        -- ⚠️ THE ENGINE OWNS DIRT NOW (2026-07-27). We spent six rounds trying to
-        -- simulate a dirt RATE, then found the native we were writing to
-        -- ("SET_PED_DIRT_LEVEL") is a GTA V native that doesn't exist in RDR3 — so
-        -- every write was a no-op and the engine was painting the mud all along.
-        -- So: the game dirties the horse as it rides and washes it in the rain, on
-        -- its own; we just READ that level and persist it. The simulation knobs
-        -- below (gainPerMinute, dirtying, water, rain, visibleAbove) are RETIRED —
-        -- they no longer do anything and are kept only so old configs don't error.
-        -- The one live knob is stableAutoCleanMinutes: how fast a STORED horse is
-        -- groomed clean by the stablehand.
+        -- ⚠️ WE OWN THE DIRT NUMBER AND PAINT IT (reworked 2026-07-28).
+        -- R11 settled the confusion: _SET_PED_DIRT_CLEANED WRITES the coat to any
+        -- level (the owner watched /sovdirtset 100 go filthy, 0 go clean), while
+        -- _GET_PED_DIRT_LEVEL reads a different layer and can't see it. So reading
+        -- the engine was a dead end — we simulate a number and write it. That's
+        -- what puts these knobs back in charge of the RATE and the mud bonus.
+        -- The client clears the engine's own grime each tick and writes THIS
+        -- number, so the coat shows exactly what's configured here.
 
-        -- HOW FAST A HORSE GETS DIRTY, and why this number had to go up.
-        --
-        -- Owner, 2026-07-27: "Dirt not accumulating or accumulating too slow."
-        --
-        -- ⚠️ Both, and the cause is my own fix. Until the dirt guard landed, a
-        -- horse looked dirty because the ENGINE painted environmental grime on it
-        -- — our number barely mattered. The guard deliberately stopped that, so
-        -- the coat now shows nothing but this figure. That is the right design
-        -- (it's what makes a brushed horse stay brushed), but it means this
-        -- number is now the ONLY thing that dirties a horse, and at 1.5/min it
-        -- was nowhere near carrying that on its own: 17 minutes of riding before
-        -- a single speck showed through the grace band below.
-        --
-        -- At 6.0 a ridden horse starts to show dirt in about 2 minutes and is
-        -- filthy inside 15; galloping doubles it (see `dirtying`). Raise for a
-        -- grubbier county, lower for a cleaner one.
-        gainPerMinute    = 6.0,   -- gets dirtier while OUT and ridden [L6]
+        -- HOW FAST A HORSE GETS DIRTY while out and ridden (owner 2026-07-28:
+        -- "10-15% faster"). At 7.0 a ridden horse is filthy in ~14 min; a gallop
+        -- and mud push it faster still. Raise for a grubbier county.
+        gainPerMinute    = 7.0,
+
+        -- HARD RIDING kicks up more ground — a gallop dirties faster.
+        gallopSpeed      = 9.0,    -- m/s that counts as a gallop
+        gallopMultiplier = 1.5,    -- x gainPerMinute at a gallop
+
+        -- MUD (owner: "going through mud should accumulate 25% faster"). RDR3 has
+        -- NO native to read the ground material (confirmed), so real mud terrain
+        -- can't be detected. The closest honest signal is wet ground — while it's
+        -- raining, the ground is muddy — so the bonus applies then. Set
+        -- mudWhenWet = false to switch it off until a mud signal exists.
+        mudWhenWet       = true,
+        mudMultiplier    = 1.25,   -- x rate on wet/muddy ground
+
+        -- WATER cleans a little (fording a river rinses the worst off, not a bath).
+        waterCleanPerMinute = 25.0,
+        waterFloor          = 15.0,   -- water alone can't get it below this
+
+        -- RAIN washes it down properly.
+        rainCleanPerMinute  = 40.0,
 
         -- [H10] A dirty horse LEFT AT THE STABLE is groomed clean by the
-        -- stablehand over this many real minutes. This is why L6 ("gets dirty")
-        -- and H10 ("auto-cleans") don't conflict: it dirties while OUT, and the
-        -- stable cleans it while STORED.
+        -- stablehand over this many real minutes (dirties while OUT, cleaned while
+        -- STORED — that's why "gets dirty" and "auto-cleans" don't conflict).
         stableAutoCleanMinutes = 30,
 
-        -- [L9] The storefront/preview horse is ALWAYS shown spotless, whatever
-        -- the real horse's state. A showroom model is clean.
+        -- [L9] The storefront/preview horse is ALWAYS shown spotless.
         previewAlwaysClean = true,
-
-        -- WHEN DIRT STARTS TO SHOW  (owner ruling 2026-07-26)
-        --   "I don't think dirty should begin to show until a certain threshold.
-        --    As a player if I brush my horse and then ride out of Valentine and
-        --    see dirt I would lose it."
-        --
-        -- A grace band. Below this the coat renders perfectly clean; above it the
-        -- rest of the range is stretched across the full visible span, so you
-        -- still get everything from a light dusting to filthy.
-        --
-        -- The stored number keeps climbing either way — this changes when dirt
-        -- SHOWS, not when it counts. Raise it if horses still look grubby too
-        -- soon after a brush; drop it toward 0 for a grimier, harder world.
-        --
-        -- Dropped 25 -> 15 on 2026-07-27 alongside the rate above. 25 was set
-        -- when dirt climbed at 1.5/min and the engine was still painting its own
-        -- grime on top; on its own it was a 17-minute blackout during which
-        -- nothing appeared to happen at all. 15 keeps a brushed horse looking
-        -- brushed out of town without hiding the first real dirt of a long ride.
-        visibleAbove = 15,
-
-        ------------------------------------------------------------------------
-        -- WHAT DIRTIES A HORSE, AND WHAT WASHES IT (owner ruling 2026-07-25)
-        ------------------------------------------------------------------------
-        -- ❌ I had this backwards. The first version treated water and rain as
-        -- dirt SOURCES ("wet ground is mud"). The owner corrected it, and they're
-        -- plainly right: water WASHES a horse. Rain washes it clean.
-        --
-        -- So the model is now the sensible one:
-        --   HARD RIDING dirties      — hooves kick up ground
-        --   WATER cleans, a little   — fording a river rinses the worst off
-        --   RAIN cleans completely   — and leaves the coat gleaming
-        --
-        -- ⚠️ Still honest about the limit: RDR3 gives us no "am I standing in
-        -- mud" native — no ground-material or dirt-level READ, only the write.
-        -- So "dirty" is inferred from hard riding rather than from real terrain.
-        dirtying = {
-            enabled     = true,
-            galloping   = 2.0,     -- hard riding kicks up the ground (x gainPerMinute)
-            gallopSpeed = 9.0,     -- m/s that counts as a gallop
-        },
-
-        -- WATER: riding through a river or shallows rinses SOME dirt off. It is
-        -- not a bath — it takes the edge off, and won't get a filthy horse clean.
-        water = {
-            enabled        = true,
-            cleanPerMinute = 25.0,   -- dirt removed per minute spent in water
-            floor          = 20.0,   -- water alone can't get it below this
-        },
-
-        -- RAIN: a proper wash. Standing out in it cleans the horse to spotless
-        -- and leaves the coat SHINY [M3] — the shine is the reward for it, and
-        -- fades as the horse dirties again.
-        rain = {
-            enabled        = true,
-            cleanPerMinute = 60.0,   -- rain scrubs fast — a few minutes and it's clean
-            shine          = true,   -- gleaming coat once rain gets it to spotless
-            shineFadesAt   = 10.0,   -- dirt above this and the shine is gone
-        },
     },
 
     ----------------------------------------------------------------------------
