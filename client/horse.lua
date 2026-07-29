@@ -395,27 +395,48 @@ end
 -- whistle control and this never interferes.
 local H_LOGIN = 0x84543902   -- INPUT_INTERACT_OPTION2 (H) — the ungated login path
 
-local function fireWhistle(heldMs)
-    Util.log(('whistle: %dms -> %s'):format(heldMs, heldMs >= LONG_WHISTLE_MS and 'LONG' or 'SHORT'))
-    if heldMs >= LONG_WHISTLE_MS then Horse.longWhistle() else Horse.shortWhistle() end
+-- TASK_WHISTLE_ANIM plays the whistle GESTURE + SOUND together (RDR3-verified,
+-- alloc8or). The native whistle control makes this itself when a horse is
+-- registered — but on the login path it's inert and silent, so we play it by
+-- hand there, matching the game's own short/long whistle.
+local WHISTLE_ANIM  = 0xD6401A1B2F63BED6
+local WHISTLE_SHORT = 0x659F956D   -- WHISTLEHORSESHORT
+local WHISTLE_LONG  = 0x33D023F4   -- WHISTLEHORSELONG
+
+local function fireWhistle(heldMs, playSound)
+    local long = heldMs >= LONG_WHISTLE_MS
+    Util.log(('whistle: %dms -> %s%s'):format(heldMs, long and 'LONG' or 'SHORT', playSound and ' (login sound)' or ''))
+    if playSound then
+        -- The native whistle was inert (login, no horse out) so it made no sound.
+        -- Play the matching whistle ourselves so it looks and sounds normal.
+        pcall(function()
+            Citizen.InvokeNative(WHISTLE_ANIM, PlayerPedId(), long and WHISTLE_LONG or WHISTLE_SHORT, 0)
+        end)
+    end
+    if long then Horse.longWhistle() else Horse.shortWhistle() end
 end
 
 CreateThread(function()
     local downAt = nil
+    local downWasLogin = false
     while true do
         local mounted = IsPedOnMount(PlayerPedId())
         local ctrl = mounted and WHISTLE_MOUNT or WHISTLE_ONFOOT
         -- The login fallback only matters when nothing is out and you're on foot:
         -- that's the one window where the native whistle control is dead.
         local useLogin = (not active) and (not mounted)
-        local pressed  = IsControlJustPressed(0, ctrl)  or (useLogin and IsControlJustPressed(0, H_LOGIN))
+        local pressedNative = IsControlJustPressed(0, ctrl)
+        local pressedLogin  = useLogin and IsControlJustPressed(0, H_LOGIN)
         local released = IsControlJustReleased(0, ctrl) or (useLogin and IsControlJustReleased(0, H_LOGIN))
-        if pressed then
+        if pressedNative or pressedLogin then
             downAt = GetGameTimer()
+            -- Play our own whistle sound only when the press came SOLELY through the
+            -- login control — i.e. the native (which would sound itself) didn't fire.
+            downWasLogin = pressedLogin and not pressedNative
         elseif released and downAt then
             local held = GetGameTimer() - downAt
             downAt = nil
-            fireWhistle(held)
+            fireWhistle(held, downWasLogin)
         end
         Wait(0)
     end
