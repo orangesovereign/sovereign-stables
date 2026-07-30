@@ -159,9 +159,12 @@ end
 -- only. The old ownership trio (considered / request-control / mission-entity) does
 -- NOT grant seat access, which is why every previous attempt failed.
 --
--- ⚠️ CONSISTENT LOOK (owner: "different wagon each spawn"). The randomised part is the
--- hitched TEAM. So we DEFER team creation, pin a random SEED derived from the wagon's
--- own id (same wagon → same team every time), then allow the seeded team to spawn.
+-- ⚠️ TEAM AUTO-CREATED AT SPAWN. A deferred team (bDontAutoCreateDraftAnimals=true)
+-- came out with NO horses (owner 2026-07-28): "allow auto-creation" only permits the
+-- team, it does not trigger it, so nothing ever made them. Both shipping scripts let
+-- the team auto-create at spawn, which reliably hitches horses — so we do the same.
+-- (Pinning appearance with a fixed seed needs the team to exist at seed-time; that's
+-- a follow-up, tracked separately. A hitched team you can drive beats a tidy no-team.)
 --
 -- Every hash below is verified against the alloc8or RDR3 nativedb. No GTA V natives.
 local function place(model, x, y, z, heading, name, id)
@@ -171,11 +174,11 @@ local function place(model, x, y, z, heading, name, id)
     local found, gz = GetGroundZAndNormalFor_3dCoord(x, y, z + 2.0)
     if found then z = gz end
 
-    -- _CREATE_DRAFT_VEHICLE, team DEFERRED: params 6/7/8/9/10 =
-    --   isNetwork(true), bScriptHostVeh(false), bDontAutoCreateDraftAnimals(TRUE=defer),
-    --   draftAnimalPopGroup(0=default breeds), p9(false).
+    -- _CREATE_DRAFT_VEHICLE, team AUTO-CREATED: params 6/7/8/9/10 =
+    --   isNetwork(true), bScriptHostVeh(false), bDontAutoCreateDraftAnimals(FALSE=make
+    --   the horses now), draftAnimalPopGroup(0=default breeds), p9(false).
     local veh = Citizen.InvokeNative(0x214651FB1DFEBA89, hash,
-        x + 0.0, y + 0.0, z + 0.0, (heading or 0.0) + 0.0, true, false, true, 0, false,
+        x + 0.0, y + 0.0, z + 0.0, (heading or 0.0) + 0.0, true, false, false, 0, false,
         Citizen.ResultAsInteger())
     local t = GetGameTimer()
     while not DoesEntityExist(veh) and (GetGameTimer() - t) < 2000 do Wait(10) end
@@ -183,10 +186,7 @@ local function place(model, x, y, z, heading, name, id)
         Util.err('draft wagon create failed for ' .. tostring(model)); return nil
     end
 
-    -- Deterministic team: seed from the wagon id BEFORE the team is generated, then
-    -- allow auto-creation so it builds from that seed. Order matters — seed first.
-    local seed = math.floor(tonumber(id) or 1) % 2147483647
-    pcall(function() Citizen.InvokeNative(0x8C6D9A399126C194, veh, seed) end)   -- _SET_DRAFT_ANIMAL_RANDOM_SEED
+    -- Keep the auto-created team hitched to the wagon.
     pcall(function() Citizen.InvokeNative(0x87344305778E5415, veh, true) end)   -- _SET_DRAFT_VEHICLE_ALLOW_DRAFT_ANIMAL_AUTO_CREATION
     pcall(function() Citizen.InvokeNative(0x6090A031C69F384E, veh, false) end)  -- _SET_DRAFT_VEHICLE_ANIMALS_CAN_DETACH (stay hitched)
 
