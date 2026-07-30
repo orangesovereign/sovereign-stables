@@ -50,8 +50,10 @@ end
 -- we restore a stored dirty coat on spawn.
 function Metabolism.applyDirt(ped, dirt0to100)
     if not (ped and DoesEntityExist(ped)) then return end
-    local f = math.max(0.0, math.min(1.0, (tonumber(dirt0to100) or 0) / 100.0))
+    local d = tonumber(dirt0to100) or 0
+    local f = math.max(0.0, math.min(1.0, d / 100.0))
     pcall(function() Citizen.InvokeNative(N_SET_DIRT, ped, f + 0.0, -1, true, true) end)
+    Metabolism._painted = math.floor(d + 0.5)   -- keep the sim's "already painted" in sync
 end
 
 -- Groom a horse fully clean: zero the dirt level AND clear the accumulated
@@ -79,8 +81,9 @@ end
 function Metabolism.setDirt(ped, dirt0to100)
     if not (ped and DoesEntityExist(ped)) then return end
     local d = tonumber(dirt0to100) or 0
-    if d <= 0 then clearPass(ped); return end
+    if d <= 0 then clearPass(ped); Metabolism._painted = 0; return end
     pcall(function() Citizen.InvokeNative(N_SET_DIRT, ped, (d / 100.0) + 0.0, -1, true, true) end)
+    Metabolism._painted = math.floor(d + 0.5)
 end
 
 --------------------------------------------------------------------------------
@@ -120,9 +123,14 @@ end
 --
 -- Each tick the horse is out and moving, dirt climbs by the config rate, faster
 -- when galloping (kicks up ground). Rain and standing water take it back down.
--- We CLEAR the engine's own grime and then write OUR value, so the coat shows
--- exactly the number — no engine dirt sneaking on top, no guessing.
+--
+-- ⚠️ DO NOT clear the engine grime every tick and re-write (that was the flicker:
+-- clear flashed it clean, the write re-dirtied it, twice a second, forever — and
+-- it fought the brush). _SET_PED_DIRT_CLEANED sets the WHOLE visible dirt, so a
+-- single write is enough. And we only write when the level actually CHANGED,
+-- since re-issuing the same level every tick is what makes it strobe.
 Metabolism._probing = false   -- still honoured by the probe below
+Metabolism._painted = nil     -- last integer level written to the coat (reset on spawn/brush)
 
 CreateThread(function()
     local report = 0
@@ -147,18 +155,19 @@ CreateThread(function()
                 local rate = (cl.gainPerMinute or 6.0)
                 local spd  = speedOf(ent)
                 if spd >= (cl.gallopSpeed or 9.0) then rate = rate * (cl.gallopMultiplier or 1.5) end
-                -- MUD: we can't read ground material in RDR3 (confirmed), so "mud"
-                -- is inferred — shallow water's edge / recent rain leaves it. Applied
-                -- while it's wet underfoot, which is the closest signal we get.
                 if cl.mudWhenWet ~= false and isRaining() then rate = rate * (cl.mudMultiplier or 1.25) end
                 dirt = dirt + rate * mins
             end
             dirt = math.max(0, math.min(cl.max or 100, dirt))
             current.dirt = dirt
 
-            -- Paint OUR number: clear the engine grime, then write the level.
-            pcall(function() Citizen.InvokeNative(N_CLEAR_ENV, ent) end)
-            Metabolism.applyDirt(ent, dirt)
+            -- Write only when the LEVEL changed — no per-tick clear, no re-issuing
+            -- the same value (both cause the strobe). A smooth ramp is smooth.
+            local lvl = math.floor(dirt + 0.5)
+            if lvl ~= Metabolism._painted then
+                Metabolism._painted = lvl
+                Metabolism.applyDirt(ent, dirt)
+            end
 
             -- Persist now and then (both directions — dirt is cosmetic).
             report = report + 1
@@ -234,6 +243,7 @@ end
 
 function Metabolism.onHorseAway()
     current, activeHorseId = nil, nil
+    Metabolism._painted = nil   -- next horse out paints fresh
     TriggerServerEvent(Events.SyncCare, nil, false)
 end
 
