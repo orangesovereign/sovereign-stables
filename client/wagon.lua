@@ -88,6 +88,16 @@ RegisterCommand('sovwagonhp', function()
     local haveCtrl = pcall(function() return Citizen.InvokeNative(0xB2E1E1FB4B0FEAAF, veh) end)   -- NETWORK_HAS_CONTROL_OF_ENTITY
     print(('    lockStatus=%s (1=unlocked, 2=locked)  hasNetControl=%s')
         :format(ok and tostring(lock) or '?', tostring(haveCtrl)))
+    -- Draft diagnostics: is it a real draft rig, and does its team exist? A wagon
+    -- with no team is why you can't drive and why the look randomises.
+    local okD, isDraft = pcall(function() return Citizen.InvokeNative(0xEA44E97849E9F3DD, veh) end)  -- IS_DRAFT_VEHICLE
+    local harnessed = 0
+    for slot = 0, 5 do
+        local okH, ped = pcall(function() return Citizen.InvokeNative(0xA8BA0BAE0173457B, veh, slot) end)  -- _GET_PED_IN_DRAFT_HARNESS
+        if okH and ped and ped ~= 0 and DoesEntityExist(ped) then harnessed = harnessed + 1 end
+    end
+    print(('    isDraftVehicle=%s  harnessedHorses(0-5)=%d')
+        :format(tostring(okD and isDraft), harnessed))
 end, false)
 
 -- Is the wagon actually moving? Wear only accrues in use (bcc onlyWhileMoving).
@@ -140,6 +150,15 @@ local function isDriving()
 end
 
 -- Put a wagon on the ground and hand it to the player.
+--
+-- ⚠️ SPAWNED AS A REAL DRAFT RIG (owner 2026-07-28: "can't get on and drive; it
+-- spawns looking different each time"). Both symptoms are one cause: a plain
+-- CreateVehicle wagon is NOT a proper draft vehicle — the game randomises a loose
+-- wagon's appearance AND won't offer the drive prompt without its hitched team.
+-- RDR3's CREATE_VEHICLE has an 8th arg (bDontAutoCreateDraftAnimals) that most
+-- wrappers leave as garbage, so the horses come up undefined. _CREATE_DRAFT_VEHICLE
+-- (0x214651FB1DFEBA89) is the R★ path: it auto-creates the team, giving a
+-- consistent, driveable rig. (Verified against the alloc8or RDR3 nativedb.)
 local function place(model, x, y, z, heading, name)
     local hash = GetHashKey(model)
     if not loadModel(hash) then Util.err('wagon model failed: ' .. tostring(model)); return nil end
@@ -147,26 +166,30 @@ local function place(model, x, y, z, heading, name)
     local found, gz = GetGroundZAndNormalFor_3dCoord(x, y, z + 2.0)
     if found then z = gz end
 
-    -- networked: other players should see your wagon
-    local veh = CreateVehicle(hash, x, y, z, heading or 0.0, true, true, false)
+    -- _CREATE_DRAFT_VEHICLE: params 8/9/10 = bDontAutoCreateDraftAnimals(false, so
+    -- DO spawn the horses), draftAnimalPopGroup(0 = the model's default team), p9(false).
+    local veh = Citizen.InvokeNative(0x214651FB1DFEBA89, hash,
+        x + 0.0, y + 0.0, z + 0.0, (heading or 0.0) + 0.0, true, false, false, 0, false,
+        Citizen.ResultAsInteger())
     local t = GetGameTimer()
     while not DoesEntityExist(veh) and (GetGameTimer() - t) < 2000 do Wait(10) end
-    if not DoesEntityExist(veh) then return nil end
+    if not DoesEntityExist(veh) or veh == 0 then
+        Util.err('draft wagon create failed for ' .. tostring(model)); return nil
+    end
+
+    -- Insurance for networked spawns, which can come up team-less: explicitly allow
+    -- the team and keep it hitched.
+    pcall(function() Citizen.InvokeNative(0x87344305778E5415, veh, true) end)   -- allow draft-animal auto-creation
+    pcall(function() Citizen.InvokeNative(0x6090A031C69F384E, veh, false) end)  -- animals can't detach (stay hitched)
 
     SetVehicleOnGroundProperly(veh)
     SetEntityVisible(veh, true, false)
     SetEntityAsMissionEntity(veh, true, true)
     SetVehicleHasBeenOwnedByPlayer(veh, true)
 
-    -- ⚠️ THE ENTRY FIX (owner 2026-07-28: "unable to get in wagon after purchase").
-    -- The wagon spawned complete, horses hitched, but no ride prompt. Cause: a
-    -- CreateVehicle wagon is not automatically "considered by the player", so the
-    -- game never offers the climb-in — no error, just nothing. These three, all
-    -- RDR3-VERIFIED hashes (alloc8or nativedb, NOT GTA V), make it enterable:
-    --   • request control so we may touch a networked entity
-    --   • mark it considered-by-player (the missing piece — false here = no prompt)
-    --   • unlock the doors with the RDR3 hash 0x96F7… (the GTA V lock hash
-    --     0xB664292EAECF7FA6 silently no-ops in RedM — do not use it)
+    -- Belt-and-suspenders entry (all RDR3-verified, not GTA V): control + considered
+    -- by the player + doors unlocked. With a real draft rig these matter less, but
+    -- they don't hurt.
     pcall(function() Citizen.InvokeNative(0xB69317BF5E782347, veh) end)        -- NETWORK_REQUEST_CONTROL_OF_ENTITY
     pcall(function() Citizen.InvokeNative(0x54800D386C5825E5, veh, true) end)  -- SET_VEHICLE_IS_CONSIDERED_BY_PLAYER
     pcall(function() Citizen.InvokeNative(0x96F78A6A075D55D9, veh, 1) end)     -- SET_VEHICLE_DOORS_LOCKED (1 = unlocked)
