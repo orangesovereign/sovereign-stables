@@ -403,40 +403,37 @@ local WHISTLE_ANIM  = 0xD6401A1B2F63BED6
 local WHISTLE_SHORT = 0x659F956D   -- WHISTLEHORSESHORT
 local WHISTLE_LONG  = 0x33D023F4   -- WHISTLEHORSELONG
 
-local function fireWhistle(heldMs, playSound)
-    local long = heldMs >= LONG_WHISTLE_MS
-    Util.log(('whistle: %dms -> %s%s'):format(heldMs, long and 'LONG' or 'SHORT', playSound and ' (login sound)' or ''))
-    if playSound then
-        -- The native whistle was inert (login, no horse out) so it made no sound.
-        -- Play the matching whistle ourselves so it looks and sounds normal.
-        pcall(function()
-            Citizen.InvokeNative(WHISTLE_ANIM, PlayerPedId(), long and WHISTLE_LONG or WHISTLE_SHORT, 0)
-        end)
-    end
-    if long then Horse.longWhistle() else Horse.shortWhistle() end
-end
-
 CreateThread(function()
     local downAt = nil
-    local downWasLogin = false
     while true do
         local mounted = IsPedOnMount(PlayerPedId())
         local ctrl = mounted and WHISTLE_MOUNT or WHISTLE_ONFOOT
         -- The login fallback only matters when nothing is out and you're on foot:
         -- that's the one window where the native whistle control is dead.
         local useLogin = (not active) and (not mounted)
-        local pressedNative = IsControlJustPressed(0, ctrl)
-        local pressedLogin  = useLogin and IsControlJustPressed(0, H_LOGIN)
-        local released = IsControlJustReleased(0, ctrl) or (useLogin and IsControlJustReleased(0, H_LOGIN))
-        if pressedNative or pressedLogin then
-            downAt = GetGameTimer()
-            -- Play our own whistle sound only when the press came SOLELY through the
-            -- login control — i.e. the native (which would sound itself) didn't fire.
-            downWasLogin = pressedLogin and not pressedNative
-        elseif released and downAt then
-            local held = GetGameTimer() - downAt
+
+        if useLogin then
+            -- LOGIN PATH — fire on PRESS, not release, so it's fluid. The native
+            -- whistle is inert here (no registered horse), so it plays no sound of
+            -- its own; we play the whistle the instant you press H and summon in the
+            -- same beat. Tap or hold doesn't matter: with nothing out, the only
+            -- thing to do is call your horse.
+            if IsControlJustPressed(0, H_LOGIN) then
+                pcall(function() Citizen.InvokeNative(WHISTLE_ANIM, PlayerPedId(), WHISTLE_LONG, 0) end)
+                Horse.longWhistle()
+            end
             downAt = nil
-            fireWhistle(held, downWasLogin)
+        else
+            -- NATIVE PATH — a horse is out (or you're mounted): the game plays its
+            -- own whistle sound, and here tap vs hold means follow vs recall.
+            if IsControlJustPressed(0, ctrl) then
+                downAt = GetGameTimer()
+            elseif IsControlJustReleased(0, ctrl) and downAt then
+                local held = GetGameTimer() - downAt
+                downAt = nil
+                Util.log(('whistle: %dms -> %s'):format(held, held >= LONG_WHISTLE_MS and 'LONG' or 'SHORT'))
+                if held >= LONG_WHISTLE_MS then Horse.longWhistle() else Horse.shortWhistle() end
+            end
         end
         Wait(0)
     end
