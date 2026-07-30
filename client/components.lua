@@ -94,22 +94,39 @@ function Components.applySet(ped, comps)
     end
     if type(comps) ~= 'table' then return 0 end
 
+    local tints = comps.__tints   -- { [slot] = { palette, t0, t1, t2 } }, applied after
     local n, applied = 0, {}
     for slot, itemId in pairs(comps) do
-        local card = Catalog.tack(itemId)
-        if card and card.hash then
-            if Components.applyHash(ped, card.hash) then
-                n = n + 1
-                applied[#applied + 1] = toHash(card.hash)
+        if slot ~= '__tints' then
+            local card = Catalog.tack(itemId)
+            if card and card.hash then
+                if Components.applyHash(ped, card.hash) then
+                    n = n + 1
+                    applied[#applied + 1] = toHash(card.hash)
+                end
+            elseif Config.Debug then
+                Util.log(('component skipped — no verified hash for "%s" (slot %s)')
+                    :format(tostring(itemId), tostring(slot)))
             end
-        elseif Config.Debug then
-            Util.log(('component skipped — no verified hash for "%s" (slot %s)')
-                :format(tostring(itemId), tostring(slot)))
         end
     end
     if n > 0 then Components.refresh(ped) end
+    -- Re-apply saved colours on top of the freshly-fitted pieces.
+    if type(tints) == 'table' then Components.applyTints(ped, tints) end
     Components._lastHashes = applied   -- remembered so /sovtint can recolour them
     return n
+end
+
+-- Apply a table of stored tints: { [slot] = { palette, t0, t1, t2 } }, mapping
+-- each tack slot to its metaped category.
+function Components.applyTints(ped, tints)
+    if not (ped and DoesEntityExist(ped)) or type(tints) ~= 'table' then return end
+    for slot, t in pairs(tints) do
+        local cat = Components.CATEGORY and Components.CATEGORY[slot]
+        if cat and type(t) == 'table' and t.palette then
+            Components.tintCategory(ped, cat, t.palette, t.t0, t.t1, t.t2)
+        end
+    end
 end
 
 --------------------------------------------------------------------------------
@@ -185,4 +202,27 @@ RegisterCommand('sovtint', function(_, args)
     Components.tintCategory(a.ent, cat, pal, t0, t1, t2)
     print(('^2[sov_tint]^7 %s / %s  tint %d/%d/%d applied. Colour changed?'):format(cat, pal, t0, t1, t2))
     if Bridge then Bridge.notify(('Tint %s %d/%d/%d'):format(pal, t0, t1, t2)) end
+end, false)
+
+-- ⚠️ TEMPORARY: prove the tint PERSISTS. Unlike /sovtint (visual only), this asks
+-- the SERVER to save the colour on the fitted slot, so it survives a re-spawn and
+-- runs the perms gate. Slot names: saddle, saddlebags, blanket, ...
+--   /sovsettint saddle metaped_tint_combined_leather 10 40 255
+RegisterCommand('sovsettint', function(_, args)
+    args = args or {}
+    local a = Horse and Horse.active and Horse.active()
+    if not (a and a.id) then
+        if Bridge then Bridge.notify('Bring your horse out first.') end
+        return
+    end
+    local slot = args[1]
+    if not slot then
+        if Bridge then Bridge.notify('Usage: /sovsettint <slot> <palette> <t0> <t1> <t2>') end
+        return
+    end
+    local pal = args[2] or 'metaped_tint_combined_leather'
+    local t0, t1, t2 = tonumber(args[3]) or 0, tonumber(args[4]) or 0, tonumber(args[5]) or 255
+    TriggerServerEvent(Events.RequestTintTack, a.id, slot, pal, t0, t1, t2)
+    print(('^2[sov_settint]^7 asked server to save %s -> %s %d/%d/%d (survives re-spawn if it takes)')
+        :format(slot, pal, t0, t1, t2))
 end, false)

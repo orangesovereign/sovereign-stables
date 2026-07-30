@@ -199,8 +199,45 @@ function Tack.remove(src, horseId, slot)
     if not comps[slot] then return true, 'Nothing there.' end
 
     comps[slot] = nil
+    if comps.__tints then comps.__tints[slot] = nil end   -- colour goes with the piece
     writeComponents(charid, horseId, comps)
     return true, 'Removed.'
+end
+
+--------------------------------------------------------------------------------
+-- Recolour a fitted slot (milestone 2.3). Colour = { palette, t0, t1, t2 } stored
+-- under comps.__tints[slot] and re-applied on spawn. Server-authoritative: you
+-- must own the horse and the fitted piece, and your grade decides which tint rows
+-- and how many channels you may set (Perms — public gets a short list, a trainer
+-- the full palette).
+--------------------------------------------------------------------------------
+function Tack.setTint(src, horseId, slot, palette, t0, t1, t2)
+    local charid = Bridge.getCharId(src)
+    if not charid then return false, 'No active character.' end
+
+    local comps = readComponents(charid, horseId)
+    if not comps then return false, 'That is not your horse.' end
+    if not comps[slot] then return false, 'Nothing fitted in that slot to colour.' end
+
+    local job, grade = Bridge.getJob(src)
+    -- How many of the three channels may this grade set? Extra channels are forced
+    -- to 255 (disabled) so a public player can't spoof the full palette.
+    local slots = Perms.tintSlotsFor(job, grade) or 1
+    local chans = { tonumber(t0) or 0, tonumber(t1) or 0, tonumber(t2) or 0 }
+    for i = 1, 3 do
+        if i > slots then
+            chans[i] = 255                         -- beyond this grade's allowance: off
+        elseif chans[i] ~= 255 and not Perms.mayUseTint(job, grade, chans[i]) then
+            return false, 'That colour is not available to you.'
+        end
+    end
+
+    comps.__tints = comps.__tints or {}
+    comps.__tints[slot] = { palette = palette, t0 = chans[1], t1 = chans[2], t2 = chans[3] }
+    writeComponents(charid, horseId, comps)
+    Util.log(('char %s tinted slot %s on horse #%s -> %s %d/%d/%d')
+        :format(charid, slot, horseId, tostring(palette), chans[1], chans[2], chans[3]))
+    return true, 'Colour applied.'
 end
 
 --------------------------------------------------------------------------------
@@ -258,6 +295,18 @@ RegisterNetEvent(Events.RequestRemoveTack, function(horseId, slot)
         local ok, msg = false, 'Something went wrong.'
         local success, err = pcall(function() ok, msg = Tack.remove(src, horseId, slot) end)
         if not success then Util.err('tack remove failed: ' .. tostring(err)) end
+        TriggerClientEvent(Events.TackResult, src, { ok = ok, message = msg, applied = ok })
+        local charid = Bridge.getCharId(src)
+        if ok and charid then pushOwnedTack(src, charid, horseId) end
+    end)
+end)
+
+RegisterNetEvent(Events.RequestTintTack, function(horseId, slot, palette, t0, t1, t2)
+    local src = source
+    CreateThread(function()
+        local ok, msg = false, 'Something went wrong.'
+        local success, err = pcall(function() ok, msg = Tack.setTint(src, horseId, slot, palette, t0, t1, t2) end)
+        if not success then Util.err('tack tint failed: ' .. tostring(err)) end
         TriggerClientEvent(Events.TackResult, src, { ok = ok, message = msg, applied = ok })
         local charid = Bridge.getCharId(src)
         if ok and charid then pushOwnedTack(src, charid, horseId) end
