@@ -276,20 +276,38 @@
         }
         sel.addEventListener('change', function () { state.palette = sel.value; preview(); });
 
-        // Three channel sliders (0-254; 255 = off). Live preview on input.
+        // Three channel steppers: arrows step ONE at a time (a slider skips past
+        // the exact number too easily — owner ask). Hold an arrow to repeat.
         ['t0', 't1', 't2'].forEach(function (ch, i) {
             var name = ['Base', 'Accent', 'Detail'][i];
             var r = el('div', 'tint__row');
             r.appendChild(el('span', 'tint__lbl', name));
-            var sl = document.createElement('input');
-            sl.type = 'range'; sl.min = 0; sl.max = 255; sl.value = state[ch]; sl.className = 'tint__slider';
-            var val = el('span', 'tint__val', state[ch] === 255 ? 'off' : String(state[ch]));
-            sl.addEventListener('input', function () {
-                state[ch] = parseInt(sl.value, 10);
+
+            var dec = el('button', 'tint__arw', '◀');   // ◀
+            var val = el('span', 'tint__num', state[ch] === 255 ? 'off' : String(state[ch]));
+            var inc = el('button', 'tint__arw', '▶');   // ▶
+
+            function set(v) {
+                state[ch] = Math.max(0, Math.min(255, v));
                 val.textContent = (state[ch] === 255 ? 'off' : String(state[ch]));
                 preview();
-            });
-            r.appendChild(sl); r.appendChild(val);
+            }
+            // click = one step; press-and-hold = repeat (accelerating a touch).
+            function hold(step) {
+                return function () {
+                    set(state[ch] + step);
+                    var t = setTimeout(function tick() {
+                        set(state[ch] + step);
+                        t = setTimeout(tick, 90);
+                    }, 380);
+                    function stop() { clearTimeout(t); document.removeEventListener('mouseup', stop); }
+                    document.addEventListener('mouseup', stop);
+                };
+            }
+            dec.addEventListener('mousedown', hold(-1));
+            inc.addEventListener('mousedown', hold(1));
+
+            r.appendChild(dec); r.appendChild(val); r.appendChild(inc);
             panel.appendChild(r);
         });
 

@@ -115,14 +115,28 @@ function Components.applySet(ped, comps)
     end
     if n > 0 then Components.refresh(ped) end
     -- Re-apply each worn piece's saved colour to its category.
-    if type(tints) == 'table' then
-        for _, w in ipairs(worn) do
-            local t = tints[w.item]
-            local cat = Components.CATEGORY and Components.CATEGORY[w.slot]
-            if t and cat and t.palette then
-                Components.tintCategory(ped, cat, t.palette, t.t0, t.t1, t.t2)
+    if type(tints) == 'table' and #worn > 0 then
+        local function paintAll()
+            for _, w in ipairs(worn) do
+                local t = tints[w.item]
+                local cat = Components.CATEGORY and Components.CATEGORY[w.slot]
+                if t and cat and t.palette then
+                    Components.tintCategory(ped, cat, t.palette, t.t0, t.t1, t.t2)
+                end
             end
         end
+        paintAll()
+        -- ⚠️ A FRESHLY-SPAWNED ped often refuses the tint on the first frame — the
+        -- component is there but the texture isn't streamed yet, so the colour
+        -- silently doesn't take (owner: "saved colours did not apply on bring-out").
+        -- /sovsettint worked because the horse was already streamed. So re-apply a
+        -- couple of times as the ped settles.
+        CreateThread(function()
+            for _, d in ipairs({ 300, 900, 2000 }) do
+                Wait(d)
+                if ped and DoesEntityExist(ped) then paintAll() end
+            end
+        end)
     end
     Components._lastHashes = applied   -- remembered so /sovtint can recolour them
     return n
