@@ -221,7 +221,12 @@ RegisterCommand('sovsettint', function(_, args)
     end
     local pal = args[2] or 'metaped_tint_combined_leather'
     local t0, t1, t2 = tonumber(args[3]) or 0, tonumber(args[4]) or 0, tonumber(args[5]) or 255
+    -- Apply it NOW so you see it on the horse you have out (this is the live
+    -- preview the UI will use), THEN ask the server to persist it.
+    if a.ent and DoesEntityExist(a.ent) then
+        Components.tintCategory(a.ent, Components.CATEGORY[slot] or slot, pal, t0, t1, t2)
+    end
     TriggerServerEvent(Events.RequestTintTack, a.id, slot, pal, t0, t1, t2)
-    print(('^2[sov_settint]^7 asked server to save %s -> %s %d/%d/%d (survives re-spawn if it takes)')
+    print(('^2[sov_settint]^7 %s -> %s %d/%d/%d — applied now + saved (survives re-spawn if it takes)')
         :format(slot, pal, t0, t1, t2))
 end, false)
