@@ -33,38 +33,46 @@ local function toHash(v)
     return tonumber(v) or 0
 end
 
--- ⚠️ DEAD END (proved in game 2026-07-28): _SET_META_PED_TAG with albedo/normal/
--- material = 0 does NOT tint tack — /sovtint changed nothing with any palette or
--- index. The native needs each piece's REAL texture-set hashes, which are
--- asset-specific metadata we don't carry. So runtime tinting is PARKED. The
--- customiser recolours by swapping baked colourway VARIANTS instead (each is its
--- own drawable, applied through the proven _APPLY_SHOP_ITEM_TO_PED) — see
--- Catalog variants and applyVariant below. Kept here in case the texture-set
--- hashes ever get sourced.
-function Components.applyTinted(ped, hash, palette, t0, t1, t2)
+-- Full metaped refresh after a component or tint change. Anything less and the
+-- change may not render (jo_libs refreshPed, confirmed across public RedM scripts).
+function Components.refreshFull(ped)
+    if not (ped and DoesEntityExist(ped)) then return end
+    pcall(function() Citizen.InvokeNative(0xAAB86462966168CE, ped) end)                       -- SetActiveMetaPedComponentsUpdated
+    pcall(function() Citizen.InvokeNative(0xCC8CA3E88256E58F, ped, false, true, true, true, false) end) -- UpdatePedVariation
+    pcall(function() Citizen.InvokeNative(0x704C908E9C405136, ped) end)                       -- N_0x704C…
+end
+
+-- ⚠️ THE REAL RECOLOUR (fixed 2026-07-28). My first attempt used _SET_META_PED_TAG
+-- with 0 textures — that native APPLIES a component with a texture set, and 0 = no
+-- textures, so it did nothing visible. The correct native for recolouring an
+-- already-worn category is _SET_TEXTURE_OUTFIT_TINTS: category + palette + three
+-- tint indices, NO texture hashes. Confirmed identical in jo_libs, vorp_character
+-- and rsg-appearance.
+--
+--   category — a metaped category string, e.g. 'horse_saddles' (joaat'd)
+--   palette  — a palette string, e.g. 'metaped_tint_combined_leather' (joaat'd)
+--   t0/t1/t2 — tint rows 0-254 (Green/Red/Blue channels); 255 disables a channel
+function Components.tintCategory(ped, category, palette, t0, t1, t2)
     if not (ped and DoesEntityExist(ped)) then return false end
-    if not hash then return false end
-    hash    = toHash(hash)
-    palette = toHash(palette)
-    t0, t1, t2 = tonumber(t0) or 0, tonumber(t1) or 0, tonumber(t2) or 0
+    local cat = toHash(category)
+    local pal = toHash(palette)
+    if pal == 0 then return false end
+    t0, t1, t2 = tonumber(t0) or 0, tonumber(t1) or 0, tonumber(t2) or 255
     pcall(function()
-        Citizen.InvokeNative(0xBC6DF00D7A4A6819, ped, hash, 0, 0, 0, palette, t0, t1, t2)  -- _SET_META_PED_TAG
+        Citizen.InvokeNative(0x4EFC1F8FF1AD94DE, ped, cat, pal, t0, t1, t2)  -- _SET_TEXTURE_OUTFIT_TINTS
     end)
+    Components.refreshFull(ped)
     return true
 end
 
--- Read the palette + tint triplet currently on an asset (for populating the UI).
--- GET_META_PED_ASSET_TINT — returns ok, palette, t0, t1, t2.
-function Components.readTint(ped, index)
-    if not (ped and DoesEntityExist(ped)) then return nil end
-    local ok, pal, a, b, c = pcall(function()
-        return Citizen.InvokeNative(0xE7998FEC53A33BBE, ped, tonumber(index) or 0,
-            Citizen.PointerValueInt(), Citizen.PointerValueInt(),
-            Citizen.PointerValueInt(), Citizen.PointerValueInt())
-    end)
-    if ok then return { palette = pal, t0 = a, t1 = b, t2 = c } end
-    return nil
-end
+-- Our tack slot ids -> the game's metaped category strings.
+Components.CATEGORY = {
+    saddle    = 'horse_saddles',   saddlebags = 'horse_saddlebags',
+    horn      = 'saddle_horns',    stirrups   = 'saddle_stirrups',
+    blanket   = 'horse_blankets',  bedroll    = 'horse_bedrolls',
+    lantern   = 'saddle_lanterns', mask       = 'horse_accessories',
+    mane      = 'horse_manes',     tail       = 'horse_tails',
+}
 
 -- Refresh the ped so applied components actually render. Batch your applies
 -- and call this ONCE at the end — it is the expensive half.
@@ -146,4 +154,35 @@ RegisterCommand('sovvariant', function(_, args)
     Components.applyVariant(a.ent, itemId, n)
     print(('^2[sov_variant]^7 %s colourway %d/%d applied. Colour changed?'):format(itemId, n, count))
     if Bridge then Bridge.notify(('%s colourway %d/%d'):format(card.label or itemId, n, count)) end
+end, false)
+
+-- ⚠️ TEMPORARY: prove _SET_TEXTURE_OUTFIT_TINTS recolours worn tack (the RIGHT
+-- native this time). Recolours a CATEGORY on the horse you have out.
+--   /sovtint                                  -> list categories + palettes
+--   /sovtint horse_saddles metaped_tint_combined_leather 10 40 255
+Components.PALETTES = {
+    'metaped_tint_combined_leather', 'metaped_tint_leather', 'metaped_tint_combined',
+    'metaped_tint_horse_leather', 'metaped_tint_generic', 'metaped_tint_metal',
+}
+
+RegisterCommand('sovtint', function(_, args)
+    args = args or {}
+    local a = Horse and Horse.active and Horse.active()
+    if not (a and a.ent and DoesEntityExist(a.ent)) then
+        if Bridge then Bridge.notify('Bring your horse out first.') end
+        return
+    end
+    if not args[1] then
+        print('^3[sov_tint]^7 categories: ' .. table.concat({
+            'horse_saddles','horse_saddlebags','saddle_horns','saddle_stirrups',
+            'horse_blankets','horse_bedrolls' }, ', '))
+        print('^3[sov_tint]^7 palettes: ' .. table.concat(Components.PALETTES, ', '))
+        print('^3[sov_tint]^7 then: /sovtint <category> <palette> <t0> <t1> <t2>   (tints 0-254, 255=off)')
+        return
+    end
+    local cat, pal = args[1], args[2] or 'metaped_tint_combined_leather'
+    local t0, t1, t2 = tonumber(args[3]) or 0, tonumber(args[4]) or 0, tonumber(args[5]) or 255
+    Components.tintCategory(a.ent, cat, pal, t0, t1, t2)
+    print(('^2[sov_tint]^7 %s / %s  tint %d/%d/%d applied. Colour changed?'):format(cat, pal, t0, t1, t2))
+    if Bridge then Bridge.notify(('Tint %s %d/%d/%d'):format(pal, t0, t1, t2)) end
 end, false)
