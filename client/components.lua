@@ -97,14 +97,13 @@ function Components.applySet(ped, comps)
     -- Colours are remembered PER PIECE (by item id), so a saddle keeps its colour
     -- even after it's removed and re-fitted (owner ruling 2026-07-28).
     local tints = comps.__tints   -- { [itemId] = { palette, t0, t1, t2 } }
-    local n, applied, worn = 0, {}, {}
+    local n, worn = 0, {}
     for slot, itemId in pairs(comps) do
         if slot ~= '__tints' then
             local card = Catalog.tack(itemId)
             if card and card.hash then
                 if Components.applyHash(ped, card.hash) then
                     n = n + 1
-                    applied[#applied + 1] = toHash(card.hash)
                     worn[#worn + 1] = { item = itemId, slot = card.slot }
                 end
             elseif Config.Debug then
@@ -138,109 +137,5 @@ function Components.applySet(ped, comps)
             end
         end)
     end
-    Components._lastHashes = applied   -- remembered so /sovtint can recolour them
     return n
 end
-
---------------------------------------------------------------------------------
--- RECOLOUR BY VARIANT — the confirmed path. Each colourway is its own drawable in
--- a piece's `variants` list; applying one via _APPLY_SHOP_ITEM_TO_PED (proven in
--- the Phase 1 spike) recolours the piece. No palette data, no texture hashes.
---------------------------------------------------------------------------------
--- Apply a specific colourway of an owned tack item to a ped.
-function Components.applyVariant(ped, itemId, variantIndex)
-    local card = Catalog and Catalog.tack and Catalog.tack(itemId)
-    if not card then return false end
-    local variants = card.variants or { card.hash }
-    local hash = variants[tonumber(variantIndex) or 1] or card.hash
-    local ok = Components.applyHash(ped, hash)
-    if ok then Components.refresh(ped) end
-    return ok
-end
-
--- ⚠️ TEMPORARY confirm command (remove once the customiser UI ships). Cycles the
--- worn saddle through its colourways so the owner can SEE variant-swapping
--- recolour a live horse before the swatch UI is built.
---   /sovvariant <tack_item_id> <n>   apply colourway n of that piece to your horse
-RegisterCommand('sovvariant', function(_, args)
-    args = args or {}
-    local a = Horse and Horse.active and Horse.active()
-    if not (a and a.ent and DoesEntityExist(a.ent)) then
-        if Bridge then Bridge.notify('Bring your horse out first.') end
-        return
-    end
-    local itemId = args[1]
-    local n = tonumber(args[2]) or 1
-    if not itemId then
-        if Bridge then Bridge.notify('Usage: /sovvariant <tack_item_id> <colourway#>') end
-        return
-    end
-    local card = Catalog and Catalog.tack and Catalog.tack(itemId)
-    local count = card and card.variants and #card.variants or (card and 1 or 0)
-    if count == 0 then
-        if Bridge then Bridge.notify('No such tack item: ' .. tostring(itemId)) end
-        return
-    end
-    Components.applyVariant(a.ent, itemId, n)
-    print(('^2[sov_variant]^7 %s colourway %d/%d applied. Colour changed?'):format(itemId, n, count))
-    if Bridge then Bridge.notify(('%s colourway %d/%d'):format(card.label or itemId, n, count)) end
-end, false)
-
--- ⚠️ TEMPORARY: prove _SET_TEXTURE_OUTFIT_TINTS recolours worn tack (the RIGHT
--- native this time). Recolours a CATEGORY on the horse you have out.
---   /sovtint                                  -> list categories + palettes
---   /sovtint horse_saddles metaped_tint_combined_leather 10 40 255
-Components.PALETTES = {
-    'metaped_tint_combined_leather', 'metaped_tint_leather', 'metaped_tint_combined',
-    'metaped_tint_horse_leather', 'metaped_tint_generic', 'metaped_tint_metal',
-}
-
-RegisterCommand('sovtint', function(_, args)
-    args = args or {}
-    local a = Horse and Horse.active and Horse.active()
-    if not (a and a.ent and DoesEntityExist(a.ent)) then
-        if Bridge then Bridge.notify('Bring your horse out first.') end
-        return
-    end
-    if not args[1] then
-        print('^3[sov_tint]^7 categories: ' .. table.concat({
-            'horse_saddles','horse_saddlebags','saddle_horns','saddle_stirrups',
-            'horse_blankets','horse_bedrolls' }, ', '))
-        print('^3[sov_tint]^7 palettes: ' .. table.concat(Components.PALETTES, ', '))
-        print('^3[sov_tint]^7 then: /sovtint <category> <palette> <t0> <t1> <t2>   (tints 0-254, 255=off)')
-        return
-    end
-    local cat, pal = args[1], args[2] or 'metaped_tint_combined_leather'
-    local t0, t1, t2 = tonumber(args[3]) or 0, tonumber(args[4]) or 0, tonumber(args[5]) or 255
-    Components.tintCategory(a.ent, cat, pal, t0, t1, t2)
-    print(('^2[sov_tint]^7 %s / %s  tint %d/%d/%d applied. Colour changed?'):format(cat, pal, t0, t1, t2))
-    if Bridge then Bridge.notify(('Tint %s %d/%d/%d'):format(pal, t0, t1, t2)) end
-end, false)
-
--- ⚠️ TEMPORARY: prove the tint PERSISTS. Unlike /sovtint (visual only), this asks
--- the SERVER to save the colour on the fitted slot, so it survives a re-spawn and
--- runs the perms gate. Slot names: saddle, saddlebags, blanket, ...
---   /sovsettint saddle metaped_tint_combined_leather 10 40 255
-RegisterCommand('sovsettint', function(_, args)
-    args = args or {}
-    local a = Horse and Horse.active and Horse.active()
-    if not (a and a.id) then
-        if Bridge then Bridge.notify('Bring your horse out first.') end
-        return
-    end
-    local slot = args[1]
-    if not slot then
-        if Bridge then Bridge.notify('Usage: /sovsettint <slot> <palette> <t0> <t1> <t2>') end
-        return
-    end
-    local pal = args[2] or 'metaped_tint_combined_leather'
-    local t0, t1, t2 = tonumber(args[3]) or 0, tonumber(args[4]) or 0, tonumber(args[5]) or 255
-    -- Apply it NOW so you see it on the horse you have out (this is the live
-    -- preview the UI will use), THEN ask the server to persist it.
-    if a.ent and DoesEntityExist(a.ent) then
-        Components.tintCategory(a.ent, Components.CATEGORY[slot] or slot, pal, t0, t1, t2)
-    end
-    TriggerServerEvent(Events.RequestTintTack, a.id, slot, pal, t0, t1, t2)
-    print(('^2[sov_settint]^7 %s -> %s %d/%d/%d — applied now + saved (survives re-spawn if it takes)')
-        :format(slot, pal, t0, t1, t2))
-end, false)

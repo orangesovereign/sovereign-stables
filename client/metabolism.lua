@@ -194,31 +194,6 @@ CreateThread(function()
 end)
 
 --------------------------------------------------------------------------------
--- ⚠️ TEMPORARY: prove the REAL dirt native paints and reads.  (remove once green)
---------------------------------------------------------------------------------
--- The R6/R7 probes tested a GTA V native that doesn't exist in RDR3, so of course
--- nothing happened. This one uses the confirmed RDR3 native
--- _SET_PED_DIRT_CLEANED, which the nativedb's own example uses to RAISE dirt, not
--- just zero it. `/sovdirtset 25|50|100` writes that level and reads it straight
--- back so we can see the coat AND confirm the value stuck; `/sovdirtset 0` grooms.
-RegisterCommand('sovdirtset', function(_, args)
-    local a = Horse and Horse.active and Horse.active()
-    if not (a and a.ent and DoesEntityExist(a.ent)) then
-        Bridge.notify('Bring your horse out first.'); return
-    end
-    local n = tonumber(args and args[1])
-    if n == nil then
-        Bridge.notify('Usage: /sovdirtset 0 | 25 | 50 | 100')
-        return
-    end
-    n = math.max(0, math.min(100, n))
-    Metabolism.setDirt(a.ent, n)
-    if current then current.dirt = n end               -- so the sim carries on from here
-    if a.id then TriggerServerEvent(Events.ReportDirt, a.id, n) end
-    Bridge.notify(('Dirt set to %d%%.'):format(n))
-end, false)
-
---------------------------------------------------------------------------------
 -- Penalties — a starving/parched horse is sluggish (never frozen).
 --------------------------------------------------------------------------------
 local function applyPenalties(ped, card)
@@ -423,45 +398,3 @@ RegisterNetEvent(Events.CareResult, function(res)
     end
 end)
 
---------------------------------------------------------------------------------
--- Feed / clean from a command (fallback to the usable-item path). Uses the
--- horse you have out.
---------------------------------------------------------------------------------
-RegisterCommand('sovfeed', function(_, args)
-    local item = args and args[1]
-    local a = Horse and Horse.active and Horse.active()
-    if not a then Bridge.notify('Bring your horse out first.'); return end
-    if not item then Bridge.notify('Which feed? e.g. /sovfeed horse_oats'); return end
-    TriggerServerEvent(Events.RequestCare, a.id, item)
-end, false)
-
--- Animation check — play a care animation WITHOUT using an item, so the mounted
--- clips can be eyeballed on their own. `/sovanim brush` or `/sovanim feed`; do it
--- mounted and on foot to compare. Testing aid; remove once confirmed.
-RegisterCommand('sovanim', function(_, args)
-    local kind = (args and args[1]) or 'brush'
-    if kind ~= 'brush' and kind ~= 'feed' then
-        Bridge.notify('Use /sovanim brush  or  /sovanim feed'); return
-    end
-    local a = Horse and Horse.active and Horse.active()
-    if not a then Bridge.notify('Bring your horse out first.'); return end
-    print(('^2[sov_anim]^7 %s — mounted=%s'):format(kind, tostring(IsPedOnMount(PlayerPedId()))))
-    playCareAnim(kind)
-end, false)
-
--- Readout — see the current care values on the horse you have out. Testing aid;
--- becomes the right-click horse-info panel in Phase 3 (shared with courage).
-RegisterCommand('sovcare', function()
-    local c = current
-    if not c then Bridge.notify('No care data — bring your horse out.'); return end
-    -- `engine=` is what _GET_PED_DIRT_LEVEL reports on the horse right now, vs our
-    -- stored `dirt=`. They should track: the engine paints dirt, we read it. If
-    -- they diverge, the sync thread hasn't caught up (it runs every 10s).
-    local a = Horse and Horse.active and Horse.active()
-    local engine = a and a.ent and Metabolism.readDirt(a.ent)
-    print(('^2[sov_care]^7 hunger=%s thirst=%s dirt=%s engine=%s')
-        :format(tostring(c.hunger), tostring(c.thirst), tostring(c.dirt), tostring(engine)))
-    Bridge.notifyCard('info', 'Your Horse',
-        ('Hunger %s%% · Thirst %s%% · Dirt %s%%')
-        :format(tostring(c.hunger), tostring(c.thirst), tostring(c.dirt)))
-end, false)
