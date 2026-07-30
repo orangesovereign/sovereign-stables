@@ -13,6 +13,20 @@
 Metabolism = Metabolism or {}
 
 local function mcfg() return Config.Metabolism or {} end
+
+-- Is OUR metabolism the active provider? When bln_hud owns horse needs, every
+-- internal loop below stands down so it can't fight bln_hud's tracking.
+local function internal() return (mcfg().provider or 'internal') == 'internal' end
+Metabolism.internal = internal
+
+-- bln_hud's live mount dirt (0-100) or nil if bln_hud isn't running. The horse
+-- menu reads this so it can show condition even though we no longer track it.
+function Metabolism.blnMountDirt()
+    if GetResourceState and GetResourceState('bln_hud') ~= 'started' then return nil end
+    local ok, v = pcall(function() return exports.bln_hud:GetMountDirtPercentage() end)
+    return ok and type(v) == 'number' and math.floor(v + 0.5) or nil
+end
+
 local current = nil   -- the active horse's live card { hunger, thirst, dirt, golden, ... }
 
 --------------------------------------------------------------------------------
@@ -133,6 +147,7 @@ Metabolism._probing = false   -- still honoured by the probe below
 Metabolism._painted = nil     -- last integer level written to the coat (reset on spawn/brush)
 
 CreateThread(function()
+    if not internal() then return end   -- bln_hud owns dirt; our sim stays off
     local report = 0
     while true do
         local secs = 2
@@ -224,6 +239,7 @@ end
 local activeHorseId = nil
 
 function Metabolism.onHorseOut(ped, horseId, care)
+    if not internal() then return end   -- bln_hud owns needs; nothing to apply
     current = care
     activeHorseId = horseId
     if care then
@@ -250,6 +266,7 @@ end
 -- Keep the server's idea of "am I mounted" fresh, so horseback-only tools and
 -- the on-foot animation choice are correct without spamming.
 CreateThread(function()
+    if not internal() then return end   -- no item-targeting needed under bln_hud
     local wasMounted = nil
     while true do
         Wait(1000)

@@ -16,6 +16,11 @@ Metabolism = Metabolism or {}
 
 local function mcfg() return Config.Metabolism or {} end
 
+-- Is OUR metabolism the active provider? When set to bln_hud, the server stops
+-- draining cores, stops handing out care cards, and does NOT register the
+-- feed/water/brush usable items — bln_hud owns all of that.
+local function internal() return (mcfg().provider or 'internal') == 'internal' end
+
 --------------------------------------------------------------------------------
 -- Read / write the metabolism blob:  { hunger, thirst, dirt, golden, goldenTs, ts }
 --------------------------------------------------------------------------------
@@ -134,7 +139,7 @@ end
 -- Public: the CURRENT status of a horse, drifted to now for the given context.
 -- Used by the summon flow to hand fresh values to the client on spawn.
 function Metabolism.current(charid, horseId, context)
-    if not (mcfg().enabled) then return nil end
+    if not internal() or not (mcfg().enabled) then return nil end
     local m = loadBlob(charid, horseId)
     if not m then return nil end
     drift(m, context or 'stored', os.time())
@@ -370,7 +375,7 @@ end)
 --------------------------------------------------------------------------------
 AddEventHandler('onResourceStart', function(res)
     if res ~= GetCurrentResourceName() then return end
-    if not mcfg().enabled then return end
+    if not internal() or not mcfg().enabled then return end   -- bln_hud owns items
     for itemName, def in pairs(mcfg().items or {}) do
         Bridge.registerUsableItem(itemName, function(data)
             local src = data and data.source

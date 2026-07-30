@@ -60,8 +60,10 @@ function Validate.run()
     -- than hunger while the only item touching it gave 10 points, so a horse's
     -- thirst was effectively unrecoverable and the retest couldn't do it. Catch
     -- that at boot instead of in game.
+    -- Only relevant when OUR metabolism is the provider; under bln_hud these
+    -- checks are noise (bln_hud owns feeding, watering and dirt).
     local m = Config.Metabolism
-    if m and m.enabled ~= false then
+    if m and m.enabled ~= false and (m.provider or 'internal') == 'internal' then
         local restores = { hunger = 0, thirst = 0, dirt = 0 }
         for _, def in pairs(m.items or {}) do
             for core in pairs(restores) do

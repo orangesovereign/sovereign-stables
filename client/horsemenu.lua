@@ -41,22 +41,15 @@ local function cfg() return (Config.UI and Config.UI.horseMenu) or {} end
 -- and Stop Leading share it because they are never available at the same time.
 local function ctrlLead() return cfg().leadControl or 0xF5C4701B end  -- INPUT_INTERACT_LOCKON_DETACH_HORSE (E)
 
-local pLead, pStop, pDrink
+local pLead, pStop
 local leadGroup = nil     -- the group our prompts are currently attached to
 local leading = false
 
--- ⚠️ R7 A1/A2: Give Water never appeared. The cause was a CONTROL COLLISION.
--- Our Drink prompt used INPUT_INTERACT_HORSE_FEED (0x0D55A0F0), which is the
--- EXACT control the vanilla "Feed" entry already holds in this same lock-on
--- group. Two prompts, one control, one group: the native one wins and ours never
--- draws. Lead works precisely because its control isn't a visible native entry.
---
--- So Drink moves to INPUT_INTERACT_OPTION2 (0x84543902), which no native horse
--- entry uses. Its key is H; while you're locked on to a horse standing right
--- next to you, the whistle that key normally does is moot. If it still clashes
--- with anything on your setup, this is one config line — Config.UI.horseMenu
--- .drinkControl — and I'll rebind it.
-local function ctrlDrink() return cfg().drinkControl or 0x84543902 end  -- INPUT_INTERACT_OPTION2
+-- ⚠️ GIVE WATER REMOVED (owner 2026-07-28: switched horse needs to bln_hud).
+-- bln_hud has no horse-thirst to credit, so a Drink prompt has nowhere to write —
+-- watering, feeding and dirt all belong to bln_hud now. The menu keeps only Lead,
+-- which is a handling action, not a need. Condition (dirt/cores) shows on
+-- bln_hud's HUD; Metabolism.blnMountDirt() is there if we ever want it inline.
 
 --------------------------------------------------------------------------------
 -- Prompts, attached to the HORSE rather than to a group of our own
@@ -86,7 +79,6 @@ end
 CreateThread(function()
     pLead  = newPrompt(ctrlLead(),  'Lead Horse')
     pStop  = newPrompt(ctrlLead(),  'Stop Leading')
-    pDrink = newPrompt(ctrlDrink(), 'Give Water')
 end)
 
 -- ⚠️ THE ENTITY HANDLE IS NOT THE GROUP ID. This is what R5 got wrong.
@@ -112,24 +104,15 @@ local function groupIdFor(ent)
 end
 
 local function attachTo(ent)
-    if not (pLead and pStop and pDrink) then return end
+    if not (pLead and pStop) then return end
     -- Re-asked every pass rather than cached against the entity: the group id
     -- belongs to the game's targeting, not to us, and it is not ours to assume
     -- stays put.
     local g = groupIdFor(ent)
     if not g or g == leadGroup then return end
     leadGroup = g
-    UiPromptSetGroup(pLead,  g, 0)
-    UiPromptSetGroup(pStop,  g, 0)
-    UiPromptSetGroup(pDrink, g, 0)
-end
-
--- Does the horse have water right where it stands? Reuses the exact test the old
--- automatic drinking used, so Give Water only appears when a drink is possible.
-local function atWater(ent)
-    if not (Metabolism and Metabolism.atWater) then return false end
-    local ok, v = pcall(Metabolism.atWater, ent)
-    return ok and v or false
+    UiPromptSetGroup(pLead, g, 0)
+    UiPromptSetGroup(pStop, g, 0)
 end
 
 --------------------------------------------------------------------------------
@@ -182,39 +165,21 @@ CreateThread(function()
 
                     local canLead  = not leading
                     local canStop  = leading
-                    -- Give Water is ALWAYS shown when you're locked on, not gated
-                    -- on being at water. R7 hid the whole feature behind an
-                    -- atWater check that could silently say "no"; a prompt that
-                    -- vanishes teaches the player nothing. Now the check moves to
-                    -- the PRESS: no water, and it says so.
-                    local canDrink = not leading
-                    UiPromptSetEnabled(pLead,  canLead);  UiPromptSetVisible(pLead,  canLead)
-                    UiPromptSetEnabled(pStop,  canStop);  UiPromptSetVisible(pStop,  canStop)
-                    UiPromptSetEnabled(pDrink, canDrink); UiPromptSetVisible(pDrink, canDrink)
+                    UiPromptSetEnabled(pLead, canLead);  UiPromptSetVisible(pLead, canLead)
+                    UiPromptSetEnabled(pStop, canStop);  UiPromptSetVisible(pStop, canStop)
 
                     if canLead and UiPromptHasStandardModeCompleted(pLead) then HorseMenu.startLead(a) end
                     if canStop and UiPromptHasStandardModeCompleted(pStop) then HorseMenu.stopLead(a) end
-                    if canDrink and UiPromptHasStandardModeCompleted(pDrink) then
-                        if atWater(a.ent) then
-                            -- The server decides the rest: a full drink, or the
-                            -- "not thirsty" chip. Name goes along for the chip.
-                            TriggerServerEvent(Events.RequestDrink, a.id, a.name)
-                        else
-                            Bridge.notify(('There is no water here for %s.'):format(a.name or 'your horse'))
-                        end
-                    end
                 else
-                    UiPromptSetVisible(pLead,  false)
-                    UiPromptSetVisible(pDrink, false)   -- too far to water it
+                    UiPromptSetVisible(pLead, false)
                     -- Stop Leading survives the distance check: leading drags the
                     -- horse along with you, so you are never far from it, and a
                     -- state you can enter must stay a state you can leave.
                     UiPromptSetVisible(pStop, leading)
                 end
             else
-                if pLead  then UiPromptSetVisible(pLead,  false) end
-                if pStop  then UiPromptSetVisible(pStop,  false) end
-                if pDrink then UiPromptSetVisible(pDrink, false) end
+                if pLead then UiPromptSetVisible(pLead, false) end
+                if pStop then UiPromptSetVisible(pStop, false) end
                 if leading and not (a and a.ent and DoesEntityExist(a.ent)) then leading = false end
             end
         end

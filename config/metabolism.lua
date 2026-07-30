@@ -19,6 +19,17 @@
 Config = Config or {}
 
 Config.Metabolism = {
+    -- ⚠️ WHO OWNS HORSE NEEDS (owner 2026-07-28: switched to bln_hud).
+    --   'bln_hud'  — bln_hud tracks the horse's dirt and cores. OUR whole
+    --                metabolism (hunger/thirst drain, the dirt simulation,
+    --                feeding, drinking, brushing, /sovcare) is TURNED OFF so it
+    --                can't fight bln_hud. The stables core — buy/store/summon,
+    --                wagons, tack, transfer, lead — is untouched, and the horse
+    --                menu shows bln_hud's mount dirt.
+    --   'internal' — our own system runs (everything below applies). Legacy.
+    provider = 'bln_hud',
+
+    -- Everything below this line only takes effect when provider = 'internal'.
     enabled = true,
 
     ----------------------------------------------------------------------------
