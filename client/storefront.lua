@@ -386,6 +386,27 @@ RegisterNUICallback('removeTack', function(data, cb)
     cb({ ok = true })
 end)
 
+-- LIVE COLOUR PREVIEW [2.3] — recolour the fitted piece on the STAND as the
+-- player drags the sliders. Nothing is saved; it's just the try-before-you-buy.
+RegisterNUICallback('previewTint', function(data, cb)
+    if data and data.slot and Preview and Preview.ped() then
+        local cat = (Components.CATEGORY and Components.CATEGORY[data.slot]) or data.slot
+        pcall(function()
+            Components.tintCategory(Preview.ped(), cat, data.palette, data.t0, data.t1, data.t2)
+        end)
+    end
+    cb({ ok = true })
+end)
+
+-- COMMIT the colour [2.3] — server persists it on the horse (ungated for tack).
+RegisterNUICallback('saveTint', function(data, cb)
+    if data and data.slot and data.horseId then
+        TriggerServerEvent(Events.RequestTintTack, data.horseId, data.slot,
+            data.palette, data.t0, data.t1, data.t2)
+    end
+    cb({ ok = true })
+end)
+
 RegisterNetEvent(Events.OwnedTackData, function(data)
     data = data or {}
     SendNUIMessage({ action = 'tack', owned = data.owned or {},

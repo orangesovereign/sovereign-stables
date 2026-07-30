@@ -31,7 +31,20 @@
     var tackCatalog = {};   // { category: [ {id,label,slot,cash,gold}, ... ] }
     var tackOwned = [];     // pieces this character owns
     var tackComponents = {};// { slot: itemId } on the horse being fitted
+    var tackTints = {};     // { itemId: {palette,t0,t1,t2} } — saved colours
+    var tackOpenSlot = null;// which fitted slot's colour panel is expanded
     var tackHorseId = null; // which owned horse we're fitting
+
+    // Leather-friendly palettes the recolour offers. Tack colour is ungated, so
+    // everyone gets the lot; the horse sees the change live as you slide.
+    var TACK_PALETTES = [
+        { id: 'metaped_tint_combined_leather', label: 'Combined Leather' },
+        { id: 'metaped_tint_leather',          label: 'Leather' },
+        { id: 'metaped_tint_combined',         label: 'Combined' },
+        { id: 'metaped_tint_horse_leather',    label: 'Horse Leather' },
+        { id: 'metaped_tint_generic',          label: 'Generic' },
+        { id: 'metaped_tint_metal',            label: 'Metal' }
+    ];
 
     function post(name, body) {
         return fetch('https://' + RESOURCE + '/' + name, {
@@ -219,13 +232,75 @@
                 '<span class="row__t"><span class="row__name">' + t.label + '</span>' +
                 '<span class="row__breed">' + (isOwnedPiece ? 'Yours — fit it to any horse' : 'For sale') + '</span></span>' + right;
             row.addEventListener('click', function () {
-                if (isWorn) post('removeTack', { horseId: tackHorseId, slot: t.slot });
+                if (isWorn) { tackOpenSlot = (tackOpenSlot === t.slot) ? null : t.slot; renderList(); }
                 else if (isOwnedPiece) post('applyTack', { horseId: tackHorseId, item: t.id });
                 else post('buyTack', { item: t.id });
             });
             list.appendChild(row);
+
+            // Fitted piece -> a colour editor drops down: pick a palette, drag the
+            // three channels, the horse on the stand recolours live, Save commits.
+            if (isWorn && tackOpenSlot === t.slot) {
+                list.appendChild(buildColourPanel(t));
+            }
         });
         document.getElementById('catFoot').textContent = tackOwned.length + ' piece' + (tackOwned.length === 1 ? '' : 's') + ' owned';
+    }
+
+    function buildColourPanel(t) {
+        var saved = tackTints[t.id] || {};
+        var state = {
+            palette: saved.palette || TACK_PALETTES[0].id,
+            t0: (saved.t0 == null ? 20 : saved.t0),
+            t1: (saved.t1 == null ? 255 : saved.t1),
+            t2: (saved.t2 == null ? 255 : saved.t2)
+        };
+        var panel = el('div', 'tint');
+
+        // Palette selector
+        var palRow = el('div', 'tint__row');
+        palRow.appendChild(el('span', 'tint__lbl', 'Palette'));
+        var sel = document.createElement('select');
+        sel.className = 'tint__sel';
+        TACK_PALETTES.forEach(function (p) {
+            var o = document.createElement('option');
+            o.value = p.id; o.textContent = p.label;
+            if (p.id === state.palette) o.selected = true;
+            sel.appendChild(o);
+        });
+        palRow.appendChild(sel);
+        panel.appendChild(palRow);
+
+        function preview() {
+            post('previewTint', { slot: t.slot, palette: state.palette, t0: state.t0, t1: state.t1, t2: state.t2 });
+        }
+        sel.addEventListener('change', function () { state.palette = sel.value; preview(); });
+
+        // Three channel sliders (0-254; 255 = off). Live preview on input.
+        ['t0', 't1', 't2'].forEach(function (ch, i) {
+            var name = ['Base', 'Accent', 'Detail'][i];
+            var r = el('div', 'tint__row');
+            r.appendChild(el('span', 'tint__lbl', name));
+            var sl = document.createElement('input');
+            sl.type = 'range'; sl.min = 0; sl.max = 255; sl.value = state[ch]; sl.className = 'tint__slider';
+            var val = el('span', 'tint__val', state[ch] === 255 ? 'off' : String(state[ch]));
+            sl.addEventListener('input', function () {
+                state[ch] = parseInt(sl.value, 10);
+                val.textContent = (state[ch] === 255 ? 'off' : String(state[ch]));
+                preview();
+            });
+            r.appendChild(sl); r.appendChild(val);
+            panel.appendChild(r);
+        });
+
+        // Save
+        var btn = el('button', 'tint__save', 'Save Colour');
+        btn.addEventListener('click', function () {
+            post('saveTint', { horseId: tackHorseId, slot: t.slot, palette: state.palette, t0: state.t0, t1: state.t1, t2: state.t2 });
+            tackTints[t.id] = { palette: state.palette, t0: state.t0, t1: state.t1, t2: state.t2 };
+        });
+        panel.appendChild(btn);
+        return panel;
     }
 
     // Swap the catalog column between the shop, the player's horses, wagons and tack.
@@ -531,7 +606,14 @@
             if (d.owned) tackOwned = d.owned;
             if (d.categories) tackCats = d.categories;
             if (d.catalog) tackCatalog = d.catalog;
-            if (d.components) tackComponents = d.components;
+            if (d.components) {
+                // Split the colour store (__tints, keyed by item id) out from the
+                // worn pieces (keyed by slot), so each stays simple to render.
+                var c = d.components;
+                tackTints = c.__tints || {};
+                tackComponents = {};
+                for (var k in c) { if (k !== '__tints' && c.hasOwnProperty(k)) tackComponents[k] = c[k]; }
+            }
             if (d.horseId) tackHorseId = d.horseId;
             if (!tackCat && tackCats.length) tackCat = tackCats[0].id;
             document.getElementById('tackBadge').textContent = tackOwned.length;
