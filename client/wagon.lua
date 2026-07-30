@@ -151,25 +151,31 @@ end
 
 -- Put a wagon on the ground and hand it to the player.
 --
--- ⚠️ SPAWNED AS A REAL DRAFT RIG (owner 2026-07-28: "can't get on and drive; it
--- spawns looking different each time"). Both symptoms are one cause: a plain
--- CreateVehicle wagon is NOT a proper draft vehicle — the game randomises a loose
--- wagon's appearance AND won't offer the drive prompt without its hitched team.
--- RDR3's CREATE_VEHICLE has an 8th arg (bDontAutoCreateDraftAnimals) that most
--- wrappers leave as garbage, so the horses come up undefined. _CREATE_DRAFT_VEHICLE
--- (0x214651FB1DFEBA89) is the R★ path: it auto-creates the team, giving a
--- consistent, driveable rig. (Verified against the alloc8or RDR3 nativedb.)
-local function place(model, x, y, z, heading, name)
+-- ⚠️ THE DRIVE PROMPT WAS MISSING ONE NATIVE (owner 2026-07-28: "can't get on and
+-- drive"). A wagon is an AITRANSPORT entity: its seats must be AUTHORISED with
+-- _SET_TRANSPORT_USAGE_FLAGS or the game shows no mount prompt, no matter what else
+-- you do. This is the native both shipping wagon scripts (bcc-wagons, rsg-wagonmaker)
+-- use and this file never did — verified by reading their spawn paths for mechanism
+-- only. The old ownership trio (considered / request-control / mission-entity) does
+-- NOT grant seat access, which is why every previous attempt failed.
+--
+-- ⚠️ CONSISTENT LOOK (owner: "different wagon each spawn"). The randomised part is the
+-- hitched TEAM. So we DEFER team creation, pin a random SEED derived from the wagon's
+-- own id (same wagon → same team every time), then allow the seeded team to spawn.
+--
+-- Every hash below is verified against the alloc8or RDR3 nativedb. No GTA V natives.
+local function place(model, x, y, z, heading, name, id)
     local hash = GetHashKey(model)
     if not loadModel(hash) then Util.err('wagon model failed: ' .. tostring(model)); return nil end
 
     local found, gz = GetGroundZAndNormalFor_3dCoord(x, y, z + 2.0)
     if found then z = gz end
 
-    -- _CREATE_DRAFT_VEHICLE: params 8/9/10 = bDontAutoCreateDraftAnimals(false, so
-    -- DO spawn the horses), draftAnimalPopGroup(0 = the model's default team), p9(false).
+    -- _CREATE_DRAFT_VEHICLE, team DEFERRED: params 6/7/8/9/10 =
+    --   isNetwork(true), bScriptHostVeh(false), bDontAutoCreateDraftAnimals(TRUE=defer),
+    --   draftAnimalPopGroup(0=default breeds), p9(false).
     local veh = Citizen.InvokeNative(0x214651FB1DFEBA89, hash,
-        x + 0.0, y + 0.0, z + 0.0, (heading or 0.0) + 0.0, true, false, false, 0, false,
+        x + 0.0, y + 0.0, z + 0.0, (heading or 0.0) + 0.0, true, false, true, 0, false,
         Citizen.ResultAsInteger())
     local t = GetGameTimer()
     while not DoesEntityExist(veh) and (GetGameTimer() - t) < 2000 do Wait(10) end
@@ -177,22 +183,36 @@ local function place(model, x, y, z, heading, name)
         Util.err('draft wagon create failed for ' .. tostring(model)); return nil
     end
 
-    -- Insurance for networked spawns, which can come up team-less: explicitly allow
-    -- the team and keep it hitched.
-    pcall(function() Citizen.InvokeNative(0x87344305778E5415, veh, true) end)   -- allow draft-animal auto-creation
-    pcall(function() Citizen.InvokeNative(0x6090A031C69F384E, veh, false) end)  -- animals can't detach (stay hitched)
+    -- Deterministic team: seed from the wagon id BEFORE the team is generated, then
+    -- allow auto-creation so it builds from that seed. Order matters — seed first.
+    local seed = math.floor(tonumber(id) or 1) % 2147483647
+    pcall(function() Citizen.InvokeNative(0x8C6D9A399126C194, veh, seed) end)   -- _SET_DRAFT_ANIMAL_RANDOM_SEED
+    pcall(function() Citizen.InvokeNative(0x87344305778E5415, veh, true) end)   -- _SET_DRAFT_VEHICLE_ALLOW_DRAFT_ANIMAL_AUTO_CREATION
+    pcall(function() Citizen.InvokeNative(0x6090A031C69F384E, veh, false) end)  -- _SET_DRAFT_VEHICLE_ANIMALS_CAN_DETACH (stay hitched)
 
-    SetVehicleOnGroundProperly(veh)
+    Citizen.InvokeNative(0x7263332501E07F52, veh, true)  -- SET_VEHICLE_ON_GROUND_PROPERLY
     SetEntityVisible(veh, true, false)
-    SetEntityAsMissionEntity(veh, true, true)
-    SetVehicleHasBeenOwnedByPlayer(veh, true)
 
-    -- Belt-and-suspenders entry (all RDR3-verified, not GTA V): control + considered
-    -- by the player + doors unlocked. With a real draft rig these matter less, but
-    -- they don't hurt.
-    pcall(function() Citizen.InvokeNative(0xB69317BF5E782347, veh) end)        -- NETWORK_REQUEST_CONTROL_OF_ENTITY
-    pcall(function() Citizen.InvokeNative(0x54800D386C5825E5, veh, true) end)  -- SET_VEHICLE_IS_CONSIDERED_BY_PLAYER
-    pcall(function() Citizen.InvokeNative(0x96F78A6A075D55D9, veh, 1) end)     -- SET_VEHICLE_DOORS_LOCKED (1 = unlocked)
+    -- Register as a proper networked, player-owned entity (the rsg-wagonmaker path):
+    -- register → wait for a live net id → claim ownership. This is what lets the
+    -- wagon be driven and networked instead of a local ghost.
+    pcall(function() NetworkRegisterEntityAsNetworked(veh) end)
+    local nt = GetGameTimer()
+    while GetGameTimer() - nt < 1500 do
+        local netId = NetworkGetNetworkIdFromEntity(veh)
+        if netId and netId ~= 0 and NetworkDoesEntityExistWithNetworkId(netId) then break end
+        Wait(10)
+    end
+    pcall(function() Citizen.InvokeNative(0xD0E02AA618020D17, PlayerId(), veh) end)  -- _SET_PLAYER_OWNS_VEHICLE
+
+    -- Keep it from being population-culled while parked (so put-away can still find
+    -- it after you walk off). Not a seat native — safe alongside the transport flags.
+    SetEntityAsMissionEntity(veh, true, true)
+
+    -- ★ THE MOUNT ENABLER, applied LAST so nothing overrides it. 528 =
+    --   TUF_ALLOW_DRIVER_ANYONE (1<<4) | TUF_ALLOW_PASSENGER_ANYONE (1<<9).
+    -- Without this an AITRANSPORT wagon offers no drive prompt.
+    pcall(function() Citizen.InvokeNative(0xE2487779957FE897, veh, 528) end)  -- _SET_TRANSPORT_USAGE_FLAGS
 
     SetModelAsNoLongerNeeded(hash)
     return veh
@@ -215,7 +235,7 @@ function Wagon.spawn(data)
         return
     end
 
-    local veh = place(data.model, spot[1], spot[2], spot[3], spot[4] or 0.0, data.name)
+    local veh = place(data.model, spot[1], spot[2], spot[3], spot[4] or 0.0, data.name, data.id)
     if not veh then
         Util.err(('wagon spawn FAILED for model %s'):format(tostring(data.model)))
         Bridge.notify('Your wagon could not be brought round.')
