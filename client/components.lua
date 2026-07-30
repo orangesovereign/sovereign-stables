@@ -33,15 +33,14 @@ local function toHash(v)
     return tonumber(v) or 0
 end
 
--- Apply a component WITH COLOUR: _SET_META_PED_TAG (RDR3-verified, 0xBC6DF00…).
--- This is the recolour path the customiser (2.3) is built on: same drawable,
--- coloured by a palette hash + three tint indices (0-254). tint0 is the base
--- (green) channel, tint1 red, tint2 blue. albedo/normal/material are 0 = use the
--- drawable's own default texture set (we don't carry per-piece texture hashes).
---
--- ⚠️ palette must be one the piece actually supports, or the colour won't take.
--- Leather tack uses 'metaped_tint_leather' / 'metaped_tint_combined_leather'
--- (PHASE1_SPIKE_FINDINGS). Confirm in game with /sovtint before trusting it.
+-- ⚠️ DEAD END (proved in game 2026-07-28): _SET_META_PED_TAG with albedo/normal/
+-- material = 0 does NOT tint tack — /sovtint changed nothing with any palette or
+-- index. The native needs each piece's REAL texture-set hashes, which are
+-- asset-specific metadata we don't carry. So runtime tinting is PARKED. The
+-- customiser recolours by swapping baked colourway VARIANTS instead (each is its
+-- own drawable, applied through the proven _APPLY_SHOP_ITEM_TO_PED) — see
+-- Catalog variants and applyVariant below. Kept here in case the texture-set
+-- hashes ever get sourced.
 function Components.applyTinted(ped, hash, palette, t0, t1, t2)
     if not (ped and DoesEntityExist(ped)) then return false end
     if not hash then return false end
@@ -106,41 +105,45 @@ function Components.applySet(ped, comps)
 end
 
 --------------------------------------------------------------------------------
--- ⚠️ TEMPORARY: prove _SET_META_PED_TAG recolours tack in game. (remove once 2.3
--- is green). Recolours the tack currently on the horse you have out with a chosen
--- palette + tint triplet, so we can SEE which palettes/indices work before the
--- customiser UI is built on them.
---   /sovtint                                   -> list the spike's palette names
---   /sovtint metaped_tint_leather 66 0 0       -> palette + tint0/1/2
-Components.PALETTES = {
-    'metaped_tint_leather', 'metaped_tint_combined_leather', 'metaped_tint_horse',
-    'metaped_tint_horse_leather', 'metaped_tint_generic', 'metaped_tint_metal',
-}
+-- RECOLOUR BY VARIANT — the confirmed path. Each colourway is its own drawable in
+-- a piece's `variants` list; applying one via _APPLY_SHOP_ITEM_TO_PED (proven in
+-- the Phase 1 spike) recolours the piece. No palette data, no texture hashes.
+--------------------------------------------------------------------------------
+-- Apply a specific colourway of an owned tack item to a ped.
+function Components.applyVariant(ped, itemId, variantIndex)
+    local card = Catalog and Catalog.tack and Catalog.tack(itemId)
+    if not card then return false end
+    local variants = card.variants or { card.hash }
+    local hash = variants[tonumber(variantIndex) or 1] or card.hash
+    local ok = Components.applyHash(ped, hash)
+    if ok then Components.refresh(ped) end
+    return ok
+end
 
-RegisterCommand('sovtint', function(_, args)
+-- ⚠️ TEMPORARY confirm command (remove once the customiser UI ships). Cycles the
+-- worn saddle through its colourways so the owner can SEE variant-swapping
+-- recolour a live horse before the swatch UI is built.
+--   /sovvariant <tack_item_id> <n>   apply colourway n of that piece to your horse
+RegisterCommand('sovvariant', function(_, args)
     args = args or {}
     local a = Horse and Horse.active and Horse.active()
     if not (a and a.ent and DoesEntityExist(a.ent)) then
         if Bridge then Bridge.notify('Bring your horse out first.') end
         return
     end
-    if not args[1] then
-        print('^3[sov_tint]^7 palettes to try (then /sovtint <name> <t0> <t1> <t2>):')
-        for _, p in ipairs(Components.PALETTES) do print('   ' .. p) end
+    local itemId = args[1]
+    local n = tonumber(args[2]) or 1
+    if not itemId then
+        if Bridge then Bridge.notify('Usage: /sovvariant <tack_item_id> <colourway#>') end
         return
     end
-    local hashes = Components._lastHashes
-    if not (hashes and #hashes > 0) then
-        if Bridge then Bridge.notify('This horse has no tack applied to recolour.') end
+    local card = Catalog and Catalog.tack and Catalog.tack(itemId)
+    local count = card and card.variants and #card.variants or (card and 1 or 0)
+    if count == 0 then
+        if Bridge then Bridge.notify('No such tack item: ' .. tostring(itemId)) end
         return
     end
-    local palette = args[1]
-    local t0, t1, t2 = tonumber(args[2]) or 0, tonumber(args[3]) or 0, tonumber(args[4]) or 0
-    for _, h in ipairs(hashes) do
-        Components.applyTinted(a.ent, h, palette, t0, t1, t2)
-    end
-    Components.refresh(a.ent)
-    print(('^2[sov_tint]^7 applied palette=%s tint=%d/%d/%d to %d piece(s). Colour changed?')
-        :format(palette, t0, t1, t2, #hashes))
-    if Bridge then Bridge.notify(('Tint %s %d/%d/%d'):format(palette, t0, t1, t2)) end
+    Components.applyVariant(a.ent, itemId, n)
+    print(('^2[sov_variant]^7 %s colourway %d/%d applied. Colour changed?'):format(itemId, n, count))
+    if Bridge then Bridge.notify(('%s colourway %d/%d'):format(card.label or itemId, n, count)) end
 end, false)
