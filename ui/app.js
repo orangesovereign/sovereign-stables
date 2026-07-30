@@ -33,6 +33,7 @@
     var tackComponents = {};// { slot: itemId } on the horse being fitted
     var tackTints = {};     // { itemId: {palette,t0,t1,t2} } — saved colours
     var tackOpenSlot = null;// which fitted slot's colour panel is expanded
+    var tackMode = 'owned'; // 'owned' (your tack, fit/recolour) or 'shop' (buy)
     var tackHorseId = null; // which owned horse we're fitting
 
     // Leather-friendly palettes the recolour offers. Tack colour is ungated, so
@@ -207,7 +208,73 @@
             document.getElementById('catFoot').textContent = '';
             return;
         }
-        // Category strip
+        // Mode toggle: your own tack (fit + recolour) vs the shop (buy). Fitting
+        // only ever targets your selected horse, so owned tack gets its own list
+        // rather than being mixed in with things for sale (owner ask).
+        var mode = el('div', 'tackmode');
+        [['owned', 'My Tack'], ['shop', 'Shop']].forEach(function (m) {
+            var b = el('button', 'tackmode__b' + (tackMode === m[0] ? ' is-active' : ''), m[1]);
+            b.addEventListener('click', function () { tackMode = m[0]; renderList(); });
+            mode.appendChild(b);
+        });
+        list.appendChild(mode);
+
+        if (tackMode === 'owned') { renderOwnedTack(list); }
+        else { renderTackShop(list); }
+    }
+
+    // One tack row (fit / remove / recolour / buy), used by both lists.
+    function renderTackRow(list, t) {
+        var isOwnedPiece = tackOwned.some(function (o) { return o.item === t.id; });
+        var isWorn = tackComponents[t.slot] === t.id;
+        var row = el('button', 'row' + (isWorn ? ' is-active' : ''));
+        var right = isWorn ? '<span class="row__price">&#10003; Fitted</span>'
+            : isOwnedPiece ? '<span class="row__price">Owned</span>'
+            : '<span class="row__price">' + money(t.cash) + '</span>';
+        var sub = isWorn ? 'Fitted — click to recolour'
+            : isOwnedPiece ? 'Yours — click to fit'
+            : 'For sale';
+        row.innerHTML =
+            '<span class="row__portrait">&#9109;</span>' +
+            '<span class="row__t"><span class="row__name">' + t.label + '</span>' +
+            '<span class="row__breed">' + sub + '</span></span>' + right;
+        row.addEventListener('click', function () {
+            if (isWorn) { tackOpenSlot = (tackOpenSlot === t.slot) ? null : t.slot; renderList(); }
+            else if (isOwnedPiece) post('applyTack', { horseId: tackHorseId, item: t.id });
+            else post('buyTack', { item: t.id });
+        });
+        list.appendChild(row);
+        if (isWorn && tackOpenSlot === t.slot) list.appendChild(buildColourPanel(t));
+    }
+
+    // Find an item's catalog entry (it carries slot/label/price).
+    function tackItemById(itemId) {
+        for (var cat in tackCatalog) {
+            var arr = tackCatalog[cat] || [];
+            for (var i = 0; i < arr.length; i++) if (arr[i].id === itemId) return arr[i];
+        }
+        return null;
+    }
+
+    // MY TACK — only what you own, grouped by category, fit/recolour on your horse.
+    function renderOwnedTack(list) {
+        var owned = tackOwned.map(function (o) { return tackItemById(o.item); }).filter(Boolean);
+        if (!owned.length) {
+            list.appendChild(el('div', 'empty', 'You own no tack yet — open the Shop.'));
+            document.getElementById('catFoot').textContent = '0 pieces owned';
+            return;
+        }
+        tackCats.forEach(function (c) {
+            var inCat = owned.filter(function (t) { return t.slot === c.slot; });
+            if (!inCat.length) return;
+            list.appendChild(el('div', 'list__label', c.label));
+            inCat.forEach(function (t) { renderTackRow(list, t); });
+        });
+        document.getElementById('catFoot').textContent = owned.length + ' piece' + (owned.length === 1 ? '' : 's') + ' owned';
+    }
+
+    // SHOP — buy new tack. Category strip; owned pieces drop out (they're in My Tack).
+    function renderTackShop(list) {
         var strip = el('div', 'catstrip');
         tackCats.forEach(function (c) {
             var b = el('button', 'catstrip__b' + (c.id === tackCat ? ' is-active' : ''), c.label);
@@ -216,34 +283,11 @@
         });
         list.appendChild(strip);
 
-        var items = (tackCatalog[tackCat] || []);
-        if (!items.length) {
-            list.appendChild(el('div', 'empty', 'Nothing in this category yet.'));
-        }
-        items.forEach(function (t) {
-            var isOwnedPiece = tackOwned.some(function (o) { return o.item === t.id; });
-            var isWorn = tackComponents[t.slot] === t.id;
-            var row = el('button', 'row' + (isWorn ? ' is-active' : ''));
-            var right = isWorn ? '<span class="row__price">&#10003; Fitted</span>'
-                : isOwnedPiece ? '<span class="row__price">Owned</span>'
-                : '<span class="row__price">' + money(t.cash) + '</span>';
-            row.innerHTML =
-                '<span class="row__portrait">&#9109;</span>' +
-                '<span class="row__t"><span class="row__name">' + t.label + '</span>' +
-                '<span class="row__breed">' + (isOwnedPiece ? 'Yours — fit it to any horse' : 'For sale') + '</span></span>' + right;
-            row.addEventListener('click', function () {
-                if (isWorn) { tackOpenSlot = (tackOpenSlot === t.slot) ? null : t.slot; renderList(); }
-                else if (isOwnedPiece) post('applyTack', { horseId: tackHorseId, item: t.id });
-                else post('buyTack', { item: t.id });
-            });
-            list.appendChild(row);
-
-            // Fitted piece -> a colour editor drops down: pick a palette, drag the
-            // three channels, the horse on the stand recolours live, Save commits.
-            if (isWorn && tackOpenSlot === t.slot) {
-                list.appendChild(buildColourPanel(t));
-            }
+        var forSale = (tackCatalog[tackCat] || []).filter(function (t) {
+            return !tackOwned.some(function (o) { return o.item === t.id; });
         });
+        if (!forSale.length) { list.appendChild(el('div', 'empty', 'You own everything in this category.')); }
+        forSale.forEach(function (t) { renderTackRow(list, t); });
         document.getElementById('catFoot').textContent = tackOwned.length + ' piece' + (tackOwned.length === 1 ? '' : 's') + ' owned';
     }
 
