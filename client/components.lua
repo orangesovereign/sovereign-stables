@@ -94,8 +94,10 @@ function Components.applySet(ped, comps)
     end
     if type(comps) ~= 'table' then return 0 end
 
-    local tints = comps.__tints   -- { [slot] = { palette, t0, t1, t2 } }, applied after
-    local n, applied = 0, {}
+    -- Colours are remembered PER PIECE (by item id), so a saddle keeps its colour
+    -- even after it's removed and re-fitted (owner ruling 2026-07-28).
+    local tints = comps.__tints   -- { [itemId] = { palette, t0, t1, t2 } }
+    local n, applied, worn = 0, {}, {}
     for slot, itemId in pairs(comps) do
         if slot ~= '__tints' then
             local card = Catalog.tack(itemId)
@@ -103,6 +105,7 @@ function Components.applySet(ped, comps)
                 if Components.applyHash(ped, card.hash) then
                     n = n + 1
                     applied[#applied + 1] = toHash(card.hash)
+                    worn[#worn + 1] = { item = itemId, slot = card.slot }
                 end
             elseif Config.Debug then
                 Util.log(('component skipped — no verified hash for "%s" (slot %s)')
@@ -111,22 +114,18 @@ function Components.applySet(ped, comps)
         end
     end
     if n > 0 then Components.refresh(ped) end
-    -- Re-apply saved colours on top of the freshly-fitted pieces.
-    if type(tints) == 'table' then Components.applyTints(ped, tints) end
-    Components._lastHashes = applied   -- remembered so /sovtint can recolour them
-    return n
-end
-
--- Apply a table of stored tints: { [slot] = { palette, t0, t1, t2 } }, mapping
--- each tack slot to its metaped category.
-function Components.applyTints(ped, tints)
-    if not (ped and DoesEntityExist(ped)) or type(tints) ~= 'table' then return end
-    for slot, t in pairs(tints) do
-        local cat = Components.CATEGORY and Components.CATEGORY[slot]
-        if cat and type(t) == 'table' and t.palette then
-            Components.tintCategory(ped, cat, t.palette, t.t0, t.t1, t.t2)
+    -- Re-apply each worn piece's saved colour to its category.
+    if type(tints) == 'table' then
+        for _, w in ipairs(worn) do
+            local t = tints[w.item]
+            local cat = Components.CATEGORY and Components.CATEGORY[w.slot]
+            if t and cat and t.palette then
+                Components.tintCategory(ped, cat, t.palette, t.t0, t.t1, t.t2)
+            end
         end
     end
+    Components._lastHashes = applied   -- remembered so /sovtint can recolour them
+    return n
 end
 
 --------------------------------------------------------------------------------

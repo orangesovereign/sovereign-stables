@@ -199,7 +199,8 @@ function Tack.remove(src, horseId, slot)
     if not comps[slot] then return true, 'Nothing there.' end
 
     comps[slot] = nil
-    if comps.__tints then comps.__tints[slot] = nil end   -- colour goes with the piece
+    -- Colour is KEPT (keyed by item id, not slot): re-fit the same piece later and
+    -- its colour comes back (owner ruling 2026-07-28).
     writeComponents(charid, horseId, comps)
     return true, 'Removed.'
 end
@@ -217,7 +218,8 @@ function Tack.setTint(src, horseId, slot, palette, t0, t1, t2)
 
     local comps = readComponents(charid, horseId)
     if not comps then return false, 'That is not your horse.' end
-    if not comps[slot] then return false, 'Nothing fitted in that slot to colour.' end
+    local itemId = comps[slot]
+    if not itemId then return false, 'Nothing fitted in that slot to colour.' end
 
     local job, grade = Bridge.getJob(src)
     -- How many of the three channels may this grade set? Extra channels are forced
@@ -232,11 +234,13 @@ function Tack.setTint(src, horseId, slot, palette, t0, t1, t2)
         end
     end
 
+    -- Keyed by ITEM id, not slot, so the colour follows the piece: remove it and
+    -- re-fit it later and the colour returns.
     comps.__tints = comps.__tints or {}
-    comps.__tints[slot] = { palette = palette, t0 = chans[1], t1 = chans[2], t2 = chans[3] }
+    comps.__tints[itemId] = { palette = palette, t0 = chans[1], t1 = chans[2], t2 = chans[3] }
     writeComponents(charid, horseId, comps)
-    Util.log(('char %s tinted slot %s on horse #%s -> %s %d/%d/%d')
-        :format(charid, slot, horseId, tostring(palette), chans[1], chans[2], chans[3]))
+    Util.log(('char %s tinted %s (slot %s) on horse #%s -> %s %d/%d/%d')
+        :format(charid, itemId, slot, horseId, tostring(palette), chans[1], chans[2], chans[3]))
     return true, 'Colour applied.'
 end
 
