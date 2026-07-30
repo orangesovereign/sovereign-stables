@@ -442,6 +442,25 @@ CreateThread(function()
     end
 end)
 
+-- ⚠️ TEMPORARY diagnostic for "put away doesn't work". Prints WHY the prompt is
+-- or isn't eligible; `/sovputaway now` stables the wagon directly (bypassing the
+-- prompt) so we can tell a prompt-DISPLAY problem from an ACTION problem.
+RegisterCommand('sovputaway', function(_, args)
+    if not (active and active.ent and DoesEntityExist(active.ent)) then
+        print('^3[sov_putaway]^7 no wagon out'); Bridge.notify('No wagon out.'); return
+    end
+    local stable = active.stableId and Config.Stables[active.stableId]
+    local spot   = stable and stable.retrieve and stable.retrieve.wagonPos
+    local wc = GetEntityCoords(active.ent)
+    local wToSpot = spot and #(wc - vector3(spot[1], spot[2], spot[3])) or -1
+    local pToW = #(GetEntityCoords(PlayerPedId()) - wc)
+    print(('^2[sov_putaway]^7 stableId=%s  spotSet=%s  wagon->spot=%.1f (need<=%.1f)  you->wagon=%.1f (need<=%.1f)  eligible=%s')
+        :format(tostring(active.stableId), tostring(spot ~= nil),
+                wToSpot, (putCfg().distance or 6.0), pToW, (putCfg().playerDistance or 8.0),
+                tostring(atSpawnPoint())))
+    if args and args[1] == 'now' then Wagon.putAway() end
+end, false)
+
 -- NO /sovwagon command — ruled out (Q2): a wagon is collected at a stable.
 -- Putting it away is still a field action, so that one stays.
 RegisterCommand('sovwagonaway', function() Wagon.dismiss() end, false)
