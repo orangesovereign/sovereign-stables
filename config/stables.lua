@@ -337,6 +337,44 @@ Config.Stables = {
             wildSalesEnabled     = false,
         },
     },
+    ['armadillo'] = {
+        label       = 'Armadillo Stables',
+        -- ✅ REAL COORDS — captured in game by the owner 2026-07-28.
+        blip = {
+            enabled = true,
+            sprite  = 1938782895,
+            coords  = { -3630.67, -2574.27, -13.84 },   -- on the stablehand
+        },
+        ped = {
+            enabled  = true,
+            model    = 'u_m_m_bwmstablehand_01',
+            coords   = { -3630.67, -2574.27, -13.84, 317.82 },   -- Ped Coords
+            scenario = 'WORLD_HUMAN_WAITING_IMPATIENT',
+            grooming = {
+                enabled  = true,
+                horsePos = { -3629.85, -2574.1, -13.81, 221.81 },   -- Horse Ped Coords
+                breeds   = nil,
+            },
+        },
+        -- On the stablehand — matches ped.coords, so the prompt opens the stable.
+        prompt = { coords = { -3630.67, -2574.27, -13.84 }, distance = 1.5 },
+        preview = {
+            horsePos = { -3624.8, -2562.66, -13.98, 90.26 },     -- Preview Horse Coords
+            wagonPos = { -3598.93, -2566.67, -14.03, 89.23 },    -- Preview Wagon Coords
+        },
+        -- OUTSIDE and clear — the wagon you drive away, and the R put-away spot.
+        retrieve = {
+            wagonPos = { -3604.31, -2576.37, -14.02, 258.28 },   -- Wagon Spawn / Put Away
+        },
+        jobs = { restricted = false, allowed = {} },
+        faction = { enabled = false, job = nil },
+        catalog = { horses = {}, wagons = {} },
+        options = {
+            storedHorsesGetDirty = true,
+            breedingEnabled      = true,
+            wildSalesEnabled     = false,
+        },
+    },
     ['vanhorn'] = {
         label       = 'Van Horn Stables',
         -- ⚠️ COORDS ARE APPROXIMATE — verify each with /sovcoords in game.
