@@ -221,26 +221,25 @@ function Tack.setTint(src, horseId, slot, palette, t0, t1, t2)
     local itemId = comps[slot]
     if not itemId then return false, 'Nothing fitted in that slot to colour.' end
 
-    local job, grade = Bridge.getJob(src)
-    -- How many of the three channels may this grade set? Extra channels are forced
-    -- to 255 (disabled) so a public player can't spoof the full palette.
-    local slots = Perms.tintSlotsFor(job, grade) or 1
-    local chans = { tonumber(t0) or 0, tonumber(t1) or 0, tonumber(t2) or 0 }
-    for i = 1, 3 do
-        if i > slots then
-            chans[i] = 255                         -- beyond this grade's allowance: off
-        elseif chans[i] ~= 255 and not Perms.mayUseTint(job, grade, chans[i]) then
-            return false, 'That colour is not available to you.'
-        end
+    -- ⚠️ TACK COLOUR IS NOT TRAINER-GATED (owner ruling 2026-07-28): anyone may
+    -- set any palette + tints on their OWN tack. Only horse COAT colour is the
+    -- gated, trainer-only thing (that's Phase 3, not this). And because the colour
+    -- lives on the horse, a fully-customised horse GIVEN to a non-trainer keeps
+    -- its look — the new owner's grade is never consulted to render it.
+    -- (Perms.tintsFor / mayUseTint stay in the codebase for the Phase 3 coat gate.)
+    local function clampTint(v)
+        v = tonumber(v) or 255
+        if v < 0 then return 0 elseif v > 255 then return 255 else return math.floor(v) end
     end
 
     -- Keyed by ITEM id, not slot, so the colour follows the piece: remove it and
     -- re-fit it later and the colour returns.
     comps.__tints = comps.__tints or {}
-    comps.__tints[itemId] = { palette = palette, t0 = chans[1], t1 = chans[2], t2 = chans[3] }
+    comps.__tints[itemId] = { palette = palette, t0 = clampTint(t0), t1 = clampTint(t1), t2 = clampTint(t2) }
     writeComponents(charid, horseId, comps)
-    Util.log(('char %s tinted %s (slot %s) on horse #%s -> %s %d/%d/%d')
-        :format(charid, itemId, slot, horseId, tostring(palette), chans[1], chans[2], chans[3]))
+    Util.log(('char %s tinted %s (slot %s) on horse #%s -> %s %s/%s/%s')
+        :format(charid, itemId, slot, horseId, tostring(palette),
+                tostring(comps.__tints[itemId].t0), tostring(comps.__tints[itemId].t1), tostring(comps.__tints[itemId].t2)))
     return true, 'Colour applied.'
 end
 
