@@ -419,7 +419,9 @@ CreateThread(function()
     putPrompt = UiPromptRegisterBegin()
     UiPromptSetControlAction(putPrompt, putControl())
     UiPromptSetText(putPrompt, CreateVarString(10, 'LITERAL_STRING', 'Put Away Wagon'))
-    UiPromptSetStandardMode(putPrompt, true)
+    UiPromptSetEnabled(putPrompt, true)      -- enable+visible ONCE (see the storage
+    UiPromptSetVisible(putPrompt, true)      -- prompt note): per-frame toggling was
+    UiPromptSetStandardMode(putPrompt, true) -- why it stayed invisible though eligible.
     UiPromptSetGroup(putPrompt, putGroup, 0)
     UiPromptRegisterEnd(putPrompt)
 
@@ -427,16 +429,11 @@ CreateThread(function()
         local wait = 500
         if putCfg().enabled ~= false and putPrompt and atSpawnPoint() then
             wait = 0
-            UiPromptSetEnabled(putPrompt, true)
-            UiPromptSetVisible(putPrompt, true)
             UiPromptSetActiveGroupThisFrame(putGroup,
                 CreateVarString(10, 'LITERAL_STRING', ('Stable %s'):format(active.name or 'Wagon')), 0, 0, 0, 0)
             if UiPromptHasStandardModeCompleted(putPrompt) then
                 Wagon.putAway()
             end
-        elseif putPrompt then
-            UiPromptSetEnabled(putPrompt, false)
-            UiPromptSetVisible(putPrompt, false)
         end
         Wait(wait)
     end
@@ -466,22 +463,21 @@ CreateThread(function()
     stoPrompt = UiPromptRegisterBegin()
     UiPromptSetControlAction(stoPrompt, stoCfg().control or 0x760A9C6F)
     UiPromptSetText(stoPrompt, CreateVarString(10, 'LITERAL_STRING', 'Open Storage'))
-    UiPromptSetStandardMode(stoPrompt, true)
+    UiPromptSetEnabled(stoPrompt, true)     -- ⚠️ enable+visible ONCE at register, like
+    UiPromptSetVisible(stoPrompt, true)     -- the stable-door prompt; toggling per-frame
+    UiPromptSetStandardMode(stoPrompt, true)-- suppresses the render (eligible but invisible).
     UiPromptSetGroup(stoPrompt, stoGroup, 0)
     UiPromptRegisterEnd(stoPrompt)
 
     while true do
         local wait = 500
+        -- The prompt shows only on the frames its group is set active; nothing to
+        -- toggle otherwise.
         if stoCfg().enabled ~= false and stoPrompt and atWagonRear() then
             wait = 0
-            UiPromptSetEnabled(stoPrompt, true)
-            UiPromptSetVisible(stoPrompt, true)
             UiPromptSetActiveGroupThisFrame(stoGroup,
                 CreateVarString(10, 'LITERAL_STRING', ('%s Storage'):format(active.name or 'Wagon')), 0, 0, 0, 0)
             if UiPromptHasStandardModeCompleted(stoPrompt) then Wagon.openStorage() end
-        elseif stoPrompt then
-            UiPromptSetEnabled(stoPrompt, false)
-            UiPromptSetVisible(stoPrompt, false)
         end
         Wait(wait)
     end
