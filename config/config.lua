@@ -146,6 +146,16 @@ Config.WagonPutAway = {
     playerDistance = 8.0,          -- and how near YOU must be to the wagon to see the prompt
 }
 
+-- WAGON CARGO HOLD — each wagon has its own storage, opened from a prompt at the
+-- BACK of the wagon while on foot. Capacity (slots) is per-wagon in config/wagons
+-- (Config.Wagons[...].storage), falling back to Config.WagonDefaults.storage.
+Config.WagonStorage = {
+    enabled    = true,
+    control    = 0x760A9C6F,   -- INPUT_INTERACT_OPTION1 (the stable-door prompt key, proven to render)
+    rearOffset = 2.6,          -- metres behind the wagon the "back" point sits
+    distance   = 2.4,          -- how near that back point you must stand
+}
+
 --------------------------------------------------------------------------------
 -- WAGON CONDITION  [WG9] — modelled on bcc-wagons' Condition feature
 --------------------------------------------------------------------------------

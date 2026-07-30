@@ -128,10 +128,27 @@ end
 -- INVENTORY (vorp_inventory) — server only.
 --------------------------------------------------------------------------------
 if IS_SERVER then
+    -- Register a custom vorp_inventory stash (a wagon's cargo hold). The
+    -- registration is in-memory, so re-register whenever the ride is called out;
+    -- it's idempotent (vorp no-ops a duplicate id). Contents auto-persist to the
+    -- DB keyed by the id, and `shared = true` means the stash belongs to the RIDE,
+    -- not the character — so it travels with a transferred wagon. Uses the table
+    -- form (the positional export is deprecated). limit = SLOTS.
     function Bridge.registerRideInventory(id, name, limit)
-        -- TODO(Phase 2+): exports.vorp_inventory:registerInventory(...) — the
-        -- horse/wagon cargo hold. Not needed for the care loop.
-        Util.log(('inventory registration deferred: %s (%s, limit %s)'):format(id, name, tostring(limit)))
+        if not id then return end
+        local ok = pcall(function()
+            exports.vorp_inventory:registerInventory({
+                id = id, name = name or 'Storage', limit = tonumber(limit) or 30,
+                acceptWeapons = false, shared = true, ignoreItemStackLimit = false,
+            })
+        end)
+        if not ok then Util.warn(('could not register inventory "%s" — is vorp_inventory running?'):format(id)) end
+    end
+
+    -- Open a registered stash for a player (server-side).
+    function Bridge.openRideInventory(src, id)
+        if not (src and id) then return end
+        pcall(function() exports.vorp_inventory:openInventory(src, id) end)
     end
 
     -- USABLE ITEMS — feed (H3), clean (H5), reviver (H12), etc. Registering an

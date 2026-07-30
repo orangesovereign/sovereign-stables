@@ -176,6 +176,23 @@ local function defaultWagon(charid)
     return rows and rows[1]
 end
 
+--------------------------------------------------------------------------------
+-- CARGO HOLD [WG storage] — each wagon has its own vorp_inventory stash. The id
+-- is the wagon's own id, so the storage travels with the wagon (transfer keeps
+-- the same id, and it's registered `shared` = belongs to the ride, not the owner).
+--------------------------------------------------------------------------------
+local function wagonStashId(wagonId) return 'sov_wagon_' .. tostring(wagonId) end
+
+local function wagonSlots(model)
+    local card = Catalog.wagon(model)
+    return (card and card.storage) or (Config.WagonDefaults and Config.WagonDefaults.storage) or 30
+end
+
+-- Idempotent: safe to call every time the wagon is brought out or its hold opened.
+local function ensureWagonStash(wagonId, name, model)
+    Bridge.registerRideInventory(wagonStashId(wagonId), (name or 'Wagon') .. ' Storage', wagonSlots(model))
+end
+
 -- A wagon is collected AT A STABLE (owner ruling Q2 — there is no summon).
 -- `stableId` is where the player is standing; the wagon arrives in that
 -- stable's yard, not wherever the player happens to be.
@@ -237,12 +254,33 @@ RegisterNetEvent(Events.RequestCallWagon, function(wagonId, stableId)
             end
         end
 
+        -- Bring its cargo hold online (registration is in-memory, so do it each
+        -- call-out; idempotent). Contents persist in the DB against the wagon id.
+        ensureWagonStash(row.id, row.name, row.model)
+
         Util.log(('wagon call granted: #%s (char %s) at %s — condition %s')
             :format(tostring(row.id), tostring(charid), tostring(stableId), tostring(health)))
         TriggerClientEvent(Events.CallWagonResult, src, { ok = true, wagon = {
             id = row.id, name = row.name, model = row.model, health = health, tint = row.tint,
             stableId = stableId,
         }})
+    end)
+end)
+
+-- Open a wagon's cargo hold [WG storage]. Ownership-checked; re-registers the
+-- stash in case the server restarted since the wagon was called out.
+RegisterNetEvent(Events.RequestWagonInventory, function(wagonId)
+    local src = source
+    if not wagonId then return end
+    CreateThread(function()
+        local charid = Bridge.getCharId(src); if not charid then return end
+        local row = ownedWagon(charid, wagonId)
+        if not row then
+            Bridge.notifyCard(src, 'failed', 'Stables', 'That is not your wagon.')
+            return
+        end
+        ensureWagonStash(row.id, row.name, row.model)
+        Bridge.openRideInventory(src, wagonStashId(row.id))
     end)
 end)
 

@@ -442,6 +442,54 @@ CreateThread(function()
     end
 end)
 
+--------------------------------------------------------------------------------
+-- CARGO HOLD — open the wagon's storage from a prompt at its BACK, on foot.
+--------------------------------------------------------------------------------
+local function stoCfg()     return Config.WagonStorage or {} end
+local stoGroup  = GetRandomIntInRange(0, 0xFFFFFF)
+local stoPrompt
+
+-- Standing on foot at the back of the out-wagon?
+local function atWagonRear()
+    if not (active and active.ent and DoesEntityExist(active.ent)) then return false end
+    if IsPedInVehicle(PlayerPedId(), active.ent, false) then return false end   -- on foot only
+    local rear = GetOffsetFromEntityInWorldCoords(active.ent, 0.0, -(stoCfg().rearOffset or 2.6), 0.0)
+    return #(GetEntityCoords(PlayerPedId()) - rear) <= (stoCfg().distance or 2.4)
+end
+
+function Wagon.openStorage()
+    if active and active.id then TriggerServerEvent(Events.RequestWagonInventory, active.id) end
+end
+
+CreateThread(function()
+    Wait(2000)
+    stoPrompt = UiPromptRegisterBegin()
+    UiPromptSetControlAction(stoPrompt, stoCfg().control or 0x760A9C6F)
+    UiPromptSetText(stoPrompt, CreateVarString(10, 'LITERAL_STRING', 'Open Storage'))
+    UiPromptSetStandardMode(stoPrompt, true)
+    UiPromptSetGroup(stoPrompt, stoGroup, 0)
+    UiPromptRegisterEnd(stoPrompt)
+
+    while true do
+        local wait = 500
+        if stoCfg().enabled ~= false and stoPrompt and atWagonRear() then
+            wait = 0
+            UiPromptSetEnabled(stoPrompt, true)
+            UiPromptSetVisible(stoPrompt, true)
+            UiPromptSetActiveGroupThisFrame(stoGroup,
+                CreateVarString(10, 'LITERAL_STRING', ('%s Storage'):format(active.name or 'Wagon')), 0, 0, 0, 0)
+            if UiPromptHasStandardModeCompleted(stoPrompt) then Wagon.openStorage() end
+        elseif stoPrompt then
+            UiPromptSetEnabled(stoPrompt, false)
+            UiPromptSetVisible(stoPrompt, false)
+        end
+        Wait(wait)
+    end
+end)
+
+-- Fallback / test path — open the out-wagon's storage from anywhere.
+RegisterCommand('sovwagonstorage', function() Wagon.openStorage() end, false)
+
 -- ⚠️ TEMPORARY diagnostic for "put away doesn't work". Prints WHY the prompt is
 -- or isn't eligible; `/sovputaway now` stables the wagon directly (bypassing the
 -- prompt) so we can tell a prompt-DISPLAY problem from an ACTION problem.

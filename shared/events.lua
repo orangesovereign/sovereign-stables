@@ -39,6 +39,7 @@ Events.ReportWagonHealth      = e('reportWagonHealth')    -- persist wear [WG9]
 Events.ReportWagonWrecked     = e('reportWagonWrecked')   -- rendered unusable, stays in place [WG9]
 Events.RequestRepairWagon     = e('requestRepairWagon')   -- field/pro repair [WG9/J14]
 Events.WagonRepaired          = e('wagonRepaired')        -- client-bound: new condition
+Events.RequestWagonInventory  = e('requestWagonInventory')-- open a wagon's cargo hold
 
 -- metabolism / care [C-series] — milestone 2.1
 Events.RequestCare     = e('requestCare')      -- feed/water/clean a horse (named item)
