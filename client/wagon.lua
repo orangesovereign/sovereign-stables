@@ -453,34 +453,33 @@ function Wagon.putAway()
     end
 end
 
-CreateThread(function()
-    -- ⚠️ Register AFTER the game has settled, not at raw file-load. The stable
-    -- door prompt registers in its module's onInit (post-boot) and works; this one
-    -- registered at load and never showed (R11 R1-R4 all failed). Same fix: wait,
-    -- then register, so the UiPrompt natives are actually live.
-    Wait(2000)
+local function setupPutPrompt()
     putPrompt = UiPromptRegisterBegin()
     UiPromptSetControlAction(putPrompt, putControl())
     UiPromptSetText(putPrompt, CreateVarString(10, 'LITERAL_STRING', 'Put Away Wagon'))
-    UiPromptSetEnabled(putPrompt, true)      -- enable+visible ONCE (see the storage
-    UiPromptSetVisible(putPrompt, true)      -- prompt note): per-frame toggling was
-    UiPromptSetStandardMode(putPrompt, true) -- why it stayed invisible though eligible.
+    UiPromptSetEnabled(putPrompt, true)      -- enable+visible ONCE, exactly like the
+    UiPromptSetVisible(putPrompt, true)      -- stablehand prompt.
+    UiPromptSetStandardMode(putPrompt, true)
     UiPromptSetGroup(putPrompt, putGroup, 0)
     UiPromptRegisterEnd(putPrompt)
+end
 
-    while true do
-        local wait = 500
-        if putCfg().enabled ~= false and putPrompt and atSpawnPoint() then
-            wait = 0
-            UiPromptSetActiveGroupThisFrame(putGroup,
-                CreateVarString(10, 'LITERAL_STRING', ('Stable %s'):format(active.name or 'Wagon')), 0, 0, 0, 0)
-            if UiPromptHasStandardModeCompleted(putPrompt) then
-                Wagon.putAway()
+local function putLoop()
+    CreateThread(function()
+        while true do
+            local wait = 500
+            if putCfg().enabled ~= false and putPrompt and atSpawnPoint() then
+                wait = 0
+                UiPromptSetActiveGroupThisFrame(putGroup,
+                    CreateVarString(10, 'LITERAL_STRING', ('Stable %s'):format(active.name or 'Wagon')), 0, 0, 0, 0)
+                if UiPromptHasStandardModeCompleted(putPrompt) then
+                    Wagon.putAway()
+                end
             end
+            Wait(wait)
         end
-        Wait(wait)
-    end
-end)
+    end)
+end
 
 --------------------------------------------------------------------------------
 -- CARGO HOLD — open the wagon's storage from a prompt at its BACK, on foot.
@@ -493,38 +492,54 @@ local stoPrompt
 local function atWagonRear()
     if not (active and active.ent and DoesEntityExist(active.ent)) then return false end
     if IsPedInVehicle(PlayerPedId(), active.ent, false) then return false end   -- on foot only
+    -- Forgiving zone: a hitched wagon is long, so a tight 2.4m rear pocket was easy
+    -- to miss. Default 3.5m around the rear point.
     local rear = GetOffsetFromEntityInWorldCoords(active.ent, 0.0, -(stoCfg().rearOffset or 2.6), 0.0)
-    return #(GetEntityCoords(PlayerPedId()) - rear) <= (stoCfg().distance or 2.4)
+    return #(GetEntityCoords(PlayerPedId()) - rear) <= (stoCfg().distance or 3.5)
 end
 
 function Wagon.openStorage()
     if active and active.id then TriggerServerEvent(Events.RequestWagonInventory, active.id) end
 end
 
-CreateThread(function()
-    Wait(2000)
+local function setupStoPrompt()
     stoPrompt = UiPromptRegisterBegin()
     UiPromptSetControlAction(stoPrompt, stoCfg().control or 0x760A9C6F)
     UiPromptSetText(stoPrompt, CreateVarString(10, 'LITERAL_STRING', 'Open Storage'))
-    UiPromptSetEnabled(stoPrompt, true)     -- ⚠️ enable+visible ONCE at register, like
-    UiPromptSetVisible(stoPrompt, true)     -- the stable-door prompt; toggling per-frame
-    UiPromptSetStandardMode(stoPrompt, true)-- suppresses the render (eligible but invisible).
+    UiPromptSetEnabled(stoPrompt, true)
+    UiPromptSetVisible(stoPrompt, true)
+    UiPromptSetStandardMode(stoPrompt, true)
     UiPromptSetGroup(stoPrompt, stoGroup, 0)
     UiPromptRegisterEnd(stoPrompt)
+end
 
-    while true do
-        local wait = 500
-        -- The prompt shows only on the frames its group is set active; nothing to
-        -- toggle otherwise.
-        if stoCfg().enabled ~= false and stoPrompt and atWagonRear() then
-            wait = 0
-            UiPromptSetActiveGroupThisFrame(stoGroup,
-                CreateVarString(10, 'LITERAL_STRING', ('%s Storage'):format(active.name or 'Wagon')), 0, 0, 0, 0)
-            if UiPromptHasStandardModeCompleted(stoPrompt) then Wagon.openStorage() end
+local function stoLoop()
+    CreateThread(function()
+        while true do
+            local wait = 500
+            if stoCfg().enabled ~= false and stoPrompt and atWagonRear() then
+                wait = 0
+                UiPromptSetActiveGroupThisFrame(stoGroup,
+                    CreateVarString(10, 'LITERAL_STRING', ('%s Storage'):format(active.name or 'Wagon')), 0, 0, 0, 0)
+                if UiPromptHasStandardModeCompleted(stoPrompt) then Wagon.openStorage() end
+            end
+            Wait(wait)
         end
-        Wait(wait)
-    end
-end)
+    end)
+end
+
+-- ⚠️ Register BOTH prompts through the module lifecycle, EXACTLY like the proven
+-- stablehand prompt (client/stables onInit). The core fires onInit after config
+-- validation, when the UiPrompt natives are actually live; the old raw Wait(2000)
+-- threads registered too early and never rendered (owner: "can't put it away or
+-- access the inventory"). This is the one structural difference from working code.
+Registry.register({
+    name = 'wagon',
+    onInit = function()
+        setupPutPrompt(); putLoop()
+        setupStoPrompt(); stoLoop()
+    end,
+})
 
 -- Fallback / test path — open the out-wagon's storage from anywhere.
 RegisterCommand('sovwagonstorage', function() Wagon.openStorage() end, false)
