@@ -210,6 +210,13 @@ Config.Metabolism = {
     --   horsebackOnly — the item can only be used while MOUNTED.
     -- Animation is chosen automatically: dirt items play the brushing anim, food
     -- items the feeding anim (both work mounted or on foot unless horsebackOnly).
+    --
+    -- ⚠️ INERT under provider = 'bln_hud' (the current setting). bln_hud registers
+    -- the horse items itself (horsebrush, horsemeal, unique_horse_feed, haycube,
+    -- stim, …) in its own usables.cfg.lua, so THIS list is NOT registered and
+    -- these values do nothing. Note `horsemeal` exists in both — harmless while
+    -- we're inert, but don't switch back to 'internal' without renaming ours, or
+    -- both resources would try to register the same item.
     ----------------------------------------------------------------------------
     items = {
         ['horsemeal']    = { label = 'Horse Meal',    hunger = 45 },
