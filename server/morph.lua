@@ -11,6 +11,51 @@
   this server handler just guards ownership + sanitises the values.
 =====================================================================]]--
 
+-- ── Gating: shape editing is "Horse Creation" — admin + at the admin stable ──
+local function nearAdminStable(src, range)
+    local ped = GetPlayerPed(src)
+    if not ped or ped == 0 then return false end
+    local pc = GetEntityCoords(ped)
+    for _, s in pairs(Config.Stables or {}) do
+        if s.adminStable then
+            local c = (s.prompt and s.prompt.coords) or (s.ped and s.ped.coords)
+            if c then
+                local d = #(pc - vector3(c[1] + 0.0, c[2] + 0.0, c[3] + 0.0))
+                if d <= (range or 15.0) then return true end
+            end
+        end
+    end
+    return false
+end
+
+local function canShapeEdit(src)
+    local cfg = (Config.Customization and Config.Customization.shapeEdit) or {}
+    if cfg.requireAdmin ~= false then
+        local job, grade = Bridge.getJob(src)
+        if not (Perms and Perms.can and Perms.can(job, grade, 'horseCreator')) then
+            return false, 'Only a Stable Owner may shape horses.'
+        end
+    end
+    if cfg.adminStableOnly ~= false and not nearAdminStable(src, cfg.stableRange) then
+        return false, 'Horse shaping is only available at the admin stable.'
+    end
+    return true
+end
+
+-- Client asks to open the customiser; the SERVER decides (gated UI is hidden, not
+-- greyed — a player who can't shape simply never gets the panel).
+RegisterNetEvent(Events.RequestCustomize, function()
+    local src = source
+    CreateThread(function()
+        local ok, why = canShapeEdit(src)
+        if ok then
+            TriggerClientEvent(Events.OpenCustomizer, src)
+        else
+            Bridge.notify(src, why or 'Not available here.')
+        end
+    end)
+end)
+
 local function readComponents(id, charid)
     local row = Db.awaitQuery('SELECT components FROM sovereign_horses WHERE id = ? AND charid = ?', { id, charid })
     if not (row and row[1]) then return nil end
@@ -44,6 +89,9 @@ RegisterNetEvent(Events.SaveHorseMorph, function(horseId, values)
     if not horseId then return end
     CreateThread(function()
         local charid = Bridge.getCharId(src); if not charid then return end
+        -- Re-check the gate on save too — never trust that the panel was allowed open.
+        local allowed, why = canShapeEdit(src)
+        if not allowed then Bridge.notify(src, why or 'Not allowed.'); return end
         local comps = readComponents(horseId, charid)
         if not comps then
             Bridge.notify(src, 'That is not your horse.'); return

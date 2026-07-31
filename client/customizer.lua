@@ -70,4 +70,15 @@ RegisterNUICallback('morphClose', function(_, cb)
     cb('ok')
 end)
 
-RegisterCommand('sovcustomize', function() open() end, false)
+-- The SERVER decides whether you may shape a horse (admin + at the admin stable).
+-- It replies OpenCustomizer only if allowed — so the panel never opens for someone
+-- who can't use it, and a denial explains why.
+RegisterNetEvent(Events.OpenCustomizer, function() open() end)
+
+RegisterCommand('sovcustomize', function()
+    if not (Horse and Horse.active and Horse.active()) then
+        pcall(function() Bridge.notify('Bring your horse out first, then customise it.') end)
+        return
+    end
+    TriggerServerEvent(Events.RequestCustomize)
+end, false)

@@ -120,6 +120,19 @@ Config.Customization = {
     -- packs). false = the public may only set the first, so their horse reads as
     -- "a colour" while a trainer's reads as "a scheme".
     publicMayUseAllTintSlots = false,
+
+    -- SHAPE / MORPH customiser (the /sovcustomize horse-shaping tool). "Horse
+    -- Creation" per the owner (2026-07-30): meant to be admin-gated AND only at
+    -- the admin stable (Config.Stables[id].adminStable = true → Braithwaite).
+    -- Gating is server-authoritative; the entry is HIDDEN from anyone who can't
+    -- use it (gated UI is hidden, not greyed).
+    -- ⚠️ DEFAULTS OFF for now so it can be tested anywhere. For production, set
+    -- BOTH to true to lock horse-shaping to an admin at Braithwaite.
+    shapeEdit = {
+        requireAdmin    = false,   -- true = needs the `horseCreator` permission
+        adminStableOnly = false,   -- true = only while at an `adminStable`
+        stableRange     = 15.0,    -- how near that stable counts as "at" it (metres)
+    },
 }
 
 --------------------------------------------------------------------------------
