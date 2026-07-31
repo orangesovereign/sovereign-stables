@@ -98,6 +98,35 @@ RegisterCommand('sovwagonhp', function()
     end
     print(('    isDraftVehicle=%s  harnessedHorses(0-5)=%d')
         :format(tostring(okD and isDraft), harnessed))
+    -- Seat count for the model (0 would explain "no driver seat to take").
+    local okS, seats = pcall(function()
+        return Citizen.InvokeNative(0x9A578736FF3A17C3, GetHashKey(active.model), Citizen.ResultAsInteger())  -- GET_VEHICLE_MODEL_NUMBER_OF_SEATS
+    end)
+    local okF, free = pcall(function()
+        return Citizen.InvokeNative(0xE052C1B1CAA4ECE4, veh, -1)  -- IS_VEHICLE_SEAT_FREE (driver)
+    end)
+    print(('    model=%s  modelSeats=%s  driverSeatFree=%s')
+        :format(tostring(active.model), okS and tostring(seats) or '?', okF and tostring(free) or '?'))
+end, false)
+
+-- ⚠️ DIAGNOSTIC for "can't get on the wagon". Force-seats you in the driver's bench,
+-- bypassing the walk-up prompt. If this seats you and you can DRIVE, the wagon is
+-- fine and only the mount PROMPT (seat authorisation) is the problem. If it does
+-- NOT seat you, or you can't drive after, the entity itself isn't a working rideable
+-- vehicle — a different fix. Tells a prompt problem from an entity problem.
+RegisterCommand('sovwagonsit', function()
+    if not (active and active.ent and DoesEntityExist(active.ent)) then
+        print('^3[sov_wagonsit]^7 no wagon out'); Bridge.notify('No wagon out.'); return
+    end
+    local ped, veh = PlayerPedId(), active.ent
+    pcall(function() Citizen.InvokeNative(0xB69317BF5E782347, veh) end)  -- NETWORK_REQUEST_CONTROL_OF_ENTITY
+    pcall(function() Citizen.InvokeNative(0xE2487779957FE897, veh, 528) end)  -- re-authorise seats first
+    Wait(50)
+    local okSeat = pcall(function() Citizen.InvokeNative(0xF75B0D629E1C063D, ped, veh, -1) end)  -- SET_PED_INTO_VEHICLE (driver)
+    Wait(200)
+    local inVeh = IsPedInVehicle(ped, veh, false)
+    print(('^2[sov_wagonsit]^7 set-into-seat ok=%s  nowInVehicle=%s'):format(tostring(okSeat), tostring(inVeh)))
+    Bridge.notify(inVeh and 'Seated — try to drive.' or 'Could not seat you on the wagon.')
 end, false)
 
 -- Is the wagon actually moving? Wear only accrues in use (bcc onlyWhileMoving).
