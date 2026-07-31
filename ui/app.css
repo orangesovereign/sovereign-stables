@@ -341,19 +341,26 @@ html, body { width: 100%; height: 100%; background: transparent; overflow: hidde
   background: linear-gradient(180deg, #b0894e, #7a5f2c); box-shadow: inset 0 1px 2px rgba(0,0,0,.4); }
 
 /* sticky-note tabs poking out the right edge */
-.mg__tabs { position: absolute; top: 44px; right: -16px; display: flex; flex-direction: column; gap: 9px; z-index: 2; }
-.mg__tab { font: inherit; font-family: var(--f-disp); font-size: .72rem; letter-spacing: .05em;
-  text-transform: uppercase; color: #2c2013; cursor: pointer; text-align: left;
-  padding: 8px 13px 8px 11px; border: 0; border-radius: 3px 7px 7px 3px;
-  background: linear-gradient(180deg, #e8dcc0, #d6c49d); border-left: 3px solid var(--brass-dim);
-  box-shadow: 2px 3px 6px rgba(0,0,0,.42); transform: rotate(1deg); transition: transform .12s ease, box-shadow .12s ease; }
-.mg__tab:nth-child(even) { transform: rotate(-1.5deg); background: linear-gradient(180deg, #e6d3b4, #d1ba8e); }
-.mg__tab:hover { transform: rotate(0) translateX(4px); }
-.mg__tab.is-active { transform: rotate(0) translateX(9px); color: #f0e2c8; border-left-color: #c8916a;
-  background: linear-gradient(180deg, #8e2a20, #661b14); box-shadow: 3px 4px 9px rgba(0,0,0,.52); }
+/* sheet-edge tabs: a vertical stack of tabbed sheets whose left edge tucks UNDER
+   the front parchment (z-index below .mg__paper), so each reads as a sheet in the
+   clipboard rather than a note floating on top. */
+.mg__tabs { position: absolute; top: 34px; bottom: 34px; right: 8px; width: 96px;
+  display: flex; flex-direction: column; gap: 6px; z-index: 1; }
+.mg__tab { flex: 1 1 auto; min-height: 0; display: flex; align-items: center; cursor: pointer;
+  font-family: var(--f-disp); font-size: .6rem; line-height: 1.08; letter-spacing: .03em;
+  text-transform: uppercase; font-weight: 600; color: #5a4526; text-align: left;
+  padding: 6px 8px 6px 26px; border: 0; border-radius: 0 8px 8px 0; border-left: 3px solid var(--brass-dim);
+  background: linear-gradient(90deg, #c9b180, #d6c49d);
+  box-shadow: inset 5px 0 8px rgba(0,0,0,.16); transition: transform .12s ease, background .12s ease; }
+.mg__tab:nth-child(even) { background: linear-gradient(90deg, #ccb587, #d9c8a0); }
+.mg__tab:hover { transform: translateX(3px); background: linear-gradient(90deg, #d6c096, #e2d2ad); }
+.mg__tab.is-active { transform: translateX(5px); color: #2c2013; border-left-color: var(--oxblood);
+  background: linear-gradient(90deg, #ecdfc4, #f2e8d0); box-shadow: -2px 0 9px rgba(0,0,0,.16); }
+.mg__tab:focus-visible { outline: 2px solid var(--brass-hi); outline-offset: -2px; }
 
 /* the parchment sheet clipped to the board */
-.mg__paper { position: relative; height: 100%; overflow: hidden auto; padding: 22px 26px 26px;
+.mg__paper { position: absolute; top: 18px; left: 18px; bottom: 18px; right: 86px; z-index: 2;
+  overflow: hidden auto; padding: 22px 26px 26px;
   border-radius: 7px; color: #372a1a;
   background:
     radial-gradient(120% 80% at 50% -10%, rgba(255,255,255,.42), transparent 60%),
