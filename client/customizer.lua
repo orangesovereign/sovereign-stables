@@ -34,6 +34,9 @@ local function open()
     end
 
     SetNuiFocus(true, true)
+    -- Keep game input alive so LEFT-CLICK still moves the camera around the horse
+    -- while the panel has the cursor (owner 2026-07-31). Sliders still work.
+    pcall(function() SetNuiFocusKeepInput(true) end)
     SendNUIMessage({
         action = 'custom:open',
         name   = a.name or 'Your Horse',
@@ -61,6 +64,7 @@ RegisterNUICallback('morphSave', function(d, cb)
 end)
 
 RegisterNUICallback('morphClose', function(_, cb)
+    pcall(function() SetNuiFocusKeepInput(false) end)
     SetNuiFocus(false, false)
     target, targetId = nil, nil
     cb('ok')

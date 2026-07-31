@@ -162,7 +162,15 @@ function Horse.spawn(data)
         -- Saved SHAPE [2.4]: morph values live in components.__morph. Re-apply here
         -- (state doesn't persist on the entity) with the same fresh-ped re-stamp the
         -- tints need — a just-spawned ped can ignore the first morph pass.
-        local morph = data.components.__morph
+        -- ⚠️ data.components arrives as a JSON STRING (server/summon.lua sends the raw
+        -- DB column), so decode it before reading __morph — indexing the string gave
+        -- nil and the shape never applied on bring-out (owner 2026-07-31).
+        local comps = data.components
+        if type(comps) == 'string' then
+            local ok, dec = pcall(json.decode, comps)
+            comps = (ok and type(dec) == 'table') and dec or nil
+        end
+        local morph = comps and comps.__morph
         if Morph and type(morph) == 'table' and next(morph) then
             Morph.apply(horse, morph)
             CreateThread(function()
