@@ -54,6 +54,7 @@ server_scripts {
     'server/metabolism.lua',   -- Metabolism.current used by summon.lua
     'server/summon.lua',
     'server/transfer.lua',
+    'server/storelink.lua',    -- charters a stable's store in sovereign_stores
 }
 
 -- Custom branded NUI shell (storefront / customizer / codex / horse creator).
