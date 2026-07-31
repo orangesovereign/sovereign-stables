@@ -158,6 +158,20 @@ function Horse.spawn(data)
     if data.components then
         local n = Components.applySet(horse, data.components)
         if n > 0 then Util.log(('applied %d tack piece(s) to horse #%s'):format(n, tostring(data.id))) end
+
+        -- Saved SHAPE [2.4]: morph values live in components.__morph. Re-apply here
+        -- (state doesn't persist on the entity) with the same fresh-ped re-stamp the
+        -- tints need — a just-spawned ped can ignore the first morph pass.
+        local morph = data.components.__morph
+        if Morph and type(morph) == 'table' and next(morph) then
+            Morph.apply(horse, morph)
+            CreateThread(function()
+                for _, d in ipairs({ 300, 900, 2000 }) do
+                    Wait(d)
+                    if DoesEntityExist(horse) then Morph.apply(horse, morph) end
+                end
+            end)
+        end
     end
 
     -- Care state [C]: dirt on the coat, a warning if it's hungry/thirsty, and the

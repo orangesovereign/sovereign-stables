@@ -55,6 +55,7 @@ Events.RequestBuyTack    = e('requestBuyTack')
 Events.RequestApplyTack  = e('requestApplyTack')   -- put an owned piece on an owned horse
 Events.RequestRemoveTack = e('requestRemoveTack')  -- clear a slot
 Events.RequestTintTack   = e('requestTintTack')    -- recolour a fitted slot [2.3]
+Events.SaveHorseMorph    = e('saveHorseMorph')     -- persist a horse's shape (Config.HorseMorph values) [2.4]
 
 -- transfer [F3 / ride transfer] — milestone 1.4.
 -- Phase 3's trainer custody transfer reuses this exact system.

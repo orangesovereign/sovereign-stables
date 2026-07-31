@@ -631,9 +631,75 @@
     function close() { root.classList.add('hidden'); }
     function requestClose() { close(); post('close', {}); }
 
+    // ── HORSE CUSTOMIZER (morph panel) ──────────────────────────────────
+    var czAttrs = [], czGroups = [], czValues = {};
+    function czEl(id) { return document.getElementById(id); }
+    function czDefault(a) { return a.kind === 'scale' ? 1.0 : 0.0; }
+    function czFmt(n) { return (Math.round(n * 100) / 100).toFixed(2); }
+    function czSet(a, v) { czValues[a.key] = v; post('morphPreview', { key: a.key, value: v }); }
+
+    function renderCustom() {
+        var wrap = czEl('czGroups'); wrap.innerHTML = '';
+        var order = (czGroups || []).slice();
+        czAttrs.forEach(function (a) { if (order.indexOf(a.group) < 0) order.push(a.group); });
+        order.forEach(function (g) {
+            var items = czAttrs.filter(function (a) { return a.group === g; });
+            if (!items.length) return;
+            var sec = document.createElement('div'); sec.className = 'cz__g';
+            var gh = document.createElement('div'); gh.className = 'cz__gh'; gh.textContent = g;
+            sec.appendChild(gh);
+            items.forEach(function (a) {
+                var v = (czValues[a.key] != null) ? czValues[a.key] : czDefault(a);
+                var row = document.createElement('div'); row.className = 'cz__row';
+                if (a.kind === 'toggle') {
+                    var lbl = document.createElement('label'); lbl.className = 'cz__lbl'; lbl.textContent = a.label;
+                    var chk = document.createElement('input'); chk.type = 'checkbox'; chk.className = 'cz__chk'; chk.checked = v >= 0.5;
+                    chk.addEventListener('change', function () { czSet(a, chk.checked ? 1 : 0); });
+                    row.appendChild(lbl); row.appendChild(chk);
+                } else {
+                    var isScale = a.kind === 'scale';
+                    var lbl2 = document.createElement('label'); lbl2.className = 'cz__lbl';
+                    lbl2.innerHTML = a.label + '<span class="cz__val">' + czFmt(v) + '</span>';
+                    var rng = document.createElement('input'); rng.type = 'range';
+                    rng.className = 'cz__rng'; rng.min = isScale ? 0.5 : -1; rng.max = isScale ? 2 : 1;
+                    rng.step = 0.05; rng.value = v;
+                    var valEl = lbl2.querySelector('.cz__val');
+                    rng.addEventListener('input', function () {
+                        var nv = parseFloat(rng.value); valEl.textContent = czFmt(nv); czSet(a, nv);
+                    });
+                    row.appendChild(lbl2); row.appendChild(rng);
+                }
+                sec.appendChild(row);
+            });
+            wrap.appendChild(sec);
+        });
+    }
+    function czResetAll() {
+        czAttrs.forEach(function (a) { czValues[a.key] = czDefault(a); });
+        renderCustom();
+        czAttrs.forEach(function (a) { post('morphPreview', { key: a.key, value: czValues[a.key] }); });
+    }
+    function openCustom(d) {
+        czAttrs = d.attrs || []; czGroups = d.groups || []; czValues = d.values || {};
+        czEl('czName').textContent = d.name || '';
+        renderCustom();
+        czEl('custom').classList.remove('hidden');
+    }
+    function closeCustom() { czEl('custom').classList.add('hidden'); post('morphClose', {}); }
+    (function () {
+        var s = czEl('czSave'), r = czEl('czReset'), x = czEl('czClose');
+        if (s) s.addEventListener('click', function () { post('morphSave', { values: czValues }); });
+        if (r) r.addEventListener('click', czResetAll);
+        if (x) x.addEventListener('click', closeCustom);
+    })();
+    document.addEventListener('keyup', function (e) {
+        if (e.key === 'Escape' && !czEl('custom').classList.contains('hidden')) closeCustom();
+    });
+
     window.addEventListener('message', function (ev) {
         var d = ev.data || {};
         if (d.action === 'open') open(d);
+        else if (d.action === 'custom:open') openCustom(d);
         else if (d.action === 'header') renderHeader(d.header || {});
         else if (d.action === 'detail') renderDetail(d.detail);
         else if (d.action === 'wallet') {
