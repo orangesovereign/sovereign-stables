@@ -696,9 +696,107 @@
         if (e.key === 'Escape' && !czEl('custom').classList.contains('hidden')) closeCustom();
     });
 
+    // ── STABLE MANAGEMENT PANEL ─────────────────────────────────────────
+    var mgPanel = null, mgSection = 'overview';
+    function mgEsc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+    function mgMoney(n) { return '$' + (Number(n) || 0).toLocaleString(); }
+
+    function mgStat(label, value, sub) {
+        return '<div class="mg__stat"><div class="mg__stat-l">' + mgEsc(label) + '</div>' +
+            '<div class="mg__stat-v">' + value + '</div>' +
+            '<div class="mg__stat-s">' + mgEsc(sub || '') + '</div></div>';
+    }
+    function mgPanelBox(title, sub, body) {
+        return '<section class="mg__box"><div class="mg__box-h"><b>' + mgEsc(title) + '</b>' +
+            (sub ? '<span>' + mgEsc(sub) + '</span>' : '') + '</div>' + body + '</section>';
+    }
+
+    function mgOverview(o, role) {
+        var stats = '';
+        if (o.funds) stats += mgStat('Society Funds', mgMoney(o.funds.cash), 'Available balance');
+        stats += mgStat('Employees on Duty', o.onDuty + ' / ' + o.staffCount, 'Current shift');
+        stats += mgStat('Client Horses', o.clientHorses.total, o.clientHorses.pending ? 'Coming soon' : 'Raising & training');
+        stats += mgStat('Ready for Pickup', o.clientHorses.ready, 'Owners notified');
+
+        // Staff on duty
+        var staffRows = (o.staff || []).map(function (e) {
+            return '<div class="mg__row"><span class="mg__ini">' + mgEsc((e.name || '?').slice(0, 2).toUpperCase()) + '</span>' +
+                '<div class="mg__row-t"><b>' + mgEsc(e.name || 'Employee') + '</b><span>' + mgEsc((e.role || '') + ' · Grade ' + (e.grade || 1)) + '</span></div>' +
+                '<span class="mg__tag ' + (Number(e.on_duty) === 1 ? 'mg__tag--ok' : '') + '">' + (Number(e.on_duty) === 1 ? 'On Duty' : 'Off Duty') + '</span></div>';
+        }).join('') || '<div class="mg__empty">No employees yet.</div>';
+
+        // Recent ledger (owner/admin only — funds present)
+        var ledgerBox = '';
+        if (o.funds) {
+            var ledRows = (o.ledger || []).map(function (l) {
+                var amt = Number(l.amount_cash) || 0;
+                return '<div class="mg__lrow"><span>' + mgEsc(l.description) + '</span>' +
+                    '<span class="mg__tag">' + mgEsc(l.category) + '</span>' +
+                    '<b class="' + (amt < 0 ? 'mg__neg' : 'mg__pos') + '">' + (amt < 0 ? '-' : '+') + mgMoney(Math.abs(amt)) + '</b></div>';
+            }).join('') || '<div class="mg__empty">No activity yet.</div>';
+            ledgerBox = mgPanelBox('Recent Ledger', 'Latest business activity', '<div class="mg__ltable">' + ledRows + '</div>');
+        }
+
+        var ops = mgPanelBox("Today's Stable Operations", 'All client work by phase',
+            '<div class="mg__empty">Client-horse training & raising is coming next — this fills in once that subsystem is built.</div>');
+        var staffBox = mgPanelBox('Staff on Duty', 'Current shift', '<div class="mg__list">' + staffRows + '</div>');
+
+        return '<div class="mg__stats">' + stats + '</div>' +
+            '<div class="mg__grid">' + ops + '<div class="mg__col">' + staffBox + ledgerBox + '</div></div>';
+    }
+
+    function mgSectionBody() {
+        var p = mgPanel; if (!p) return '';
+        if (mgSection === 'overview') return mgOverview(p.overview || {}, p.role);
+        var titles = { trainer: 'Trainer Panel', staff: 'Staff & Roles', breeding: 'Breeding Register',
+            ledger: 'Society Ledger', settings: 'Stable Settings', admin: 'Admin Panel' };
+        return '<div class="mg__empty mg__soon">' + mgEsc(titles[mgSection] || 'Section') +
+            ' is designed and coming next. The shell + Overview are live first.</div>';
+    }
+    var MG_TITLES = { overview: 'Operations Overview', trainer: 'Trainer Panel', staff: 'Staff & Roles',
+        breeding: 'Breeding Register', ledger: 'Society Ledger', settings: 'Stable Settings', admin: 'System Administration' };
+
+    function mgRender() {
+        var p = mgPanel; if (!p) return;
+        var el = document.getElementById('manage');
+        var nav = (p.nav || []).map(function (n) {
+            return '<button class="mg__nav-i' + (n.key === mgSection ? ' is-active' : '') + '" data-mg="' + n.key + '">' + mgEsc(n.label) + '</button>';
+        }).join('');
+        el.innerHTML =
+            '<div class="mg__frame">' +
+              '<header class="mg__hd"><div class="mg__brand"><div class="mg__seal">SC</div>' +
+                '<div><h1>Sovereign Stables</h1><p>Stables &amp; Carriage Co.</p></div></div>' +
+                '<div class="mg__loc">' + mgEsc(p.stableName) + '</div>' +
+                '<div class="mg__who">' + mgEsc((p.playerName || '') + ' — ' + (p.roleLabel || '')) + '</div>' +
+                '<button class="mg__exit" data-mg="__close">Exit ✕</button></header>' +
+              '<div class="mg__body"><nav class="mg__nav"><div class="mg__nav-l">Stable Management</div>' + nav + '</nav>' +
+                '<main class="mg__main"><div class="mg__eyebrow">Stable Management</div>' +
+                  '<h2 class="mg__title">' + mgEsc(MG_TITLES[mgSection] || 'Overview') + '</h2>' +
+                  '<div class="mg__content">' + mgSectionBody() + '</div></main></div>' +
+              '<footer class="mg__ft">Authorized Access · ' + mgEsc(p.roleLabel || '') + '</footer>' +
+            '</div>';
+    }
+    function mgOpen(panel) {
+        mgPanel = panel; mgSection = 'overview';
+        mgRender();
+        document.getElementById('manage').classList.remove('hidden');
+    }
+    function mgClose() { document.getElementById('manage').classList.add('hidden'); mgPanel = null; post('manageClose', {}); }
+    document.getElementById('manage').addEventListener('click', function (e) {
+        var b = e.target.closest('[data-mg]'); if (!b) return;
+        var k = b.getAttribute('data-mg');
+        if (k === '__close') { mgClose(); return; }
+        mgSection = k; mgRender();
+    });
+    document.addEventListener('keyup', function (e) {
+        if (e.key === 'Escape' && !document.getElementById('manage').classList.contains('hidden')) mgClose();
+    });
+
     window.addEventListener('message', function (ev) {
         var d = ev.data || {};
         if (d.action === 'open') open(d);
+        else if (d.action === 'manage:open') mgOpen(d.panel || {});
         else if (d.action === 'custom:open') openCustom(d);
         else if (d.action === 'header') renderHeader(d.header || {});
         else if (d.action === 'detail') renderDetail(d.detail);

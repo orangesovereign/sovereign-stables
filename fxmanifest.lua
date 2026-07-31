@@ -38,6 +38,7 @@ client_scripts {
     'client/morph.lua',        -- horse morph apply engine (drives Config.HorseMorph)
     'client/coat.lua',         -- horse coat/morph probe (Horse Customiser groundwork)
     'client/customizer.lua',   -- horse morph customiser panel (live preview + save)
+    'client/management.lua',   -- role-scoped stable management panel
     'client/horsemenu.lua',    -- horse interaction menu: name + condition, lead, drink
     'client/wagon.lua',
     'client/transfer.lua',
@@ -55,6 +56,7 @@ server_scripts {
     'server/wagons.lua',
     'server/tack.lua',
     'server/morph.lua',        -- persist a horse's shape (Config.HorseMorph values)
+    'server/management.lua',   -- role-scoped stable management panel (business layer)
     'server/metabolism.lua',   -- Metabolism.current used by summon.lua
     'server/summon.lua',
     'server/transfer.lua',

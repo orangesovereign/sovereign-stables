@@ -120,4 +120,63 @@ CREATE TABLE IF NOT EXISTS `sovereign_ledger` (
   KEY `idx_charid` (`charid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
+-- ---------------------------------------------------------------------
+-- STABLE BUSINESS — native ownership + funds per stable (owner ruling
+-- 2026-07-31: the management panel's business layer lives HERE, not in
+-- sovereign_stores). One row per OWNED stable; `stable_id` is the
+-- config/stables.lua key. Unowned stables (no row) are admin-run.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `sovereign_stable_business` (
+  `stable_id`    VARCHAR(48)   NOT NULL,   -- config/stables.lua key, e.g. 'valentine'
+  `owner_charid` INT(11)       NULL,       -- current owner (NULL = unowned/admin-run)
+  `name`         VARCHAR(64)   NULL,       -- business name (defaults to the stable label)
+  `status`       VARCHAR(16)   NOT NULL DEFAULT 'open',   -- open / closed / suspended
+  `funds_cash`   DECIMAL(12,2) NOT NULL DEFAULT 0,        -- the society funds
+  `funds_gold`   DECIMAL(12,2) NOT NULL DEFAULT 0,
+  `tax_due`      DECIMAL(12,2) NOT NULL DEFAULT 0,
+  `tax_due_at`   BIGINT        NULL,
+  `created_at`   TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`stable_id`),
+  KEY `idx_owner` (`owner_charid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
+
+-- ---------------------------------------------------------------------
+-- STABLE EMPLOYEES — roster + role + grade + duty. The owner is on the
+-- business row above; this is staff (trainer / stablehand). `role` maps to a
+-- permission set in config; `grade` is the rank shown in the panel.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `sovereign_stable_employees` (
+  `id`          INT(11)     NOT NULL AUTO_INCREMENT,
+  `stable_id`   VARCHAR(48) NOT NULL,
+  `charid`      INT(11)     NOT NULL,
+  `name`        VARCHAR(64) NULL,          -- cached display name
+  `role`        VARCHAR(24) NOT NULL DEFAULT 'stablehand',  -- trainer / stablehand
+  `grade`       INT(11)     NOT NULL DEFAULT 1,
+  `on_duty`     TINYINT(1)  NOT NULL DEFAULT 0,
+  `hired_at`    TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `last_active` TIMESTAMP   NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uniq_stable_char` (`stable_id`, `charid`),
+  KEY `idx_stable` (`stable_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
+
+-- ---------------------------------------------------------------------
+-- STABLE LEDGER — the society ledger (income, expenses, tax, deposits).
+-- Every money movement in the business writes one row; the panel reads it.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `sovereign_stable_ledger` (
+  `id`            INT(11)       NOT NULL AUTO_INCREMENT,
+  `stable_id`     VARCHAR(48)   NOT NULL,
+  `description`   VARCHAR(96)   NOT NULL,
+  `category`      VARCHAR(24)   NOT NULL,   -- service/supplies/payroll/breeding/deposit/tax
+  `actor_charid`  INT(11)       NULL,       -- who caused it (NULL = system)
+  `actor_name`    VARCHAR(64)   NULL,
+  `amount_cash`   DECIMAL(12,2) NOT NULL DEFAULT 0,   -- signed (+in / -out)
+  `amount_gold`   DECIMAL(12,2) NOT NULL DEFAULT 0,
+  `balance_after` DECIMAL(12,2) NULL,
+  `created_at`    TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_stable_time` (`stable_id`, `created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
+
 SET FOREIGN_KEY_CHECKS = 1;
