@@ -18,6 +18,7 @@ shared_scripts {
     'config/tack.lua',
     'config/jobs.lua',
     'config/metabolism.lua',
+    'config/horsemorph.lua',
     'config/locales/en.lua',
     'shared/events.lua',
     'shared/util.lua',
@@ -34,6 +35,7 @@ client_scripts {
     'client/components.lua',   -- tack apply pipeline; horse.lua + preview.lua use it
     'client/metabolism.lua',   -- care state; horse.lua + preview.lua call into it
     'client/horse.lua',
+    'client/morph.lua',        -- horse morph apply engine (drives Config.HorseMorph)
     'client/coat.lua',         -- horse coat/morph probe (Horse Customiser groundwork)
     'client/horsemenu.lua',    -- horse interaction menu: name + condition, lead, drink
     'client/wagon.lua',

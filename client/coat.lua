@@ -163,6 +163,30 @@ RegisterCommand('sovexprget', function(_, args)
 end, false)
 
 --------------------------------------------------------------------------------
+-- /sovmorph <key> <value> — apply a NAMED morph attribute (Config.HorseMorph) to
+-- your horse, e.g. /sovmorph muscle 0.8, /sovmorph belly 0.6, /sovmorph scale 1.2.
+-- /sovmorph list — print all available keys.
+--------------------------------------------------------------------------------
+RegisterCommand('sovmorph', function(_, args)
+    if args and args[1] == 'list' then
+        print('^2[sov_coat]^7 morph keys:')
+        for _, a in ipairs(Morph.all()) do
+            print(('    %-14s %-22s [%s]'):format(a.key, a.label, a.group))
+        end
+        return
+    end
+    local h = needHorse(); if not h then return end
+    local key, val = args and args[1], tonumber(args and args[2])
+    if not (key and val ~= nil and Morph.attr(key)) then
+        print('^3usage:^7 /sovmorph <key> <value>   (/sovmorph list for keys)'); return
+    end
+    Morph.set(h, key, val)
+    local a = Morph.attr(key)
+    print(('^2[sov_coat]^7 %s = %.2f applied'):format(key, val))
+    pcall(function() Bridge.notify(('%s = %.2f'):format(a.label, val)) end)
+end, false)
+
+--------------------------------------------------------------------------------
 -- /sovscale <f> — uniform body scale (_SET_PED_SCALE), e.g. 1.0 default, 1.1 big.
 --------------------------------------------------------------------------------
 RegisterCommand('sovscale', function(_, args)
