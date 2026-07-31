@@ -190,4 +190,17 @@ CREATE TABLE IF NOT EXISTS `sovereign_store_orders` (
   KEY `idx_stable_item` (`stable_id`, `item`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
+-- ---------------------------------------------------------------------
+-- STORE STOCK — the store's on-hand item counts, tracked in the DB (NOT a raw
+-- vorp stash) so listings/buys/order-fills can move goods programmatically and
+-- reliably. Deposit = take from the player + increment here; withdraw/buy =
+-- decrement here + give to the player. One row per (stable, item).
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `sovereign_store_stock` (
+  `stable_id`  VARCHAR(48) NOT NULL,
+  `item`       VARCHAR(64) NOT NULL,
+  `qty`        INT(11)     NOT NULL DEFAULT 0,
+  PRIMARY KEY (`stable_id`, `item`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
+
 SET FOREIGN_KEY_CHECKS = 1;

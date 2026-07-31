@@ -61,6 +61,12 @@ Events.RequestTintTack   = e('requestTintTack')    -- recolour a fitted slot [2.
 Events.RequestTransfer   = e('requestTransfer')    -- offer a horse/wagon to a server id
 Events.RespondTransfer   = e('respondTransfer')    -- target accepts/declines
 
+-- store [ST] — player-run store tied to a stable (its owner/employees run it)
+Events.RequestStoreData   = e('requestStoreData')     -- open a stable's store panel
+Events.StoreData          = e('storeData')            -- client-bound: role-scoped view
+Events.RequestStoreAction = e('requestStoreAction')   -- buy/fill/list/order/stock/till (action field)
+Events.StoreActionResult  = e('storeActionResult')    -- client-bound: outcome + refreshed view
+
 -- client-bound
 Events.OpenStorefront    = e('openStorefront')
 Events.HeaderData        = e('headerData')

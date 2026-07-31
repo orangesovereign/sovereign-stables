@@ -18,6 +18,7 @@ shared_scripts {
     'config/tack.lua',
     'config/jobs.lua',
     'config/metabolism.lua',
+    'config/store.lua',
     'config/locales/en.lua',
     'shared/events.lua',
     'shared/util.lua',
@@ -54,6 +55,7 @@ server_scripts {
     'server/metabolism.lua',   -- Metabolism.current used by summon.lua
     'server/summon.lua',
     'server/transfer.lua',
+    'server/store.lua',        -- player-run store (listings, buy orders, till)
 }
 
 -- Custom branded NUI shell (storefront / customizer / codex / horse creator).
