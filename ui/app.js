@@ -760,21 +760,23 @@
     function mgRender() {
         var p = mgPanel; if (!p) return;
         var el = document.getElementById('manage');
-        var nav = (p.nav || []).map(function (n) {
-            return '<button class="mg__nav-i' + (n.key === mgSection ? ' is-active' : '') + '" data-mg="' + n.key + '">' + mgEsc(n.label) + '</button>';
+        var tabs = (p.nav || []).map(function (n) {
+            return '<button class="mg__tab' + (n.key === mgSection ? ' is-active' : '') +
+                '" data-mg="' + n.key + '">' + mgEsc(n.label) + '</button>';
         }).join('');
         el.innerHTML =
-            '<div class="mg__frame">' +
-              '<header class="mg__hd"><div class="mg__brand"><div class="mg__seal">SC</div>' +
-                '<div><h1>Sovereign Stables</h1><p>Stables &amp; Carriage Co.</p></div></div>' +
-                '<div class="mg__loc">' + mgEsc(p.stableName) + '</div>' +
-                '<div class="mg__who">' + mgEsc((p.playerName || '') + ' — ' + (p.roleLabel || '')) + '</div>' +
-                '<button class="mg__exit" data-mg="__close">Exit ✕</button></header>' +
-              '<div class="mg__body"><nav class="mg__nav"><div class="mg__nav-l">Stable Management</div>' + nav + '</nav>' +
-                '<main class="mg__main"><div class="mg__eyebrow">Stable Management</div>' +
-                  '<h2 class="mg__title">' + mgEsc(MG_TITLES[mgSection] || 'Overview') + '</h2>' +
-                  '<div class="mg__content">' + mgSectionBody() + '</div></main></div>' +
-              '<footer class="mg__ft">Authorized Access · ' + mgEsc(p.roleLabel || '') + '</footer>' +
+            '<div class="mg__board">' +
+              '<span class="mg__clip"></span>' +
+              '<nav class="mg__tabs">' + tabs + '</nav>' +
+              '<div class="mg__paper">' +
+                '<header class="mg__paperhd"><div class="mg__seal">SC</div>' +
+                  '<div class="mg__ph-t"><h1>' + mgEsc(p.stableName) + '</h1>' +
+                    '<p>' + mgEsc((p.playerName || '') + ' — ' + (p.roleLabel || '')) + '</p></div>' +
+                  '<button class="mg__exit" data-mg="__close" title="Close">&#10005;</button></header>' +
+                '<div class="mg__eyebrow">Stable Management</div>' +
+                '<h2 class="mg__title">' + mgEsc(MG_TITLES[mgSection] || 'Overview') + '</h2>' +
+                '<div class="mg__content">' + mgSectionBody() + '</div>' +
+              '</div>' +
             '</div>';
     }
     function mgOpen(panel) {
