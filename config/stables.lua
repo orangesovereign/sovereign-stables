@@ -176,36 +176,32 @@ Config.Stables = {
 
     ['saintdenis'] = {
         label       = 'Saint Denis Stables',
-        -- ⚠️ COORDS ARE APPROXIMATE — verify each with /sovcoords in game.
-        -- All six are derived from one anchor so they're internally consistent
-        -- and near each other; nudge them onto the real building.
+        -- ✅ REAL COORDS — captured in game by the owner 2026-07-30.
         blip = {
             enabled = true,
             sprite  = 1938782895,
-            coords  = { 2493.000, -1360.000, 46.000 },
+            coords  = { 2503.57, -1461.4, 46.26 },   -- on the stablehand
         },
         ped = {
             enabled  = true,
             model    = 'u_m_m_bwmstablehand_01',
-            coords   = { 2490.500, -1362.000, 46.000, 180.0 },   -- /sovcoords ped
+            coords   = { 2503.57, -1461.4, 46.26, 256.59 },   -- Ped Coords
             scenario = 'WORLD_HUMAN_WAITING_IMPATIENT',
             grooming = {
                 enabled  = true,
-                horsePos = { 2490.500, -1362.700, 46.000, 270.0 },   -- /sovcoords horse
+                horsePos = { 2504.23, -1461.37, 46.26, 4.24 },   -- Horse Ped Coords
                 breeds   = nil,
             },
         },
-        -- ⚠️ PUT THIS ON THE STABLEHAND. If it doesn't match ped.coords there is
-        -- no way to open this stable — the ped and horse will still spawn, which
-        -- is what makes the mistake so quiet.
-        prompt = { coords = { 2490.500, -1362.000, 46.000 }, distance = 1.5 },
+        -- On the stablehand — matches ped.coords, so the prompt opens the stable.
+        prompt = { coords = { 2503.57, -1461.4, 46.26 }, distance = 1.5 },
         preview = {
-            horsePos = { 2502.000, -1359.000, 46.000, 270.0 },   -- /sovcoords horse
-            wagonPos = { 2485.000, -1349.000, 46.000, 270.0 },   -- /sovcoords wagon
+            horsePos = { 2503.12, -1445.85, 46.26, 358.55 },   -- Preview Horse Coords
+            wagonPos = { 2501.3, -1424.33, 46.1, 178.81 },     -- Preview Wagon Coords
         },
-        -- OUTSIDE and clear — this is the wagon you actually drive away.
+        -- OUTSIDE and clear — the wagon you drive away, and the R put-away spot.
         retrieve = {
-            wagonPos = { 2479.000, -1353.000, 46.000, 0.0 },     -- /sovcoords wagon
+            wagonPos = { 2503.09, -1430.87, 46.15, 87.73 },   -- Wagon Spawn / Put Away
         },
         jobs = { restricted = false, allowed = {} },
         faction = { enabled = false, job = nil },
