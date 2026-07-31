@@ -481,18 +481,28 @@ local function atWagonToMount()
     return #(GetEntityCoords(ped) - GetEntityCoords(active.ent)) <= (mntCfg().distance or 4.0)
 end
 
--- Put the player in the driver seat. This is EXACTLY what /sovwagonsit does — and
--- the owner confirmed that seats them and they can drive — so mount replicates it
--- verbatim rather than gambling on the animated TASK_ENTER_VEHICLE (which has been
--- the flaky one). Instant seat, but guaranteed.
+-- Climb into the driver seat. TASK_ENTER_VEHICLE plays the proper climb animation
+-- (confirmed working in-game 2026-07-30), with the proven SET_PED_INTO_VEHICLE as a
+-- fallback if the climb doesn't complete — so "get on" is both natural AND never
+-- silently fails.
 function Wagon.mount()
     if not (active and active.ent and DoesEntityExist(active.ent)) then return end
     local ped, veh = PlayerPedId(), active.ent
     if IsPedInVehicle(ped, veh, false) then return end
     pcall(function() Citizen.InvokeNative(0xB69317BF5E782347, veh) end)      -- NETWORK_REQUEST_CONTROL_OF_ENTITY
     pcall(function() Citizen.InvokeNative(0xE2487779957FE897, veh, 528) end) -- re-authorise seats first
-    Wait(50)
-    pcall(function() Citizen.InvokeNative(0xF75B0D629E1C063D, ped, veh, -1) end)  -- SET_PED_INTO_VEHICLE (driver) — proven
+    -- TASK_ENTER_VEHICLE(ped, veh, timeout, seat(-1=driver), speed, flag, p6)
+    pcall(function() Citizen.InvokeNative(0xC20E50AA46D09CA8, ped, veh, 20000, -1, 1.0, 1, 0) end)
+    CreateThread(function()
+        local t = GetGameTimer()
+        while GetGameTimer() - t < 3500 do
+            if IsPedInVehicle(PlayerPedId(), veh, false) then return end   -- climb succeeded
+            Wait(50)
+        end
+        if not IsPedInVehicle(PlayerPedId(), veh, false) and DoesEntityExist(veh) then
+            pcall(function() Citizen.InvokeNative(0xF75B0D629E1C063D, PlayerPedId(), veh, -1) end)  -- fallback: proven force-seat
+        end
+    end)
 end
 
 local function setupMountPrompt()
@@ -582,20 +592,30 @@ local function atSpawnPoint()
     return #(p - wc) <= ((putCfg().playerDistance or 8.0))            -- and you're with it?
 end
 
--- Put the wagon away. If you're sat on it, step down first, then stable it.
+-- Put the wagon away. ⚠️ This must ALWAYS stow, even while you're sat driving — the
+-- old code routed through Wagon.dismiss(), whose "step down first" guard REFUSED to
+-- stow while you were in the seat, so pressing R from the driver's bench did nothing
+-- (owner 2026-07-30: "R prompt appears but doesn't stow"). We stow directly here:
+-- deleting the wagon drops you off, so no dismount race can block it. We still ask you
+-- to step off first for grace, but we don't WAIT on it — the stow happens regardless.
 function Wagon.putAway()
     if not (active and DoesEntityExist(active.ent)) then return end
-    local ped = PlayerPedId()
-    if IsPedInVehicle(ped, active.ent, false) then
-        local veh = active.ent
-        pcall(function() TaskLeaveVehicle(ped, veh, 0) end)
+    local ped, veh, id, name = PlayerPedId(), active.ent, active.id, active.name
+    local function stow()
+        if not (active and active.id == id) then return end   -- already gone
+        TriggerServerEvent(Events.ReportWagonDismiss, id)
+        Bridge.notify(('%s is put away.'):format(name or 'Your wagon'))
+        Wagon.despawn(true)   -- DeleteEntity ejects any rider, so this works seated too
+    end
+    if IsPedInVehicle(ped, veh, false) then
+        pcall(function() TaskLeaveVehicle(ped, veh, 0) end)   -- start the dismount for looks
         CreateThread(function()
             local t = GetGameTimer()
-            while IsPedInVehicle(PlayerPedId(), veh, false) and GetGameTimer() - t < 3000 do Wait(50) end
-            Wagon.dismiss()
+            while IsPedInVehicle(PlayerPedId(), veh, false) and GetGameTimer() - t < 1500 do Wait(50) end
+            stow()   -- stow whether or not the dismount finished
         end)
     else
-        Wagon.dismiss()
+        stow()
     end
 end
 
