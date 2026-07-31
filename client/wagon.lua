@@ -528,6 +528,33 @@ local function mountLoop()
     end)
 end
 
+-- ⚠️ GUARANTEED mount, independent of the UiPrompt drawing AND of the module
+-- lifecycle. This is a RAW thread (like the wear/watchdog loops that clearly run,
+-- since the wagon spawns and despawns), watching the E key directly. If the on-
+-- screen prompt above never draws — which is why R/G were only usable via command —
+-- pressing E on foot near the wagon STILL gets you on. Checks both the enabled and
+-- disabled control (the game may swallow E for its own failed ambient enter).
+CreateThread(function()
+    while true do
+        local wait = 350
+        if mntCfg().enabled ~= false and atWagonToMount() then
+            wait = 0
+            local ctrl = mntCfg().control or 0xCEFD9220
+            if IsControlJustPressed(0, ctrl) or IsDisabledControlJustPressed(0, ctrl)
+               or IsControlJustReleased(0, ctrl) or IsDisabledControlJustReleased(0, ctrl) then
+                Wagon.mount()
+                Wait(1500)   -- debounce: one tap = one mount
+            end
+        end
+        Wait(wait)
+    end
+end)
+
+-- Diagnostic: run the mount ACTION directly (TASK_ENTER_VEHICLE climb + fallback),
+-- bypassing both the prompt and the E-key watch. If this seats you, the action is
+-- fine and only key/prompt detection was the issue.
+RegisterCommand('sovwagonmount', function() Wagon.mount() end, false)
+
 --------------------------------------------------------------------------------
 -- PUT AWAY AT THE SPAWN POINT — park the wagon where it came out, press R.
 --------------------------------------------------------------------------------
