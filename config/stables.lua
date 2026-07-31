@@ -405,6 +405,49 @@ Config.Stables = {
             wildSalesEnabled     = false,
         },
     },
+    ['braithwaite'] = {
+        label       = 'Braithwaite Stables',
+        -- ✅ REAL COORDS — captured in game by the owner 2026-07-30.
+        -- ⭐ THE ADMIN STABLE (owner 2026-07-30): horse/breed CREATION is only
+        -- available here. `adminStable = true` marks it; the Horse Creator checks
+        -- this so the creator surface appears only at Braithwaite (and only for
+        -- admins — gated UI is hidden, not greyed).
+        adminStable = true,
+        blip = {
+            enabled = true,
+            sprite  = 1938782895,
+            coords  = { 965.15, -1827.76, 46.48 },   -- on the stablehand
+        },
+        ped = {
+            enabled  = true,
+            model    = 'u_m_m_bwmstablehand_01',
+            coords   = { 965.15, -1827.76, 46.48, 90.5 },   -- Ped Coords
+            scenario = 'WORLD_HUMAN_WAITING_IMPATIENT',
+            grooming = {
+                enabled  = true,
+                horsePos = { 964.5, -1827.88, 46.49, 190.96 },   -- Horse Ped Coords
+                breeds   = nil,
+            },
+        },
+        -- On the stablehand — matches ped.coords, so the prompt opens the stable.
+        prompt = { coords = { 965.15, -1827.76, 46.48 }, distance = 1.5 },
+        preview = {
+            horsePos = { 980.06, -1846.11, 46.95, 321.49 },   -- Preview Horse Coords
+            wagonPos = { 995.1, -1858.57, 45.74, 171.44 },    -- Preview Wagon Coords
+        },
+        -- OUTSIDE and clear — the wagon you drive away, and the R put-away spot.
+        retrieve = {
+            wagonPos = { 964.93, -1861.92, 45.92, 183.73 },   -- Wagon Spawn / Put Away
+        },
+        jobs = { restricted = false, allowed = {} },
+        faction = { enabled = false, job = nil },
+        catalog = { horses = {}, wagons = {} },
+        options = {
+            storedHorsesGetDirty = true,
+            breedingEnabled      = true,
+            wildSalesEnabled     = false,
+        },
+    },
     -- NOTE: no Annesburg stable — Annesburg is served by Van Horn (owner 2026-07-30).
     --==========================================================================
     -- ADDING A STABLE — copy a block above, then change ALL SIX POSITIONS
