@@ -187,27 +187,6 @@ if IS_SERVER then
         return true
     end
 
-    -- Can this player carry `amount` more of `item`? Async in vorp; bridged to a
-    -- synchronous return like itemCount. If the check can't run, we DON'T block the
-    -- sale (return true) — a missing export shouldn't strand a paying customer.
-    function Bridge.canCarry(src, item, amount)
-        amount = amount or 1
-        local p = promise.new()
-        local ok = pcall(function()
-            exports.vorp_inventory:canCarryItem(src, item, amount, function(can) p:resolve(can ~= false) end)
-        end)
-        if not ok then p:resolve(true) end
-        return Citizen.Await(p)
-    end
-
-    -- Give `amount` of `item` (the Store's counter). Returns true on success.
-    function Bridge.giveItem(src, item, amount, metadata)
-        if not (src and item) then return false end
-        amount = amount or 1
-        return pcall(function()
-            exports.vorp_inventory:addItem(src, item, amount, metadata or {})
-        end)
-    end
 
     -- The actual item INSTANCE the player is carrying, with its id and metadata.
     --
