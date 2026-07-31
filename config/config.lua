@@ -117,6 +117,10 @@ Config.Access = {
 Config.Admin = {
     groups = { 'admin', 'superadmin', 'mod', 'moderator' },        -- VORP character groups
     aces   = { 'sovereign_stables.admin', 'group.admin', 'group.superadmin', 'command' },
+    -- GUARANTEED override: exact player identifiers that are always admin. Run
+    -- /sovwhoami in game to see your identifier + group, then paste the
+    -- identifier here (e.g. 'steam:110000112345678' or 'license:xxxx…').
+    identifiers = {},
 }
 
 Config.Customization = {

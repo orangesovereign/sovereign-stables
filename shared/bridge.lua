@@ -71,6 +71,7 @@ if IS_SERVER then
         local g
         pcall(function() if user.getGroup then g = user.getGroup() end end)
         if not g then pcall(function() g = user.getUsedCharacter and user.getUsedCharacter.group end) end
+        if not g then local ch = Bridge.getCharacter(src); g = ch and (ch.group or ch.Group or ch.userGroup) end
         return g
     end
 
@@ -78,6 +79,15 @@ if IS_SERVER then
     -- Config.Admin lists the accepted groups/aces (config/config.lua).
     function Bridge.isAdmin(src)
         local cfg = Config.Admin or {}
+        -- Guaranteed override: your identifier in Config.Admin.identifiers.
+        if cfg.identifiers and next(cfg.identifiers) then
+            local id = Bridge.getIdentifier(src)
+            if id then
+                for _, want in ipairs(cfg.identifiers) do
+                    if tostring(want) == tostring(id) then return true end
+                end
+            end
+        end
         local grp = Bridge.getGroup(src)
         if grp then
             grp = tostring(grp):lower()

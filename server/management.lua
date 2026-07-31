@@ -168,6 +168,27 @@ end)
 -- Ownership bootstrap (until the Admin Panel's assign-owner lands).
 --   sovsetstableowner <stableId> [charid]
 --------------------------------------------------------------------------------
+-- Diagnostic: what does the server see about YOU? Prints group, job/grade, ace
+-- results, identifier, and the final isAdmin verdict — so we can pin admin access.
+RegisterCommand('sovwhoami', function(src)
+    if src == 0 then print('run in-game'); return end
+    CreateThread(function()
+        local grp  = Bridge.getGroup(src)
+        local job, grade = Bridge.getJob(src)
+        local id   = Bridge.getIdentifier(src)
+        local parts = {}
+        for _, ace in ipairs((Config.Admin and Config.Admin.aces) or {}) do
+            local ok = false; pcall(function() ok = IsPlayerAceAllowed(src, ace) end)
+            parts[#parts + 1] = ace .. '=' .. tostring(ok)
+        end
+        local adm = Bridge.isAdmin(src)
+        print(('^3[sov_whoami]^7 group=%s  job=%s  grade=%s  isAdmin=%s'):format(tostring(grp), tostring(job), tostring(grade), tostring(adm)))
+        print(('^3[sov_whoami]^7 identifier=%s'):format(tostring(id)))
+        print(('^3[sov_whoami]^7 aces: %s'):format(table.concat(parts, '  ')))
+        Bridge.notify(src, ('group=%s · isAdmin=%s (see F8)'):format(tostring(grp), tostring(adm)))
+    end)
+end, false)
+
 RegisterCommand('sovsetstableowner', function(src, args)
     if src ~= 0 and not isAdmin(src) then Bridge.notify(src, 'Admins only.'); return end
     local stableId = args and args[1]
