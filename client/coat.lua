@@ -24,13 +24,44 @@ Coat = Coat or {}
 
 local function u32(x) return x & 0xFFFFFFFF end
 
--- The horse to operate on: your brought-out horse, else the mount you're riding.
+-- The horse to operate on, in order of preference: the mount you're riding, the
+-- horse you brought out via the script, then the NEAREST horse ped within 8m. The
+-- nearest-horse fallback matters — the probe found nothing before if you were just
+-- stood next to your horse instead of mounted (owner: "no change from any command").
 local function currentHorse()
+    local ped = PlayerPedId()
+    local ok, m = pcall(function() return GetMount(ped) end)
+    if ok and m and m ~= 0 and DoesEntityExist(m) then return m end
     local a = Horse and Horse.active and Horse.active()
     if a and a.ent and DoesEntityExist(a.ent) then return a.ent end
-    local ok, m = pcall(function() return GetMount(PlayerPedId()) end)
-    if ok and m and m ~= 0 and DoesEntityExist(m) then return m end
-    return nil
+    -- Nearest horse ped: scan the ped pool, keep the closest that IS a horse.
+    local pc = GetEntityCoords(ped)
+    local best, bestD = nil, 8.0
+    local okPool, pool = pcall(function() return GetGamePool('CPed') end)
+    if okPool and pool then
+        for _, e in ipairs(pool) do
+            if e ~= ped and DoesEntityExist(e) then
+                local isHorse = false
+                pcall(function() isHorse = Citizen.InvokeNative(0x772A1969F649E902, GetEntityModel(e)) end)  -- _IS_THIS_MODEL_A_HORSE
+                if isHorse then
+                    local d = #(GetEntityCoords(e) - pc)
+                    if d < bestD then best, bestD = e, d end
+                end
+            end
+        end
+    end
+    return best
+end
+
+-- Resolve the horse and shout on-screen if there isn't one, so the owner always
+-- gets visible feedback (the print-only path was invisible without the F8 console).
+local function needHorse(tag)
+    local h = currentHorse()
+    if not h then
+        print(('^3[%s]^7 no horse found — mount, bring out, or stand next to your horse'):format(tag or 'sov_coat'))
+        pcall(function() Bridge.notify('No horse nearby to work on.') end)
+    end
+    return h
 end
 
 local function commit(ped)
@@ -51,8 +82,9 @@ local CANDIDATE_CATS = {
 -- then flag which of our candidate NAMES match (that's the body-coat category).
 --------------------------------------------------------------------------------
 RegisterCommand('sovcoatcats', function()
-    local h = currentHorse()
-    if not h then print('^3[sov_coat]^7 no horse — bring out or mount your horse first'); return end
+    local h = needHorse()
+    if not h then return end
+    pcall(function() Bridge.notify('Reading horse categories — see F8 console.') end)
     local num = Citizen.InvokeNative(0xA622E66EEE92A08D, h, Citizen.ResultAsInteger()) or 0  -- _GET_NUM_COMPONENT_CATEGORIES_IN_PED
     print(('^2[sov_coat]^7 %d component categories on this horse:'):format(num))
     local present = {}
@@ -72,8 +104,8 @@ end, false)
 -- find the working body-coat category+palette (mirrors how /sovtint found tack).
 --------------------------------------------------------------------------------
 RegisterCommand('sovcoattint', function(_, args)
-    local h = currentHorse()
-    if not h then print('^3[sov_coat]^7 no horse'); return end
+    local h = needHorse()
+    if not h then return end
     local cat, pal = args[1], args[2]
     if not (cat and pal) then
         print('^3usage:^7 /sovcoattint <category> <palette> <t0 0-255> <t1> <t2>')
@@ -92,8 +124,8 @@ end, false)
 -- the breed's built-in coat variations (_SET_PED_VARIATION_PRESET).
 --------------------------------------------------------------------------------
 RegisterCommand('sovcoatpreset', function(_, args)
-    local h = currentHorse()
-    if not h then print('^3[sov_coat]^7 no horse'); return end
+    local h = needHorse()
+    if not h then return end
     local idx = tonumber(args[1]) or 0
     pcall(function() Citizen.InvokeNative(0xFFA1594703ED27CA, h, idx) end)  -- _SET_PED_VARIATION_PRESET
     commit(h)
@@ -107,22 +139,23 @@ end, false)
 -- body-size, 41611 gender(0/1).
 --------------------------------------------------------------------------------
 RegisterCommand('sovexpr', function(_, args)
-    local h = currentHorse()
-    if not h then print('^3[sov_coat]^7 no horse'); return end
+    local h = needHorse()
+    if not h then return end
     local idx = tonumber(args[1])
     local val = tonumber(args[2])
     if not (idx and val) then print('^3usage:^7 /sovexpr <expressionIndex> <value -1..1>'); return end
     pcall(function() Citizen.InvokeNative(0x5653AB26C82938CF, h, idx, val + 0.0) end)  -- _SET_CHAR_EXPRESSION
     commit(h)
     print(('^2[sov_coat]^7 expression idx=%d val=%.2f applied'):format(idx, val))
+    pcall(function() Bridge.notify(('Morph %d = %.2f applied.'):format(idx, val)) end)
 end, false)
 
 --------------------------------------------------------------------------------
 -- /sovexprget <index> — read the current value (for "start from this breed").
 --------------------------------------------------------------------------------
 RegisterCommand('sovexprget', function(_, args)
-    local h = currentHorse()
-    if not h then print('^3[sov_coat]^7 no horse'); return end
+    local h = needHorse()
+    if not h then return end
     local idx = tonumber(args[1])
     if not idx then print('^3usage:^7 /sovexprget <expressionIndex>'); return end
     local v = Citizen.InvokeNative(0xFD1BA1EEF7985BB8, h, idx, Citizen.ResultAsFloat())  -- _GET_CHAR_EXPRESSION
@@ -133,8 +166,8 @@ end, false)
 -- /sovscale <f> — uniform body scale (_SET_PED_SCALE), e.g. 1.0 default, 1.1 big.
 --------------------------------------------------------------------------------
 RegisterCommand('sovscale', function(_, args)
-    local h = currentHorse()
-    if not h then print('^3[sov_coat]^7 no horse'); return end
+    local h = needHorse()
+    if not h then return end
     local f = tonumber(args[1]) or 1.0
     pcall(function() Citizen.InvokeNative(0x25ACFC650B65C538, h, f + 0.0) end)  -- _SET_PED_SCALE
     print(('^2[sov_coat]^7 scale set to %.3f'):format(f))
