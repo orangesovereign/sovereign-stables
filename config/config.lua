@@ -136,6 +136,16 @@ Config.WagonBlip = {
     label   = 'Wagon',      -- fallback name; the wagon's own name is used if set
 }
 
+-- GET ON THE WAGON (owner 2026-07-30). The game's ambient "enter vehicle" never
+-- fires for a scripted wagon, so E won't get you on (it still gets you OFF). This
+-- prompt drives entry ourselves: press E on foot near the wagon to climb into the
+-- driver seat. `control` is the key; default E.
+Config.WagonMount = {
+    enabled  = true,
+    control  = 0xCEFD9220,   -- INPUT_ENTER (E)
+    distance = 4.0,          -- how near the wagon you must be on foot to see the prompt
+}
+
 -- PUT THE WAGON AWAY AT ITS SPAWN POINT (owner 2026-07-28).
 -- Drive the wagon back to the stable's retrieve.wagonPos and a prompt offers to
 -- stable it — the mirror of collecting it. `control` is the key; default R.

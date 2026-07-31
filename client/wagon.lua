@@ -249,6 +249,11 @@ local function place(model, x, y, z, heading, name, id)
     local function authoriseSeats()
         if DoesEntityExist(veh) then
             pcall(function() Citizen.InvokeNative(0xE2487779957FE897, veh, 528) end)  -- _SET_TRANSPORT_USAGE_FLAGS
+            -- Re-added 2026-07-30: the owner proved the wagon is drivable (force-seat
+            -- works, E gets you OFF) but E won't get you ON — the ambient enter system
+            -- ignores the wagon unless it's "considered by the player". Re-stamp it
+            -- alongside the seat flags (the team hitch resets this too).
+            pcall(function() Citizen.InvokeNative(0x54800D386C5825E5, veh, true) end)  -- SET_VEHICLE_IS_CONSIDERED_BY_PLAYER
         end
     end
     authoriseSeats()
@@ -455,6 +460,75 @@ CreateThread(function()
 end)
 
 --------------------------------------------------------------------------------
+-- GET ON THE WAGON — a scripted mount prompt (press E near the wagon).
+--------------------------------------------------------------------------------
+-- Owner 2026-07-30: the wagon is fully drivable (force-seat works, E gets you OFF)
+-- but the game's ambient enter never fires for a scripted wagon, so E won't get you
+-- ON. This is a known RedM gap — so we drive entry ourselves: a prompt on the E key
+-- (INPUT_ENTER) when on foot near the wagon, which climbs you into the driver seat
+-- with TASK_ENTER_VEHICLE (natural animation), falling back to the proven
+-- SET_PED_INTO_VEHICLE if the climb doesn't complete. Same UiPrompt pattern as the
+-- put-away/storage prompts, registered through the module lifecycle.
+local function mntCfg()     return Config.WagonMount or {} end
+local mntGroup  = GetRandomIntInRange(0, 0xFFFFFF)
+local mntPrompt
+
+-- On foot, near the out-wagon, not already aboard.
+local function atWagonToMount()
+    if not (active and active.ent and DoesEntityExist(active.ent)) then return false end
+    local ped = PlayerPedId()
+    if IsPedInVehicle(ped, active.ent, false) then return false end   -- already on it
+    return #(GetEntityCoords(ped) - GetEntityCoords(active.ent)) <= (mntCfg().distance or 4.0)
+end
+
+-- Climb into the driver seat. TASK_ENTER_VEHICLE plays the proper mount animation;
+-- if it hasn't seated us shortly (pathing hiccup), we plant directly — the same call
+-- /sovwagonsit proved works — so "get on" never just silently fails.
+function Wagon.mount()
+    if not (active and active.ent and DoesEntityExist(active.ent)) then return end
+    local ped, veh = PlayerPedId(), active.ent
+    pcall(function() Citizen.InvokeNative(0xB69317BF5E782347, veh) end)  -- request control
+    -- TASK_ENTER_VEHICLE(ped, veh, timeout, seat(-1=driver), speed, flag, p6)
+    pcall(function() Citizen.InvokeNative(0xC20E50AA46D09CA8, ped, veh, 20000, -1, 1.0, 1, 0) end)
+    CreateThread(function()
+        local t = GetGameTimer()
+        while GetGameTimer() - t < 2500 do
+            if IsPedInVehicle(ped, veh, false) then return end
+            Wait(50)
+        end
+        if not IsPedInVehicle(PlayerPedId(), veh, false) and DoesEntityExist(veh) then
+            pcall(function() Citizen.InvokeNative(0xF75B0D629E1C063D, PlayerPedId(), veh, -1) end)  -- SET_PED_INTO_VEHICLE (fallback)
+        end
+    end)
+end
+
+local function setupMountPrompt()
+    mntPrompt = UiPromptRegisterBegin()
+    UiPromptSetControlAction(mntPrompt, mntCfg().control or 0xCEFD9220)   -- E (INPUT_ENTER)
+    UiPromptSetText(mntPrompt, CreateVarString(10, 'LITERAL_STRING', 'Get on Wagon'))
+    UiPromptSetEnabled(mntPrompt, true)
+    UiPromptSetVisible(mntPrompt, true)
+    UiPromptSetStandardMode(mntPrompt, true)
+    UiPromptSetGroup(mntPrompt, mntGroup, 0)
+    UiPromptRegisterEnd(mntPrompt)
+end
+
+local function mountLoop()
+    CreateThread(function()
+        while true do
+            local wait = 500
+            if mntCfg().enabled ~= false and mntPrompt and atWagonToMount() then
+                wait = 0
+                UiPromptSetActiveGroupThisFrame(mntGroup,
+                    CreateVarString(10, 'LITERAL_STRING', ('Get on %s'):format(active.name or 'Wagon')), 0, 0, 0, 0)
+                if UiPromptHasStandardModeCompleted(mntPrompt) then Wagon.mount() end
+            end
+            Wait(wait)
+        end
+    end)
+end
+
+--------------------------------------------------------------------------------
 -- PUT AWAY AT THE SPAWN POINT — park the wagon where it came out, press R.
 --------------------------------------------------------------------------------
 -- Owner request 2026-07-28: "when you park your wagon in the wagon spawn point R
@@ -582,6 +656,7 @@ end
 Registry.register({
     name = 'wagon',
     onInit = function()
+        setupMountPrompt(); mountLoop()
         setupPutPrompt(); putLoop()
         setupStoPrompt(); stoLoop()
     end,
