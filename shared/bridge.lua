@@ -63,6 +63,35 @@ if IS_SERVER then
         return ch.job, ch.jobGrade
     end
 
+    -- The player's VORP admin group ('admin'/'superadmin'/...), or nil. Tries the
+    -- several shapes VORP has used (character.group, user.getGroup()).
+    function Bridge.getGroup(src)
+        local core = Bridge.core(); if not core then return nil end
+        local user = core.getUser(src); if not user then return nil end
+        local g
+        pcall(function() if user.getGroup then g = user.getGroup() end end)
+        if not g then pcall(function() g = user.getUsedCharacter and user.getUsedCharacter.group end) end
+        return g
+    end
+
+    -- Is this player a SERVER ADMIN? VORP group → ace → boss-grade horseCreator.
+    -- Config.Admin lists the accepted groups/aces (config/config.lua).
+    function Bridge.isAdmin(src)
+        local cfg = Config.Admin or {}
+        local grp = Bridge.getGroup(src)
+        if grp then
+            grp = tostring(grp):lower()
+            for _, g in ipairs(cfg.groups or {}) do if tostring(g):lower() == grp then return true end end
+        end
+        for _, ace in ipairs(cfg.aces or {}) do
+            local ok = false
+            pcall(function() ok = IsPlayerAceAllowed(src, ace) end)
+            if ok then return true end
+        end
+        local job, grade = Bridge.getJob(src)
+        return (Perms and Perms.can and Perms.can(job, grade, 'horseCreator')) == true
+    end
+
     ----------------------------------------------------------------------------
     -- MONEY  (0 = cash, 1 = gold)
     ----------------------------------------------------------------------------

@@ -106,6 +106,19 @@ Config.Access = {
 -- ⚠️ Nothing reads this yet. The customiser is S14/S15 in PHASE 2; the tints
 -- ride on `_SET_META_PED_TAG` (see PHASE1_SPIKE_FINDINGS). The permission model
 -- is settled here so Phase 2 builds the UI, not the rules.
+--------------------------------------------------------------------------------
+-- ADMIN — who counts as a SERVER ADMIN (the Admin Panel, Horse Creator, and
+-- "manage from anywhere"). Checked in this order until one matches:
+--   1. VORP character group (ch.group) is in `groups`
+--   2. any ace in `aces` is allowed for the player
+--   3. the boss-grade `horseCreator` permission (a stable-owner-admin)
+-- Add your server's admin group/ace here if admins aren't recognised.
+--------------------------------------------------------------------------------
+Config.Admin = {
+    groups = { 'admin', 'superadmin', 'mod', 'moderator' },        -- VORP character groups
+    aces   = { 'sovereign_stables.admin', 'group.admin', 'group.superadmin', 'command' },
+}
+
 Config.Customization = {
     -- Colours offered WITHOUT `fullCustomization`. Indices into the item's own
     -- palette (RDR2 palettes run 0–255 per tint slot). Keep this list short —

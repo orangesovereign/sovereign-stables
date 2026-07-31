@@ -23,13 +23,8 @@ Management = Management or {}
 -- Identity / role resolution
 --------------------------------------------------------------------------------
 local function isAdmin(src)
-    -- A true server admin (ace). Falls back to the boss-grade horseCreator perm so
-    -- an owner-admin still works without an ace set up.
-    local ok = false
-    pcall(function() ok = IsPlayerAceAllowed(src, 'sovereign_stables.admin') end)
-    if ok then return true end
-    local job, grade = Bridge.getJob(src)
-    return (Perms and Perms.can and Perms.can(job, grade, 'horseCreator')) == true
+    -- Server admin per Config.Admin (VORP group / ace / boss perm). See bridge.lua.
+    return Bridge.isAdmin(src)
 end
 
 local function businessRow(stableId)
