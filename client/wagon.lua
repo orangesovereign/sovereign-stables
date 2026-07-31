@@ -209,10 +209,27 @@ local function place(model, x, y, z, heading, name, id)
     -- it after you walk off). Not a seat native — safe alongside the transport flags.
     SetEntityAsMissionEntity(veh, true, true)
 
-    -- ★ THE MOUNT ENABLER, applied LAST so nothing overrides it. 528 =
-    --   TUF_ALLOW_DRIVER_ANYONE (1<<4) | TUF_ALLOW_PASSENGER_ANYONE (1<<9).
-    -- Without this an AITRANSPORT wagon offers no drive prompt.
-    pcall(function() Citizen.InvokeNative(0xE2487779957FE897, veh, 528) end)  -- _SET_TRANSPORT_USAGE_FLAGS
+    -- ★ THE MOUNT ENABLER. 528 = TUF_ALLOW_DRIVER_ANYONE (1<<4) |
+    --   TUF_ALLOW_PASSENGER_ANYONE (1<<9). Without this an AITRANSPORT wagon offers
+    --   no drive prompt.
+    -- ⚠️ RE-APPLIED over the first couple seconds, not just once: the draft team
+    -- hitches ASYNCHRONOUSLY after spawn, and when it attaches it re-initialises the
+    -- transport's seat config and WIPES this authorisation — so a single call at spawn
+    -- was flaky ("sometimes can't get on"). Re-stamping it after the team settles makes
+    -- entry reliable.
+    local function authoriseSeats()
+        if DoesEntityExist(veh) then
+            pcall(function() Citizen.InvokeNative(0xE2487779957FE897, veh, 528) end)  -- _SET_TRANSPORT_USAGE_FLAGS
+        end
+    end
+    authoriseSeats()
+    CreateThread(function()
+        for _ = 1, 8 do          -- ~2.4s of re-stamping (8 × 300ms) covers the team hitch
+            Wait(300)
+            if not DoesEntityExist(veh) then return end
+            authoriseSeats()
+        end
+    end)
 
     SetModelAsNoLongerNeeded(hash)
     return veh
