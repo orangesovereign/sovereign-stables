@@ -20,7 +20,23 @@ RegisterNUICallback('manageClose', function(_, cb)
     cb('ok')
 end)
 
--- Ask to open the panel for the stable you're standing at.
+-- Nearest stable to the player, computed CLIENT-side (reliable coords, unlike a
+-- server GetEntityCoords which lags/reads 0,0,0). nil if not near any.
+local function nearestStable(range)
+    local pc = GetEntityCoords(PlayerPedId())
+    local best, bestD = nil, range or 30.0
+    for id, s in pairs(Config.Stables or {}) do
+        local c = (s.prompt and s.prompt.coords) or (s.ped and s.ped.coords)
+        if c then
+            local d = #(pc - vector3(c[1] + 0.0, c[2] + 0.0, c[3] + 0.0))
+            if d < bestD then best, bestD = id, d end
+        end
+    end
+    return best
+end
+
+-- Ask to open the panel. We send the nearest stable; the server decides access
+-- (owners/trainers must be AT a stable; an admin may manage from anywhere).
 RegisterCommand('sovmanage', function()
-    TriggerServerEvent(Events.RequestManagement)
+    TriggerServerEvent(Events.RequestManagement, nearestStable(30.0))
 end, false)

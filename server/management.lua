@@ -125,16 +125,32 @@ end
 --------------------------------------------------------------------------------
 -- Open
 --------------------------------------------------------------------------------
-RegisterNetEvent(Events.RequestManagement, function(explicitStable)
+-- The admin's fallback stable when they open from anywhere: the admin stable
+-- (Braithwaite), else the first configured stable.
+local function adminDefaultStable()
+    for id, s in pairs(Config.Stables or {}) do if s.adminStable then return id end end
+    for id in pairs(Config.Stables or {}) do return id end
+    return nil
+end
+
+RegisterNetEvent(Events.RequestManagement, function(clientStable)
     local src = source
     CreateThread(function()
         local charid = Bridge.getCharId(src)
         if not charid then return end
-        local stableId = explicitStable or stableAt(src)
+        local admin = isAdmin(src)
+        -- Trust the client's nearest-stable (reliable coords); fall back to a
+        -- server check only if it wasn't sent.
+        local stableId = (clientStable and Config.Stables[clientStable] and clientStable) or stableAt(src)
         if not (stableId and Config.Stables[stableId]) then
-            Bridge.notify(src, 'Stand at a stable to manage it.'); return
+            if admin then
+                stableId = adminDefaultStable()   -- an admin may manage from anywhere
+            else
+                Bridge.notify(src, 'Stand at a stable to manage it.'); return
+            end
         end
-        local role = roleAt(src, stableId, charid)
+        if not (stableId and Config.Stables[stableId]) then return end
+        local role = admin and 'admin' or roleAt(src, stableId, charid)
         if not role then
             Bridge.notify(src, 'You have no business here.'); return   -- hidden: no panel for outsiders
         end
