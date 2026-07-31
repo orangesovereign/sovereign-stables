@@ -405,48 +405,7 @@ Config.Stables = {
             wildSalesEnabled     = false,
         },
     },
-    ['annesburg'] = {
-        label       = 'Annesburg Stables',
-        -- ⚠️ COORDS ARE APPROXIMATE — verify each with /sovcoords in game.
-        -- All six are derived from one anchor so they're internally consistent
-        -- and near each other; nudge them onto the real building.
-        blip = {
-            enabled = true,
-            sprite  = 1938782895,
-            coords  = { 2930.000, 1279.000, 45.000 },
-        },
-        ped = {
-            enabled  = true,
-            model    = 'u_m_m_bwmstablehand_01',
-            coords   = { 2927.500, 1277.000, 45.000, 180.0 },   -- /sovcoords ped
-            scenario = 'WORLD_HUMAN_WAITING_IMPATIENT',
-            grooming = {
-                enabled  = true,
-                horsePos = { 2927.500, 1276.300, 45.000, 270.0 },   -- /sovcoords horse
-                breeds   = nil,
-            },
-        },
-        -- ⚠️ PUT THIS ON THE STABLEHAND. If it doesn't match ped.coords there is
-        -- no way to open this stable — the ped and horse will still spawn, which
-        -- is what makes the mistake so quiet.
-        prompt = { coords = { 2927.500, 1277.000, 45.000 }, distance = 1.5 },
-        preview = {
-            horsePos = { 2939.000, 1280.000, 45.000, 270.0 },   -- /sovcoords horse
-            wagonPos = { 2922.000, 1290.000, 45.000, 270.0 },   -- /sovcoords wagon
-        },
-        -- OUTSIDE and clear — this is the wagon you actually drive away.
-        retrieve = {
-            wagonPos = { 2916.000, 1286.000, 45.000, 0.0 },     -- /sovcoords wagon
-        },
-        jobs = { restricted = false, allowed = {} },
-        faction = { enabled = false, job = nil },
-        catalog = { horses = {}, wagons = {} },
-        options = {
-            storedHorsesGetDirty = true,
-            breedingEnabled      = true,
-            wildSalesEnabled     = false,
-        },
-    },
+    -- NOTE: no Annesburg stable — Annesburg is served by Van Horn (owner 2026-07-30).
     --==========================================================================
     -- ADDING A STABLE — copy a block above, then change ALL SIX POSITIONS
     --==========================================================================
