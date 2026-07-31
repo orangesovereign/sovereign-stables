@@ -535,16 +535,22 @@ end
 -- pressing E on foot near the wagon STILL gets you on. Checks both the enabled and
 -- disabled control (the game may swallow E for its own failed ambient enter).
 CreateThread(function()
+    local notified = false
     while true do
         local wait = 350
         if mntCfg().enabled ~= false and atWagonToMount() then
             wait = 0
+            if not notified then
+                Bridge.notify('Press E to get on the wagon.'); notified = true
+            end
             local ctrl = mntCfg().control or 0xCEFD9220
             if IsControlJustPressed(0, ctrl) or IsDisabledControlJustPressed(0, ctrl)
                or IsControlJustReleased(0, ctrl) or IsDisabledControlJustReleased(0, ctrl) then
                 Wagon.mount()
                 Wait(1500)   -- debounce: one tap = one mount
             end
+        else
+            notified = false
         end
         Wait(wait)
     end
@@ -675,11 +681,55 @@ local function stoLoop()
     end)
 end
 
--- ⚠️ Register BOTH prompts through the module lifecycle, EXACTLY like the proven
--- stablehand prompt (client/stables onInit). The core fires onInit after config
--- validation, when the UiPrompt natives are actually live; the old raw Wait(2000)
--- threads registered too early and never rendered (owner: "can't put it away or
--- access the inventory"). This is the one structural difference from working code.
+-- ⚠️ GUARANTEED put-away + storage via raw key-watch, independent of the UiPrompt
+-- drawing. The wagon UiPrompts never rendered for the owner (R/G/E all only worked
+-- via command), while these raw threads — the same kind as the wear/watchdog loops
+-- that clearly run — reliably fire on keypress. A one-time notice on entering the
+-- zone tells you which key, since there's no on-screen prompt to rely on.
+CreateThread(function()          -- PUT AWAY (R)
+    local notified = false
+    while true do
+        local wait = 350
+        if putCfg().enabled ~= false and atSpawnPoint() then
+            wait = 0
+            if not notified then
+                Bridge.notify('Press R to put your wagon away.'); notified = true
+            end
+            local ctrl = putControl()
+            if IsControlJustPressed(0, ctrl) or IsDisabledControlJustPressed(0, ctrl)
+               or IsControlJustReleased(0, ctrl) or IsDisabledControlJustReleased(0, ctrl) then
+                Wagon.putAway(); Wait(1500)
+            end
+        else
+            notified = false
+        end
+        Wait(wait)
+    end
+end)
+
+CreateThread(function()          -- STORAGE (G) at the wagon rear
+    local notified = false
+    while true do
+        local wait = 350
+        if stoCfg().enabled ~= false and atWagonRear() then
+            wait = 0
+            if not notified then
+                Bridge.notify('Press G to open the wagon storage.'); notified = true
+            end
+            local ctrl = stoCfg().control or 0x760A9C6F
+            if IsControlJustPressed(0, ctrl) or IsDisabledControlJustPressed(0, ctrl)
+               or IsControlJustReleased(0, ctrl) or IsDisabledControlJustReleased(0, ctrl) then
+                Wagon.openStorage(); Wait(1200)
+            end
+        else
+            notified = false
+        end
+        Wait(wait)
+    end
+end)
+
+-- Prompts still registered through the lifecycle in case they DO draw on the live
+-- server (they're the nicer UX); the raw threads above are the reliable path.
 Registry.register({
     name = 'wagon',
     onInit = function()
