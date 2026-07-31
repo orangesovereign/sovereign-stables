@@ -481,25 +481,18 @@ local function atWagonToMount()
     return #(GetEntityCoords(ped) - GetEntityCoords(active.ent)) <= (mntCfg().distance or 4.0)
 end
 
--- Climb into the driver seat. TASK_ENTER_VEHICLE plays the proper mount animation;
--- if it hasn't seated us shortly (pathing hiccup), we plant directly — the same call
--- /sovwagonsit proved works — so "get on" never just silently fails.
+-- Put the player in the driver seat. This is EXACTLY what /sovwagonsit does — and
+-- the owner confirmed that seats them and they can drive — so mount replicates it
+-- verbatim rather than gambling on the animated TASK_ENTER_VEHICLE (which has been
+-- the flaky one). Instant seat, but guaranteed.
 function Wagon.mount()
     if not (active and active.ent and DoesEntityExist(active.ent)) then return end
     local ped, veh = PlayerPedId(), active.ent
-    pcall(function() Citizen.InvokeNative(0xB69317BF5E782347, veh) end)  -- request control
-    -- TASK_ENTER_VEHICLE(ped, veh, timeout, seat(-1=driver), speed, flag, p6)
-    pcall(function() Citizen.InvokeNative(0xC20E50AA46D09CA8, ped, veh, 20000, -1, 1.0, 1, 0) end)
-    CreateThread(function()
-        local t = GetGameTimer()
-        while GetGameTimer() - t < 2500 do
-            if IsPedInVehicle(ped, veh, false) then return end
-            Wait(50)
-        end
-        if not IsPedInVehicle(PlayerPedId(), veh, false) and DoesEntityExist(veh) then
-            pcall(function() Citizen.InvokeNative(0xF75B0D629E1C063D, PlayerPedId(), veh, -1) end)  -- SET_PED_INTO_VEHICLE (fallback)
-        end
-    end)
+    if IsPedInVehicle(ped, veh, false) then return end
+    pcall(function() Citizen.InvokeNative(0xB69317BF5E782347, veh) end)      -- NETWORK_REQUEST_CONTROL_OF_ENTITY
+    pcall(function() Citizen.InvokeNative(0xE2487779957FE897, veh, 528) end) -- re-authorise seats first
+    Wait(50)
+    pcall(function() Citizen.InvokeNative(0xF75B0D629E1C063D, ped, veh, -1) end)  -- SET_PED_INTO_VEHICLE (driver) — proven
 end
 
 local function setupMountPrompt()
