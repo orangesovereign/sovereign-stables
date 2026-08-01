@@ -62,6 +62,7 @@ server_scripts {
     'server/business.lua',     -- employees / society ledger / funds (uses management helpers)
     'server/training.lua',     -- client-horse boarding/training (posts income to the ledger)
     'server/breeding.lua',     -- stud register (gestation + cooldown; stud fees to the ledger)
+    'server/creator.lua',      -- admin Horse Creator (author horses into a stable catalog)
     'server/metabolism.lua',   -- Metabolism.current used by summon.lua
     'server/summon.lua',
     'server/transfer.lua',

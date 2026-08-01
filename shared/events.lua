@@ -68,6 +68,11 @@ Events.RequestTrainingData = e('requestTrainingData') -- open the Trainer Panel 
 Events.TrainingData        = e('trainingData')        -- client-bound: role-scoped training roster + counts
 Events.RequestBreedingData = e('requestBreedingData') -- open the Breeding Register
 Events.BreedingData        = e('breedingData')        -- client-bound: pairings + stats + perms
+-- horse creator [admin] — author a horse into a stable's catalog
+Events.RequestValidateHorse = e('requestValidateHorse') -- run the validation checks (no write)
+Events.ValidateHorseResult  = e('validateHorseResult')  -- client-bound: {checks, ok}
+Events.RequestCreatedHorses = e('requestCreatedHorses') -- list admin-created horses (optionally a stable)
+Events.CreatedHorsesData    = e('createdHorsesData')    -- client-bound: created-horse catalog
 
 -- transfer [F3 / ride transfer] — milestone 1.4.
 -- Phase 3's trainer custody transfer reuses this exact system.

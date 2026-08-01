@@ -235,4 +235,39 @@ CREATE TABLE IF NOT EXISTS `sovereign_breedings` (
   KEY `idx_stable_status` (`stable_id`, `status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
+-- ---------------------------------------------------------------------
+-- CREATED HORSES — the admin Horse Creator's output. An authored horse placed
+-- into a stable's catalog: identity, base stats, price, and sale rules, plus an
+-- optional saved SHAPE (morph JSON) from the customiser. `internal_name` is the
+-- unique id used to detect duplicates. [J22]
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `sovereign_created_horses` (
+  `id`             INT(11)     NOT NULL AUTO_INCREMENT,
+  `internal_name`  VARCHAR(64) NOT NULL,
+  `display_name`   VARCHAR(64) NOT NULL,
+  `breed`          VARCHAR(48) NULL,
+  `model`          VARCHAR(64) NOT NULL,
+  `coat`           VARCHAR(48) NULL,
+  `sex`            VARCHAR(16) NULL,
+  `height`         VARCHAR(16) NULL,
+  `health`         INT(11)     NOT NULL DEFAULT 50,
+  `stamina`        INT(11)     NOT NULL DEFAULT 50,
+  `speed`          INT(11)     NOT NULL DEFAULT 50,
+  `acceleration`   INT(11)     NOT NULL DEFAULT 50,
+  `turn`           INT(11)     NOT NULL DEFAULT 50,
+  `stable_id`      VARCHAR(48) NULL,        -- assigned stable's catalog
+  `category`       VARCHAR(24) NOT NULL DEFAULT 'specialty',
+  `price_cash`     DECIMAL(12,2) NOT NULL DEFAULT 0,
+  `price_gold`     DECIMAL(12,2) NOT NULL DEFAULT 0,
+  `availability`   VARCHAR(16) NOT NULL DEFAULT 'visible',
+  `trainer_required` TINYINT(1) NOT NULL DEFAULT 0,
+  `ownership_papers` TINYINT(1) NOT NULL DEFAULT 1,
+  `morph`          LONGTEXT    NULL,        -- saved shape (Config.HorseMorph values)
+  `created_by`     INT(11)     NULL,
+  `created_at`     TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uniq_internal` (`internal_name`),
+  KEY `idx_stable` (`stable_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
+
 SET FOREIGN_KEY_CHECKS = 1;
