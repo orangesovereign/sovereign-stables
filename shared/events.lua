@@ -66,6 +66,8 @@ Events.RequestManageAction = e('requestManageAction') -- a management action (hi
 Events.ManageActionResult  = e('manageActionResult')  -- client-bound: action outcome (panel then refreshes)
 Events.RequestTrainingData = e('requestTrainingData') -- open the Trainer Panel (client-horse roster)
 Events.TrainingData        = e('trainingData')        -- client-bound: role-scoped training roster + counts
+Events.RequestBreedingData = e('requestBreedingData') -- open the Breeding Register
+Events.BreedingData        = e('breedingData')        -- client-bound: pairings + stats + perms
 
 -- transfer [F3 / ride transfer] — milestone 1.4.
 -- Phase 3's trainer custody transfer reuses this exact system.

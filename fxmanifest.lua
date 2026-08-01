@@ -20,6 +20,7 @@ shared_scripts {
     'config/metabolism.lua',
     'config/horsemorph.lua',
     'config/training.lua',
+    'config/breeding.lua',
     'config/locales/en.lua',
     'shared/events.lua',
     'shared/util.lua',
@@ -60,6 +61,7 @@ server_scripts {
     'server/management.lua',   -- role-scoped stable management panel (business layer)
     'server/business.lua',     -- employees / society ledger / funds (uses management helpers)
     'server/training.lua',     -- client-horse boarding/training (posts income to the ledger)
+    'server/breeding.lua',     -- stud register (gestation + cooldown; stud fees to the ledger)
     'server/metabolism.lua',   -- Metabolism.current used by summon.lua
     'server/summon.lua',
     'server/transfer.lua',

@@ -210,4 +210,29 @@ CREATE TABLE IF NOT EXISTS `sovereign_client_horses` (
   KEY `idx_trainer` (`trainer_charid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
+-- ---------------------------------------------------------------------
+-- BREEDINGS — the stud register. A sire×dam pairing that gestates to a foal,
+-- then the parents enter a restoration cooldown. `started_at`/`result_at`/
+-- `restore_until` are epoch seconds. Stud fees post to the ledger.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `sovereign_breedings` (
+  `id`             INT(11)     NOT NULL AUTO_INCREMENT,
+  `stable_id`      VARCHAR(48) NOT NULL,
+  `sire_name`      VARCHAR(64) NOT NULL,
+  `dam_name`       VARCHAR(64) NOT NULL,
+  `client_name`    VARCHAR(64) NULL,
+  `handler_charid` INT(11)     NULL,
+  `handler_name`   VARCHAR(64) NULL,
+  `status`         VARCHAR(16) NOT NULL DEFAULT 'in_progress',  -- in_progress / completed / restoring
+  `result`         VARCHAR(24) NULL,        -- foal outcome (Filly/Colt) once completed
+  `fee`            DECIMAL(12,2) NOT NULL DEFAULT 0,
+  `started_at`     BIGINT      NULL,
+  `result_at`      BIGINT      NULL,        -- when the foal is due
+  `restore_until`  BIGINT      NULL,        -- cooldown end after completion
+  `created_by`     INT(11)     NULL,
+  `created_at`     TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_stable_status` (`stable_id`, `status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
+
 SET FOREIGN_KEY_CHECKS = 1;
