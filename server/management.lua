@@ -128,6 +128,36 @@ local function adminDefaultStable()
     return nil
 end
 
+-- Build + send the role-scoped panel payload to a client. Exposed so the other
+-- business modules can refresh the panel after an action.
+function Management.push(src, stableId)
+    if not (stableId and Config.Stables[stableId]) then return end
+    local charid = Bridge.getCharId(src); if not charid then return end
+    local admin = isAdmin(src)
+    local role = admin and 'admin' or roleAt(src, stableId, charid)
+    if not role then return end
+    local biz = businessRow(stableId)
+    local ch = Bridge.getCharacter(src)
+    local payload = {
+        stableId = stableId,
+        stableName = (biz and biz.name) or (Config.Stables[stableId].label) or 'Stable',
+        role = role,
+        roleLabel = ({ admin = 'Server Administrator', owner = 'Owner', trainer = 'Trainer', stablehand = 'Stablehand' })[role] or role,
+        playerName = (ch and (ch.firstname and (ch.firstname .. ' ' .. (ch.lastname or '')))) or GetPlayerName(src),
+        nav = navFor(role),
+        overview = overview(stableId, role, biz),
+    }
+    TriggerClientEvent(Events.ManagementData, src, payload)
+end
+
+-- Shared helpers for the other management modules (server/business.lua, etc.).
+Management.isAdmin      = isAdmin
+Management.roleAt       = roleAt
+Management.businessRow  = businessRow
+Management.canManage    = function(src, stableId, charid)   -- owner or admin
+    return isAdmin(src) or roleAt(src, stableId, charid) == 'owner'
+end
+
 RegisterNetEvent(Events.RequestManagement, function(clientStable)
     local src = source
     CreateThread(function()
@@ -145,22 +175,10 @@ RegisterNetEvent(Events.RequestManagement, function(clientStable)
             end
         end
         if not (stableId and Config.Stables[stableId]) then return end
-        local role = admin and 'admin' or roleAt(src, stableId, charid)
-        if not role then
+        if not (admin or roleAt(src, stableId, charid)) then
             Bridge.notify(src, 'You have no business here.'); return   -- hidden: no panel for outsiders
         end
-        local biz = businessRow(stableId)
-        local ch = Bridge.getCharacter(src)
-        local payload = {
-            stableId = stableId,
-            stableName = (biz and biz.name) or (Config.Stables[stableId].label) or 'Stable',
-            role = role,
-            roleLabel = ({ admin = 'Server Administrator', owner = 'Owner', trainer = 'Trainer', stablehand = 'Stablehand' })[role] or role,
-            playerName = (ch and (ch.firstname and (ch.firstname .. ' ' .. (ch.lastname or '')))) or GetPlayerName(src),
-            nav = navFor(role),
-            overview = overview(stableId, role, biz),
-        }
-        TriggerClientEvent(Events.ManagementData, src, payload)
+        Management.push(src, stableId)
     end)
 end)
 

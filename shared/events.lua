@@ -62,6 +62,8 @@ Events.OpenCustomizer    = e('openCustomizer')     -- client-bound: server appro
 -- stable management panel [3.x] — role-scoped business panel
 Events.RequestManagement = e('requestManagement')  -- open the management panel for a stable
 Events.ManagementData    = e('managementData')     -- client-bound: role-scoped panel payload
+Events.RequestManageAction = e('requestManageAction') -- a management action (hire/fire/duty/fund/...) [3.x]
+Events.ManageActionResult  = e('manageActionResult')  -- client-bound: action outcome (panel then refreshes)
 
 -- transfer [F3 / ride transfer] — milestone 1.4.
 -- Phase 3's trainer custody transfer reuses this exact system.

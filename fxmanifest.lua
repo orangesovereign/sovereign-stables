@@ -57,6 +57,7 @@ server_scripts {
     'server/tack.lua',
     'server/morph.lua',        -- persist a horse's shape (Config.HorseMorph values)
     'server/management.lua',   -- role-scoped stable management panel (business layer)
+    'server/business.lua',     -- employees / society ledger / funds (uses management helpers)
     'server/metabolism.lua',   -- Metabolism.current used by summon.lua
     'server/summon.lua',
     'server/transfer.lua',
