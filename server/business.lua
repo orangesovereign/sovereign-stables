@@ -46,6 +46,15 @@ function Business.postLedger(stableId, desc, category, actorCharid, actorName, c
         { stableId, tostring(desc or ''), tostring(category or 'misc'), actorCharid, actorName, cash, gold, c })
 end
 
+-- The non-money audit trail (Activity Log). Other subsystems call this to record
+-- what happened (a hire, a phase change, a withdrawal).
+function Business.logActivity(stableId, actorCharid, actorName, action, target, category, result)
+    exec([[INSERT INTO sovereign_stable_activity (stable_id, actor_charid, actor_name, action, target, category, result)
+           VALUES (?,?,?,?,?,?,?)]],
+        { stableId, actorCharid, actorName, tostring(action or ''):sub(1, 96),
+          target and tostring(target):sub(1, 96) or nil, tostring(category or 'general'):sub(1, 24), result or 'success' })
+end
+
 --------------------------------------------------------------------------------
 -- Role / gating (via management.lua helpers)
 --------------------------------------------------------------------------------
@@ -170,15 +179,37 @@ end
 --------------------------------------------------------------------------------
 -- Dispatcher
 --------------------------------------------------------------------------------
+-- Friendly audit labels per action (Activity Log).
+local ACTIVITY = {
+    hire = { 'Hired employee', 'staff' }, fire = { 'Removed employee', 'staff' },
+    setRole = { 'Changed employee role', 'staff' }, setGrade = { 'Changed employee grade', 'staff' },
+    clockOn = { 'Clocked on duty', 'staff' }, clockOff = { 'Clocked off', 'staff' },
+    fundDeposit = { 'Deposited society funds', 'ledger' }, fundWithdraw = { 'Withdrew society funds', 'ledger' },
+    ledgerEntry = { 'Recorded ledger entry', 'ledger' },
+    intake = { 'Took in a client horse', 'training' }, setPhase = { 'Advanced training phase', 'training' },
+    markReady = { 'Marked ready for pickup', 'training' }, returnHorse = { 'Returned a horse', 'training' },
+    trainerNote = { 'Added a client note', 'training' }, reassign = { 'Reassigned a client horse', 'training' },
+    beginPairing = { 'Booked a breeding', 'breeding' }, cancelPairing = { 'Cancelled a breeding', 'breeding' },
+    createHorse = { 'Created a horse', 'settings' },
+}
+
 RegisterNetEvent(Events.RequestManageAction, function(stableId, action, payload)
     local src = source
     if not (stableId and Config.Stables[stableId] and action and Actions[action]) then return end
     CreateThread(function()
         local charid = Bridge.getCharId(src); if not charid then return end
+        payload = payload or {}
         local ok, msg = false, 'Something went wrong.'
-        local good, err = pcall(function() ok, msg = Actions[action](src, stableId, charid, payload or {}) end)
+        local good, err = pcall(function() ok, msg = Actions[action](src, stableId, charid, payload) end)
         if not good then Util.err(('manage action "%s": %s'):format(tostring(action), tostring(err))) end
         TriggerClientEvent(Events.ManageActionResult, src, { ok = ok, message = msg })
-        if ok and Management and Management.push then Management.push(src, stableId) end   -- refresh the panel
+        if ok then
+            local m = ACTIVITY[action]
+            if m then
+                Business.logActivity(stableId, charid, nameOfCharid(charid), m[1],
+                    payload.target or payload.horse or payload.name or payload.sire, m[2])
+            end
+            if Management and Management.push then Management.push(src, stableId) end   -- refresh the panel
+        end
     end)
 end)

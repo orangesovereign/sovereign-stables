@@ -270,4 +270,24 @@ CREATE TABLE IF NOT EXISTS `sovereign_created_horses` (
   KEY `idx_stable` (`stable_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
+-- ---------------------------------------------------------------------
+-- STABLE ACTIVITY — the non-money audit trail (hires, phase changes, duty,
+-- withdrawals...) shown in the admin Activity Log. Money movements are in the
+-- ledger; this is everything else, server-verified.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `sovereign_stable_activity` (
+  `id`           INT(11)     NOT NULL AUTO_INCREMENT,
+  `stable_id`    VARCHAR(48) NOT NULL,
+  `actor_charid` INT(11)     NULL,
+  `actor_name`   VARCHAR(64) NULL,
+  `action`       VARCHAR(96) NOT NULL,
+  `target`       VARCHAR(96) NULL,
+  `category`     VARCHAR(24) NOT NULL DEFAULT 'general',   -- staff/training/breeding/ledger/settings
+  `result`       VARCHAR(16) NOT NULL DEFAULT 'success',
+  `source`       VARCHAR(16) NOT NULL DEFAULT 'server',
+  `created_at`   TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_stable_time` (`stable_id`, `created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
+
 SET FOREIGN_KEY_CHECKS = 1;

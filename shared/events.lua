@@ -73,6 +73,17 @@ Events.RequestValidateHorse = e('requestValidateHorse') -- run the validation ch
 Events.ValidateHorseResult  = e('validateHorseResult')  -- client-bound: {checks, ok}
 Events.RequestCreatedHorses = e('requestCreatedHorses') -- list admin-created horses (optionally a stable)
 Events.CreatedHorsesData    = e('createdHorsesData')    -- client-bound: created-horse catalog
+-- admin aggregates + audit (read layer over the business data)
+Events.RequestStableDirectory = e('requestStableDirectory') -- all stables (admin)
+Events.StableDirectoryData    = e('stableDirectoryData')
+Events.RequestStableProfile   = e('requestStableProfile')   -- one stable's admin profile
+Events.StableProfileData      = e('stableProfileData')
+Events.RequestActivityLog     = e('requestActivityLog')     -- audit trail for a stable
+Events.ActivityLogData        = e('activityLogData')
+Events.RequestLedger          = e('requestLedger')          -- society ledger entries + summaries
+Events.LedgerData             = e('ledgerData')
+Events.RequestEmployees       = e('requestEmployees')       -- roster + permission snapshot
+Events.EmployeesData          = e('employeesData')
 
 -- transfer [F3 / ride transfer] — milestone 1.4.
 -- Phase 3's trainer custody transfer reuses this exact system.
