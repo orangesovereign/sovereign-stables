@@ -61,9 +61,16 @@ local function nameOfCharid(charid)
 end
 
 --------------------------------------------------------------------------------
--- ACTIONS  (each returns ok, message)
+-- ACTIONS  (each returns ok, message). Shared registry so other business modules
+-- (training, breeding, horse creator) can add their own actions to the same
+-- RequestManageAction dispatcher: `Business.actions.myAction = function(...) end`.
 --------------------------------------------------------------------------------
-local Actions = {}
+Business.actions = Business.actions or {}
+local Actions = Business.actions
+-- Expose the shared helpers other modules need.
+Business.canManage    = canManage
+Business.isOwnerOrAdmin = isOwnerOrAdmin
+Business.nameOfCharid = nameOfCharid
 
 -- Hire: add an employee by charid (the panel picks a nearby player → charid).
 function Actions.hire(src, stableId, charid, p)

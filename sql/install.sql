@@ -179,4 +179,35 @@ CREATE TABLE IF NOT EXISTS `sovereign_stable_ledger` (
   KEY `idx_stable_time` (`stable_id`, `created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
+-- ---------------------------------------------------------------------
+-- CLIENT HORSES — the boarding/training business. A client's horse taken in
+-- for raising or training, assigned to a trainer, moving through phases
+-- (raising → training → ready → returned). `received_at`/`ready_at` are epoch
+-- seconds; progress is derived from them. Training income posts to the ledger.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `sovereign_client_horses` (
+  `id`             INT(11)     NOT NULL AUTO_INCREMENT,
+  `stable_id`      VARCHAR(48) NOT NULL,
+  `horse_name`     VARCHAR(64) NOT NULL,
+  `breed`          VARCHAR(64) NULL,
+  `model`          VARCHAR(64) NULL,
+  `gender`         VARCHAR(16) NULL,
+  `age`            VARCHAR(16) NULL,
+  `client_name`    VARCHAR(64) NOT NULL,
+  `client_charid`  INT(11)     NULL,
+  `po_box`         VARCHAR(16) NULL,
+  `tier`           VARCHAR(24) NULL,
+  `phase`          VARCHAR(16) NOT NULL DEFAULT 'raising',
+  `trainer_charid` INT(11)     NULL,
+  `trainer_name`   VARCHAR(64) NULL,
+  `received_at`    BIGINT      NULL,
+  `ready_at`       BIGINT      NULL,
+  `notes`          TEXT        NULL,
+  `created_by`     INT(11)     NULL,
+  `created_at`     TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_stable_phase` (`stable_id`, `phase`),
+  KEY `idx_trainer` (`trainer_charid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
+
 SET FOREIGN_KEY_CHECKS = 1;

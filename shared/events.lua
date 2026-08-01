@@ -64,6 +64,8 @@ Events.RequestManagement = e('requestManagement')  -- open the management panel 
 Events.ManagementData    = e('managementData')     -- client-bound: role-scoped panel payload
 Events.RequestManageAction = e('requestManageAction') -- a management action (hire/fire/duty/fund/...) [3.x]
 Events.ManageActionResult  = e('manageActionResult')  -- client-bound: action outcome (panel then refreshes)
+Events.RequestTrainingData = e('requestTrainingData') -- open the Trainer Panel (client-horse roster)
+Events.TrainingData        = e('trainingData')        -- client-bound: role-scoped training roster + counts
 
 -- transfer [F3 / ride transfer] — milestone 1.4.
 -- Phase 3's trainer custody transfer reuses this exact system.

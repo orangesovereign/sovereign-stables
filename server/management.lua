@@ -105,9 +105,10 @@ local function overview(stableId, role, biz)
         onDuty   = onDuty,
         staffCount = #staff,
         ledger   = ledger,
-        -- Subsystems not built yet — sent as explicit placeholders, not faked.
-        clientHorses = { total = 0, raising = 0, training = 0, ready = 0, pending = true },
-        breeding     = { active = 0, pending = true },
+        -- Client-horse training (real once server/training.lua is loaded).
+        clientHorses = (Training and Training.counts and Training.counts(stableId))
+                        or { total = 0, raising = 0, training = 0, ready = 0, pending = true },
+        breeding     = { active = 0, pending = true },   -- breeding subsystem still to come
     }
     -- Money is owner/admin only.
     if role == 'owner' or role == 'admin' then
