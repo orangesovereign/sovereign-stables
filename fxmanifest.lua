@@ -76,18 +76,19 @@ server_scripts {
 -- referenced); to revert, point ui_page back at 'ui_legacy/index.html'.
 -- Rebuild: cd ui && npm run build.
 ui_page 'ui/dist/index.html'
+-- Serve the ENTIRE Vite build recursively (by type) — the JS/CSS bundle, the
+-- bundled webfonts in assets/, the redesign emblems in assets/emblems/, the
+-- linked kit CSS/fonts, and any legacy kit PNGs still referenced. Missing any of
+-- these makes RedM 404 them (emblems/fonts vanish in-game while a plain browser
+-- still serves them).
 files {
     'ui/dist/index.html',
-    'ui/dist/assets/*.js',
-    -- Book-UI asset kit (leather/parchment/brass surfaces, seals, icons) + CSS/fonts
-    'ui/dist/css/*.css',
-    'ui/dist/fonts/*.woff2',
-    'ui/dist/assets/textures/*.png',
-    'ui/dist/assets/book_furniture/*.png',
-    'ui/dist/assets/seals/*.png',
-    'ui/dist/assets/cards/*.png',
-    'ui/dist/assets/containers/*.png',
-    'ui/dist/assets/icons/*.png',
+    'ui/dist/**/*.js',
+    'ui/dist/**/*.css',
+    'ui/dist/**/*.png',
+    'ui/dist/**/*.woff2',
+    'ui/dist/**/*.woff',
+    'ui/dist/**/*.json',
 }
 
 -- Resources this script talks to (all reached through shared/bridge.lua).
