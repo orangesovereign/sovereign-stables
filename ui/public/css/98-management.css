@@ -1,0 +1,135 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   SOVEREIGN STABLES · MANAGEMENT BOOK (React)
+   Layout/type glue on top of the kit surfaces. Namespaced .mg2-*.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* --- base: keep the CEF surface transparent (NEVER color-scheme:dark) --- */
+* { box-sizing: border-box; }
+html, body { width: 100%; height: 100%; margin: 0; background: transparent; color-scheme: normal; overflow: hidden; }
+#root { position: fixed; inset: 0; display: grid; place-items: center; }
+
+:root { --mg-ink: #2c2013; --mg-ink-soft: #5a4426; --mg-brass: #8a6a2f; --mg-cream: #efe4ca; }
+
+/* The book fills most of the screen; header row sits above the rail|pages grid. */
+.ss-ui { width: min(1620px, 97vw); height: min(92vh, 940px); }
+.ss-book { grid-template-rows: auto minmax(0, 1fr); }
+.ss-page { padding: clamp(20px, 2.1vw, 38px) clamp(22px, 2.3vw, 42px); }
+
+/* ---- header ---- */
+.mg-hd { grid-column: 1 / -1; display: flex; align-items: center; gap: 14px; padding: 10px 26px; color: #e7dbc2; }
+.mg-hd-seal { filter: drop-shadow(0 1px 1px #000); }
+.mg-brand { display: flex; flex-direction: column; line-height: 1.12; }
+.mg-brand b { font-family: var(--ss-font-display, Cinzel), Georgia, serif; font-size: 1.15rem; letter-spacing: .05em; color: #e7dbc2; }
+.mg-brand em { font-style: normal; font-size: .68rem; color: #b0894e; letter-spacing: .05em; }
+.mg-loc { margin-inline-start: auto; min-width: 300px; padding: 8px 26px; display: grid; place-items: center; text-align: center;
+  font-family: var(--ss-font-display, Cinzel), Georgia, serif; letter-spacing: .12em; text-transform: uppercase; font-size: .82rem; color: #d7b878; }
+.mg-who { margin-inline-start: auto; white-space: nowrap; font-family: var(--ss-font-display, Cinzel), Georgia, serif;
+  font-size: .78rem; letter-spacing: .06em; text-transform: uppercase; color: #e7dbc2; }
+.mg2-wallet { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+  font-family: var(--ss-font-display, Cinzel), Georgia, serif; font-size: .82rem; letter-spacing: .04em; color: #d7b878; }
+.mg2-wallet b { color: #efe4ca; font-variant-numeric: tabular-nums; }
+.mg-exit { min-width: 92px; padding: 8px 18px; }
+
+/* ---- left rail: framed icon + label ---- */
+.ss-left-rail { gap: 10px; padding: 8px 8px 14px; }
+.mg2-rail-btn { display: flex; flex-direction: column; align-items: center; gap: 5px;
+  background: none; border: 0; cursor: pointer; padding: 2px; width: 100%; }
+.mg2-rail-ico { inline-size: clamp(50px, 4vw, 66px); }
+.mg2-rail-btn em { font-family: var(--ss-font-display, Cinzel), Georgia, serif; font-style: normal;
+  font-size: .56rem; letter-spacing: .06em; text-transform: uppercase; color: #a9863f; text-align: center; line-height: 1.08; }
+.mg2-rail-btn.is-active em { color: #efe4ca; }
+.mg2-rail-btn:hover em { color: #d7b878; }
+
+/* ---- page scaffolding ---- */
+.mg2-page { display: flex; flex-direction: column; }
+.mg2-page-title { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 16px; margin: 2px 0 16px; }
+.mg2-page-title h1 { margin: 0; font-family: var(--ss-font-display, Cinzel), Georgia, serif; font-weight: 500;
+  font-size: clamp(1.7rem, 1.2rem + 1.1vw, 2.5rem); letter-spacing: .06em; text-transform: uppercase; color: var(--mg-ink); text-align: center; }
+.mg2-flourish { height: 2px; background: linear-gradient(90deg, transparent, rgba(120,90,45,.55)); }
+.mg2-flourish--r { background: linear-gradient(90deg, rgba(120,90,45,.55), transparent); }
+
+.mg2-head { text-align: center; margin: 20px 0 12px; padding-bottom: 8px; border-bottom: 1px solid rgba(44,32,19,.22); }
+.mg2-head h2 { margin: 0; font-family: var(--ss-font-display, Cinzel), Georgia, serif; font-weight: 500;
+  font-size: clamp(1rem, .8rem + .5vw, 1.28rem); letter-spacing: .07em; text-transform: uppercase; color: var(--mg-ink); }
+.mg2-head small { display: block; margin-top: 3px; font-family: var(--ss-font-body, "Libre Baskerville"), serif;
+  font-size: .62rem; letter-spacing: .13em; text-transform: uppercase; color: var(--mg-brass); }
+
+/* ---- wide stat plates: clean card_dark + round medallion ---- */
+.mg2-stats { gap: 16px; margin-bottom: 4px; }
+.ss-card-dark.mg2-stat { min-block-size: clamp(74px, 7vw, 96px); padding: 10px clamp(16px, 1.8vw, 24px);
+  display: flex; align-items: center; gap: 16px; }
+.mg2-medallion { flex: 0 0 auto; inline-size: 50px; block-size: 50px; border-radius: 50%; display: grid; place-items: center;
+  background: radial-gradient(circle at 50% 34%, #33220f, #120b05); border: 2px solid var(--ss-brass-500, #b0894e);
+  box-shadow: inset 0 0 9px rgba(0,0,0,.65), 0 0 0 1px rgba(0,0,0,.4), 0 1px 2px rgba(0,0,0,.5); }
+.mg2-stat-txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.mg2-stat-txt small { font-family: var(--ss-font-body, serif); font-size: .6rem; letter-spacing: .12em; text-transform: uppercase; color: #c39a54; }
+.mg2-stat-txt strong { font-family: var(--ss-font-display, Cinzel), Georgia, serif; font-size: clamp(1.3rem, 1rem + .7vw, 1.85rem);
+  color: #f0e6cd; font-variant-numeric: tabular-nums; line-height: 1; }
+
+/* ---- phase list ---- */
+.mg2-panel { display: flex; flex-direction: column; }
+.mg2-phase { display: grid; grid-template-columns: 58px 1fr auto minmax(120px, 190px); gap: 14px; align-items: center;
+  padding: 12px 4px; border-bottom: 1px solid rgba(44,32,19,.14); }
+.mg2-phase:last-child { border-bottom: 0; }
+.mg2-phase-seal { display: grid; place-items: center; }
+.mg2-phase-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.mg2-phase-main strong { font-family: var(--ss-font-display, Cinzel), Georgia, serif; font-size: .98rem; letter-spacing: .05em; text-transform: uppercase; color: var(--mg-ink); }
+.mg2-phase-main small { font-family: var(--ss-font-body, serif); font-size: .74rem; color: var(--mg-ink-soft); }
+.mg2-phase-count { font-family: var(--ss-font-ledger, serif); font-size: .82rem; color: var(--mg-ink-soft); white-space: nowrap; }
+.mg2-phase-count b { font-family: var(--ss-font-display, Cinzel), Georgia, serif; font-size: 1.05rem; color: var(--mg-ink); }
+.mg2-phase-bar { block-size: 10px; border-radius: 3px; border-color: rgba(44,32,19,.32); background: rgba(44,32,19,.12); }
+.mg2-phase-bar > span { border-radius: 2px; }
+
+/* ---- client pickup queue ---- */
+.mg2-pickups { gap: 10px; margin-top: 2px; }
+.ss-card-dark.mg2-pickup { display: grid; grid-template-columns: 44px 1fr auto auto; gap: 14px; align-items: center; padding: 9px 16px; min-block-size: 58px; }
+.mg2-pickup-portrait { inline-size: 40px; block-size: 40px; border-radius: 50%; border: 2px solid var(--ss-brass-700, #6b5327);
+  background: #120b05 url("../assets/cards/portrait_horse.png") center/78% no-repeat; }
+.mg2-pickup-id { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.mg2-pickup-id strong { color: #efe4ca; font-family: var(--ss-font-display, Cinzel), serif; font-size: .95rem; letter-spacing: .03em; }
+.mg2-pickup-id small { color: #b0894e; font-size: .74rem; }
+.mg2-pickup-btn { border: 1px solid rgba(88,113,82,.8); border-radius: 4px; cursor: pointer; background: rgba(64,93,66,.32); color: #cfe0bf;
+  padding: 6px 12px; font-family: var(--ss-font-display, Cinzel), serif; font-size: .64rem; letter-spacing: .07em; text-transform: uppercase; white-space: nowrap; }
+.mg2-pickup-btn:hover { background: rgba(64,93,66,.5); }
+.mg2-pickup-note { color: #8a6a2f; font-size: .6rem; letter-spacing: .12em; text-transform: uppercase; white-space: nowrap; }
+
+/* ---- staff on duty ---- */
+.mg2-staffgrid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 6px; }
+.ss-card-dark.mg2-staff { position: relative; display: grid; justify-items: center; gap: 5px; padding: 16px 8px 12px; text-align: center; }
+.mg2-staff-badge { position: absolute; top: -9px; left: 50%; transform: translateX(-50%); background: var(--ss-oxblood-700, #6a1c15);
+  border: 1px solid var(--ss-brass-500, #b0894e); border-radius: 3px; padding: 2px 11px; color: #efe4ca;
+  font-family: var(--ss-font-display, Cinzel), serif; font-size: .56rem; letter-spacing: .09em; text-transform: uppercase; white-space: nowrap; }
+.mg2-staff-portrait { inline-size: 50px; block-size: 50px; border-radius: 50%; display: grid; place-items: center; margin-top: 4px;
+  background: radial-gradient(circle at 50% 34%, #33220f, #120b05); border: 2px solid var(--ss-brass-700, #6b5327); }
+.mg2-staff strong { color: #efe4ca; font-family: var(--ss-font-display, Cinzel), serif; font-size: .9rem; letter-spacing: .03em; }
+.mg2-staff small { color: #b0894e; font-size: .68rem; }
+
+/* ---- current shift notes ---- */
+.ss-card-dark.mg2-notes { display: flex; align-items: center; gap: 16px; padding: 13px 20px; margin: 4px 0 2px; }
+.mg2-notes-txt { flex: 1; min-width: 0; }
+.mg2-notes-txt strong { display: block; color: #efe4ca; font-family: var(--ss-font-display, Cinzel), serif; font-size: .82rem; letter-spacing: .05em; text-transform: uppercase; }
+.mg2-notes-txt p { margin: 5px 0 0; color: #d8c9a6; font-family: var(--ss-font-body, serif); font-size: .78rem; line-height: 1.45; }
+.mg2-notes-seal { flex: 0 0 auto; }
+
+/* ---- recent ledger ---- */
+.mg2-ledger { display: flex; flex-direction: column; }
+.mg2-led-row { display: grid; grid-template-columns: 66px 1fr auto; gap: 12px; align-items: center; padding: 9px 6px; border-bottom: 1px solid rgba(44,32,19,.14); }
+.mg2-led-row:last-child { border-bottom: 0; }
+.mg2-led-date { font-family: var(--ss-font-body, serif); font-size: .64rem; letter-spacing: .1em; text-transform: uppercase; color: var(--mg-brass); }
+.mg2-led-desc { color: var(--mg-ink); font-size: .86rem; }
+.mg2-led-amt { font-family: var(--ss-font-display, Cinzel), serif; font-variant-numeric: tabular-nums; font-size: .92rem; }
+.mg2-led-amt.mg-pos { color: #3f6b2e; } .mg2-led-amt.mg-neg { color: #9a3222; }
+
+/* ---- right-edge bookmark tabs ---- */
+.ss-right-tabs .mg2-rtab { display: grid; place-items: center; gap: 2px; }
+.mg2-rtab em { font-family: var(--ss-font-display, Cinzel), serif; font-style: normal; font-size: .5rem; letter-spacing: .06em; text-transform: uppercase; color: #a9863f; }
+.mg2-rtab.is-active em { color: #efe4ca; }
+
+/* ---- misc ---- */
+.mg2-page-blank { flex: 1; }
+.mg-empty { padding: 22px; text-align: center; font-style: italic; color: #7a5f34; }
+.mg-soon { border: 1px dashed rgba(120,90,45,.5); border-radius: 8px; margin-top: 6px; }
+.mg2-page--l::before, .mg2-page--r::before { content: ""; position: absolute; top: 14px; inline-size: 26px; block-size: 26px;
+  opacity: .3; background: url("../assets/icons/ico_horseshoe.png") center/contain no-repeat; pointer-events: none; }
+.mg2-page--l::before { left: 18px; }
+.mg2-page--r::before { right: 18px; }

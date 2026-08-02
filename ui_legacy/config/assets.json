@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "base": "../assets",
+  "textures": {
+    "leather": "textures/tex_leather.png",
+    "parchment": "textures/tex_parchment.png",
+    "pageEdge": "textures/page_edge.png"
+  },
+  "bookFurniture": {
+    "corner": "book_furniture/frame_corner.png",
+    "nameplate": "book_furniture/nameplate.png",
+    "bookmark": "book_furniture/ribbon_bookmark.png",
+    "clasp": "book_furniture/strap_buckle.png",
+    "fleur": "book_furniture/fleur_small.png",
+    "cartouche": "book_furniture/cartouche.png"
+  },
+  "seals": {
+    "oxbloodHorseshoe": "seals/seal_oxblood_horseshoe.png",
+    "oxbloodHorsehead": "seals/seal_oxblood_horsehead.png",
+    "oxbloodSC": "seals/seal_oxblood_sc.png",
+    "goldHorsehead": "seals/seal_gold_horsehead.png",
+    "greenHorseshoe": "seals/seal_green_horseshoe.png",
+    "redRing": "seals/stamp_red_ring.png",
+    "greenOval": "seals/stamp_green_oval.png"
+  },
+  "cards": {
+    "banner": "cards/banner_ribbon.png",
+    "portraitFrame": "cards/portrait_frame_oval.png",
+    "cornerClip": "cards/card_corner_clip.png",
+    "topper": "cards/card_topper.png",
+    "horsePortrait": "cards/portrait_horse.png",
+    "pairingEmblem": "cards/emblem_pairing.png"
+  },
+  "containers": {
+    "plateStat": { "file": "containers/plate_stat.png", "slice": "36% 8% 12% 8% fill" },
+    "plateStatAdmin": { "file": "containers/plate_stat_admin.png", "slice": "20% 8% 20% 25% fill" },
+    "buttonPrimary": { "file": "containers/btn_primary.png", "slice": "24% 8% fill" },
+    "buttonSecondary": { "file": "containers/btn_secondary.png", "slice": "24% 8% fill" },
+    "input": { "file": "containers/field_input.png", "slice": "28% 6% fill" },
+    "toggleOn": "containers/toggle_on.png",
+    "toggleOff": "containers/toggle_off.png",
+    "cardDark": { "file": "containers/card_dark.png", "slice": "12% 5% fill" },
+    "horseCard": { "file": "containers/card_horse.png", "slice": "8% 10% fill" },
+    "horseCardActive": { "file": "containers/card_horse_active.png", "slice": "8% 10% fill" },
+    "railTab": { "file": "containers/tab_rail.png", "slice": "18% fill" },
+    "railTabActive": { "file": "containers/tab_rail_active.png", "slice": "18% fill" },
+    "bookTab": { "file": "containers/tab_book.png", "slice": "8% 18% 8% 14% fill" },
+    "bookTabActive": { "file": "containers/tab_book_active.png", "slice": "8% 18% 8% 14% fill" },
+    "topTab": { "file": "containers/tab_top.png", "slice": "24% 8% 5% fill" },
+    "topTabActive": { "file": "containers/tab_top_active.png", "slice": "24% 8% 5% fill" },
+    "sliderKnob": "containers/slider_knob.png"
+  },
+  "icons": [
+    "horseshoe", "horse_head", "person", "people", "fleur", "ledger", "gear", "star", "barn", "wagon_wheel",
+    "wagon", "coin", "gold", "income", "expense", "check", "alert", "diamond", "envelope", "crown",
+    "hand", "target", "eye", "clock", "magnifier", "caret", "arrow_right", "arrow_left", "rosette", "sc_logo"
+  ],
+  "iconPattern": "icons/ico_{name}.png"
+}

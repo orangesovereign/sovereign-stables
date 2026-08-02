@@ -70,24 +70,27 @@ server_scripts {
     'server/storelink.lua',    -- charters a stable's store in sovereign_stores
 }
 
--- Custom branded NUI shell (storefront / customizer / codex / horse creator).
--- Phase 0 ships a plain HTML/CSS/JS shell; a bundler is introduced when the
--- storefront gains real screens.
-ui_page 'ui/index.html'
+-- Custom branded NUI shell (storefront / customizer / management book).
+-- MIGRATION IN PROGRESS: moving to a React + Vite NUI (ui/) to match every other
+-- sovereign_* resource. The working vanilla UI is preserved as ui_legacy/ and
+-- stays the live ui_page until the React build (ui/dist) is feature-complete, so
+-- the in-game UI never breaks mid-migration. Flip ui_page to 'ui/dist/index.html'
+-- (files 'ui/dist/index.html' + 'ui/dist/assets/*') once the React app ships.
+ui_page 'ui_legacy/index.html'
 files {
-    'ui/index.html',
-    'ui/app.css',
-    'ui/app.js',
+    'ui_legacy/index.html',
+    'ui_legacy/app.css',
+    'ui_legacy/app.js',
     -- Book-UI asset kit (leather/parchment/brass surfaces, seals, icons) + its CSS
-    'ui/css/*.css',
-    'ui/config/*.json',
-    'ui/fonts/*.woff2',
-    'ui/assets/textures/*.png',
-    'ui/assets/book_furniture/*.png',
-    'ui/assets/seals/*.png',
-    'ui/assets/cards/*.png',
-    'ui/assets/containers/*.png',
-    'ui/assets/icons/*.png',
+    'ui_legacy/css/*.css',
+    'ui_legacy/config/*.json',
+    'ui_legacy/fonts/*.woff2',
+    'ui_legacy/assets/textures/*.png',
+    'ui_legacy/assets/book_furniture/*.png',
+    'ui_legacy/assets/seals/*.png',
+    'ui_legacy/assets/cards/*.png',
+    'ui_legacy/assets/containers/*.png',
+    'ui_legacy/assets/icons/*.png',
 }
 
 -- Resources this script talks to (all reached through shared/bridge.lua).

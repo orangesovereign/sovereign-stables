@@ -1,104 +1,18 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
+  <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Sovereign Stables</title>
-    <!-- Book-UI asset kit (surfaces, seals, icons) + local Cinzel/Baskerville override.
-         Kit PNGs were downscaled 62MB->10MB (see redm-cef-heavy-borderimages fix):
-         RedM CEF eager-decodes every border-image and blacked the game surface at
-         the old ~200MB decoded footprint. Keep these assets small. -->
+    <!-- Book-UI asset kit (surfaces, seals, icons) + bundled Cinzel/Baskerville.
+         Linked (not bundled) so the kit's relative url() paths stay intact and
+         Vite just copies public/ verbatim into dist/. -->
     <link rel="stylesheet" href="css/sovereign-stables.css" />
     <link rel="stylesheet" href="css/95-fonts.css" />
-    <link rel="stylesheet" href="app.css" />
-</head>
-<body>
-    <div id="root" class="hidden">
-        <div class="frame">
-            <!-- HEADER -->
-            <header class="hd">
-                <div class="brand">
-                    <div class="seal"><span>SC</span></div>
-                    <div class="brand__t">
-                        <h1>Sovereign Stables</h1>
-                        <p>Stables &amp; Carriage Co.</p>
-                    </div>
-                </div>
-                <button class="chip loc" id="loc"><span class="ic">&#9906;</span><span id="locName">—</span><span class="caret">&#9662;</span></button>
-                <div class="chip who"><span class="ic">&#9737;</span><span id="who">—</span></div>
-                <div class="wallet">
-                    <span class="cash"><span class="ic">&#128176;</span><b id="cash">$0</b></span>
-                    <span class="gold"><span class="ic">&#9673;</span><b id="gold">0</b> <em>Gold</em></span>
-                </div>
-                <button class="esc" id="esc">ESC <span>&#10005;</span></button>
-            </header>
-
-            <div class="body">
-                <!-- LEFT NAV -->
-                <nav class="nav">
-                    <div class="nav__label">Stable Services</div>
-                    <button class="nav__item is-active" data-view="shop"><span class="ic">&#9812;</span>Stablefront</button>
-                    <button class="nav__item" data-view="owned"><span class="ic">&#9816;</span>My Horses<span class="badge" id="ownBadge">0</span></button>
-                    <button class="nav__item" data-view="tack"><span class="ic">&#9109;</span>Components<span class="badge" id="tackBadge">0</span></button>
-                    <button class="nav__item" data-view="wagons"><span class="ic">&#9881;</span>Wagons<span class="badge" id="wagonBadge">0</span></button>
-                    <div class="nav__mgmt">
-                        <div class="shield">&#9877;</div>
-                        <div class="nav__mgmt-t"><b>Stable Management</b><span id="permTier">—</span></div>
-                    </div>
-                </nav>
-
-                <!-- CATALOG -->
-                <section class="cat">
-                    <div class="cat__label">Stable Catalog</div>
-                    <h2 class="cat__head">Find your better half.</h2>
-                    <p class="cat__sub">Every horse has a history. Choose one worthy of yours.</p>
-                    <div class="cat__divider"><span id="collection">Collection</span></div>
-                    <div class="tabs">
-                        <button data-tab="specialty" class="is-active">Specialty Horses</button>
-                        <button data-tab="stock">Stock Horses</button>
-                    </div>
-                    <!-- Breed filter [N1] — 100+ coats across 27 breeds is a lot
-                         of scrolling; this narrows the list to one breed. -->
-                    <div class="filter" id="breedFilterWrap">
-                        <label class="filter__l" for="breedFilter">Breed</label>
-                        <select class="filter__s" id="breedFilter"></select>
-                    </div>
-                    <div class="list" id="list"></div>
-                    <div class="cat__foot" id="catFoot"></div>
-                </section>
-
-                <!-- CENTER STAGE (transparent — the game renders the horse here) -->
-                <section class="stage" id="stage">
-                    <div class="stage__hint">&#10021; Drag to orbit &middot; Scroll to zoom</div>
-                    <button class="arrow arrow--l" id="prev">&#8249;</button>
-                    <button class="arrow arrow--r" id="next">&#8250;</button>
-                    <div class="stage__loc"><span class="ic">&#9906;</span><span id="stageLoc">—</span></div>
-                </section>
-
-                <!-- DETAIL -->
-                <aside class="detail" id="detail"></aside>
-            </div>
-        </div>
-    </div>
-
-    <!-- HORSE CUSTOMIZER — a side panel; the horse stays visible in the world. -->
-    <div id="custom" class="cz hidden">
-        <div class="cz__panel">
-            <header class="cz__hd">
-                <div class="cz__t"><h2>Horse Customizer</h2><p id="czName">—</p></div>
-                <button class="cz__x" id="czClose">Done</button>
-            </header>
-            <div class="cz__groups" id="czGroups"></div>
-            <footer class="cz__ft">
-                <button class="cz__reset" id="czReset">Reset all</button>
-                <button class="cz__save" id="czSave">Save Shape</button>
-            </footer>
-        </div>
-    </div>
-
-    <!-- STABLE MANAGEMENT PANEL — role-scoped, filled by app.js from the server. -->
-    <div id="manage" class="mg hidden"></div>
-
-    <script src="app.js"></script>
-</body>
+    <link rel="stylesheet" href="css/98-management.css" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
 </html>

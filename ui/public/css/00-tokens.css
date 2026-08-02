@@ -1,0 +1,62 @@
+@layer ss-theme {
+  :root {
+    /* NOTE: do NOT set `color-scheme: dark` here. In RedM/FiveM CEF it makes the
+       UA paint an OPAQUE black canvas behind the page, which the transparent NUI
+       can't punch through — the whole game render goes black (even at character
+       select). This is independent of asset size. Left `normal` on purpose. */
+    color-scheme: normal;
+
+    --ss-leather-950: #100a06;
+    --ss-leather-900: #17120e;
+    --ss-leather-800: #24180f;
+    --ss-leather-700: #2a1a0e;
+    --ss-leather-600: #3a2414;
+    --ss-leather-500: #4a2e1a;
+    --ss-brass-900: #4c3819;
+    --ss-brass-700: #6b5327;
+    --ss-brass-500: #b0894e;
+    --ss-brass-300: #d7b878;
+    --ss-oxblood-900: #4c120f;
+    --ss-oxblood-700: #6a1c15;
+    --ss-oxblood-500: #8e2a20;
+    --ss-parchment-100: #efe4ca;
+    --ss-parchment-200: #e2d3b0;
+    --ss-ink: #2c2013;
+    --ss-green-700: #405d42;
+    --ss-green-500: #587152;
+    --ss-danger: #8f2822;
+    --ss-warning: #a97835;
+    --ss-success: #4c694d;
+
+    --ss-font-display: "Rye", "Bookman Old Style", Georgia, serif;
+    --ss-font-body: "Special Elite", "Courier New", monospace;
+    --ss-font-ledger: "Libre Baskerville", Georgia, serif;
+
+    --ss-text-xs: clamp(0.66rem, 0.58rem + 0.2vw, 0.78rem);
+    --ss-text-sm: clamp(0.78rem, 0.68rem + 0.26vw, 0.94rem);
+    --ss-text-md: clamp(0.9rem, 0.78rem + 0.32vw, 1.08rem);
+    --ss-text-lg: clamp(1.08rem, 0.9rem + 0.48vw, 1.42rem);
+    --ss-text-xl: clamp(1.42rem, 1.1rem + 0.82vw, 2.15rem);
+    --ss-text-2xl: clamp(1.9rem, 1.42rem + 1.18vw, 3rem);
+
+    --ss-space-1: clamp(0.25rem, 0.2rem + 0.14vw, 0.38rem);
+    --ss-space-2: clamp(0.45rem, 0.36rem + 0.22vw, 0.7rem);
+    --ss-space-3: clamp(0.7rem, 0.54rem + 0.38vw, 1.05rem);
+    --ss-space-4: clamp(1rem, 0.76rem + 0.58vw, 1.55rem);
+    --ss-space-5: clamp(1.4rem, 1rem + 0.9vw, 2.25rem);
+    --ss-space-6: clamp(2rem, 1.35rem + 1.35vw, 3.35rem);
+
+    --ss-radius-sm: 5px;
+    --ss-radius-md: 10px;
+    --ss-radius-lg: 18px;
+    --ss-line-brass: color-mix(in srgb, var(--ss-brass-500) 66%, transparent);
+    --ss-line-ink: color-mix(in srgb, var(--ss-ink) 42%, transparent);
+    --ss-focus-ring: 0 0 0 2px var(--ss-brass-300), 0 0 0 5px rgba(106, 28, 21, 0.78);
+    --ss-transition-fast: 120ms ease;
+    --ss-transition: 190ms cubic-bezier(.2, .75, .25, 1);
+
+    --ss-tex-leather: url("../assets/textures/tex_leather.png");
+    --ss-tex-parchment: url("../assets/textures/tex_parchment.png");
+    --ss-page-edge: url("../assets/textures/page_edge.png");
+  }
+}

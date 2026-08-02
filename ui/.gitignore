@@ -1,0 +1,3 @@
+node_modules
+# NOTE: dist/ is intentionally committed — the server deploys the built NUI via
+# FileZilla and does not run a build step. Rebuild with `npm run build` and commit.
