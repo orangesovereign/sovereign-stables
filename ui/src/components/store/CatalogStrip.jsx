@@ -8,7 +8,43 @@ export default function CatalogStrip(props) {
   const { view } = props
   if (view === 'owned') return <OwnedStrip {...props} />
   if (view === 'wagons') return <WagonStrip {...props} />
+  if (view === 'tack') return <TackStrip {...props} />
   return <ShopStrip {...props} />
+}
+
+function TackStrip({ tackCats, tackCatalog, tackCat, setTackCat, tackOwned, tackWorn, tackSel, onSelectTack,
+  owned, tackHorseId, onSelectHorse, search, setSearch }) {
+  const items = (tackCatalog[tackCat] || [])
+  let vis = items
+  if (search) vis = items.filter((t) => (t.label || t.id || '').toLowerCase().includes(search.toLowerCase()))
+  const ownedIds = new Set((tackOwned || []).map((o) => o.item))
+  const cat = (tackCats || []).find((c) => c.id === tackCat)
+
+  const horseSelect = (
+    <label className="sf-filter"><span>Horse</span>
+      <select value={tackHorseId || ''} onChange={(e) => onSelectHorse(Number(e.target.value))}>
+        {(owned || []).map((o) => <option key={o.id} value={o.id}>{o.name || o.model}</option>)}
+      </select>
+    </label>
+  )
+
+  return (
+    <Strip
+      tabs={(tackCats || []).map((c) => ({ key: c.id, label: c.label }))}
+      activeTab={tackCat} onTab={setTackCat}
+      filter={(owned || []).length ? horseSelect : null} search={search} onSearch={setSearch}
+    >
+      {vis.length ? vis.map((t) => {
+        const isOwned = ownedIds.has(t.id)
+        const isWorn = cat && tackWorn[cat.slot] === t.id
+        return (
+          <Card key={t.id} active={t.id === tackSel} tag={isWorn ? 'Fitted' : isOwned ? 'Owned' : null}
+            name={t.label || t.id} sub={cat ? cat.label : ''}
+            price={isOwned ? null : money(t.cash)} onClick={() => onSelectTack(t.id)} />
+        )
+      }) : <div className="sf-empty">The saddlery is still being stocked.</div>}
+    </Strip>
+  )
 }
 
 function Card({ active, no, tag, thumb, name, sub, price, onClick }) {

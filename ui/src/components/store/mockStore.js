@@ -34,6 +34,28 @@ export const mockOwned = {
     { id: 3, name: 'Rustfang', model: 'Arabian' },
   ],
 }
+export const mockTack = {
+  categories: [
+    { id: 'saddle', slot: 'saddle', label: 'Saddles' },
+    { id: 'saddlebag', slot: 'saddlebag', label: 'Saddlebags' },
+    { id: 'blanket', slot: 'blanket', label: 'Blankets' },
+    { id: 'stirrup', slot: 'stirrup', label: 'Stirrups' },
+  ],
+  catalog: {
+    saddle: [
+      { id: 'saddle_ranch_cutter', slot: 'saddle', label: 'Ranch Cutter Saddle', cash: 325, desc: 'A balanced working saddle built for long days and hard turns.' },
+      { id: 'saddle_trail', slot: 'saddle', label: 'Trail Saddle', cash: 290 },
+      { id: 'saddle_roper', slot: 'saddle', label: 'Roper Saddle', cash: 300 },
+      { id: 'saddle_deluxe', slot: 'saddle', label: 'Deluxe Stock Saddle', cash: 350 },
+    ],
+    saddlebag: [{ id: 'bag_leather', slot: 'saddlebag', label: 'Leather Saddlebag', cash: 120 }],
+    blanket: [{ id: 'blanket_wool', slot: 'blanket', label: 'Wool Blanket', cash: 60 }],
+    stirrup: [{ id: 'stirrup_iron', slot: 'stirrup', label: 'Iron Stirrups', cash: 45 }],
+  },
+  owned: [{ item: 'saddle_ranch_cutter' }],
+  components: { saddle: 'saddle_ranch_cutter', __tints: { saddle_ranch_cutter: { palette: 'metaped_tint_leather', t0: 40, t1: 12, t2: 255 } } },
+  horseId: 1,
+}
 export const mockWagons = {
   cap: 4,
   owned: [{ id: 10, name: 'Old Faithful', model: 'Field Delivery Wagon', health: 84, storage: 40, is_default: 1 }],

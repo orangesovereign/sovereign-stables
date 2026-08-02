@@ -3,8 +3,9 @@ import { useNuiEvent, fetchNui, isBrowser } from '../nui.js'
 import { Icon, money } from './bits.jsx'
 import Stage from './store/Stage.jsx'
 import Papers from './store/Papers.jsx'
+import TackPapers from './store/TackPapers.jsx'
 import CatalogStrip from './store/CatalogStrip.jsx'
-import { mockOwned, mockWagons } from './store/mockStore.js'
+import { mockOwned, mockWagons, mockTack } from './store/mockStore.js'
 
 const ALL = '__all__'
 const RAIL = [
@@ -31,6 +32,16 @@ export default function Storefront({ initial }) {
   const [wagonTab, setWagonTab] = useState('shop')
   const [wallet, setWallet] = useState({ cash: (initial.header || {}).cash || 0, gold: (initial.header || {}).gold || 0 })
 
+  // ---- tack (Components) ----
+  const [tackCats, setTackCats] = useState(isBrowser ? mockTack.categories : [])
+  const [tackCatalog, setTackCatalog] = useState(isBrowser ? mockTack.catalog : {})
+  const [tackOwned, setTackOwned] = useState(isBrowser ? mockTack.owned : [])
+  const [tackWorn, setTackWorn] = useState(isBrowser ? { saddle: mockTack.components.saddle } : {})
+  const [tackTints, setTackTints] = useState(isBrowser ? mockTack.components.__tints : {})
+  const [tackHorseId, setTackHorseId] = useState(isBrowser ? mockTack.horseId : null)
+  const [tackCat, setTackCat] = useState(isBrowser ? 'saddle' : null)
+  const [tackSel, setTackSel] = useState(isBrowser ? 'saddle_ranch_cutter' : null)
+
   useNuiEvent('header', (h) => { setHeader(h); setWallet({ cash: h.cash, gold: h.gold }) })
   useNuiEvent('detail', (d) => setDetail(d.detail))
   useNuiEvent('wallet', (d) => setWallet({ cash: d.cash, gold: d.gold }))
@@ -38,6 +49,22 @@ export default function Storefront({ initial }) {
   useNuiEvent('wagons', (d) => {
     if (d.owned) setWagons(d.owned)
     if (d.catalog) setWagonRows(d.catalog)
+  })
+  useNuiEvent('tack', (d) => {
+    if (d.categories) { setTackCats(d.categories); setTackCat((c) => c || (d.categories[0] && d.categories[0].id)) }
+    if (d.catalog) setTackCatalog(d.catalog)
+    if (d.owned) setTackOwned(d.owned)
+    if (d.horseId) setTackHorseId(d.horseId)
+    if (d.components) {
+      const worn = {}
+      let tints = {}
+      for (const k in d.components) {
+        if (k === '__tints') tints = d.components[k] || {}
+        else worn[k] = d.components[k]
+      }
+      setTackWorn(worn)
+      setTackTints(tints)
+    }
   })
 
   const post = useCallback((name, body) => fetchNui(name, body), [])
@@ -47,9 +74,22 @@ export default function Storefront({ initial }) {
   const goView = (v) => {
     setView(v); setSelected(null); setSearch('')
     if (v === 'wagons') { setWagonTab('shop'); post('requestWagons', {}) }
-    else if (v === 'tack') post('requestTack', {})
+    else if (v === 'tack') post('requestTack', { horseId: tackHorseId })
     else post('restoreHorsePreview', {})
   }
+
+  // ---- tack callbacks ----
+  const selectTackHorse = (id) => { setTackHorseId(id); post('requestTack', { horseId: id }) }
+  const buyTack = (item) => post('buyTack', { item })
+  const equipTack = (item) => post('applyTack', { horseId: tackHorseId, item })
+  const previewTint = (slot, t) => post('previewTint', { slot, palette: t.palette, t0: t.t0, t1: t.t1, t2: t.t2 })
+  const saveTint = (slot, t) => {
+    post('saveTint', { horseId: tackHorseId, slot, palette: t.palette, t0: t.t0, t1: t.t1, t2: t.t2 })
+    if (tackSel) setTackTints((prev) => ({ ...prev, [tackSel]: t }))
+  }
+  const tackItem = tackSel ? (tackCatalog[tackCat] || []).find((t) => t.id === tackSel) ||
+    Object.values(tackCatalog).flat().find((t) => t.id === tackSel) : null
+  const tackCatObj = (tackCats || []).find((c) => c.id === tackCat)
 
   const choose = (model) => { setSelected(model); post('select', { model }) }
   const selectOwned = (id) => { setSelected(id); post('selectOwned', { id }) }
@@ -91,7 +131,14 @@ export default function Storefront({ initial }) {
       <Stage onOrbit={onOrbit} onZoom={onZoom} onPrev={() => cycle(-1)} onNext={() => cycle(1)} />
 
       {view === 'tack' ? (
-        <aside className="sf-papers sf-papers--empty"><div className="sf-soon">The saddlery is being fitted out.<br />Components arrive next.</div></aside>
+        <TackPapers
+          item={tackItem}
+          categoryLabel={tackCatObj && tackCatObj.label}
+          isOwned={!!tackItem && (tackOwned || []).some((o) => o.item === tackItem.id)}
+          isWorn={!!tackItem && tackCatObj && tackWorn[tackCatObj.slot] === tackItem.id}
+          savedTint={tackItem ? tackTints[tackItem.id] : null}
+          onBuy={buyTack} onEquip={equipTack} onPreview={previewTint} onSave={saveTint}
+        />
       ) : (
         <Papers detail={detail} view={view} onPost={post} onGotoComponents={() => goView('tack')} />
       )}
@@ -102,6 +149,9 @@ export default function Storefront({ initial }) {
         owned={owned} onSelectOwned={selectOwned}
         wagons={wagons} wagonRows={wagonRows} wagonTab={wagonTab} setWagonTab={setWagonTab}
         onSelectWagon={selectWagon} onSelectWagonModel={selectWagonModel}
+        tackCats={tackCats} tackCatalog={tackCatalog} tackCat={tackCat} setTackCat={setTackCat}
+        tackOwned={tackOwned} tackWorn={tackWorn} tackSel={tackSel} onSelectTack={setTackSel}
+        tackHorseId={tackHorseId} onSelectHorse={selectTackHorse}
       />
     </div>
   )

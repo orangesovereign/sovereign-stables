@@ -136,3 +136,17 @@
 .sf-card-sub { font-size: .64rem; color: #8a6a2f; text-transform: uppercase; letter-spacing: .04em; }
 .sf-card-price { margin-top: 3px; font-family: var(--ss-font-display, Cinzel), serif; font-size: .74rem; color: #d7b878; }
 .sf-empty { padding: 26px; margin: auto; font-style: italic; color: #7a5f34; }
+
+/* ---- tack: component configuration ---- */
+.sf-sub--config { margin-top: 8px; }
+.sf-config { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0 6px; }
+.sf-step { display: grid; gap: 4px; }
+.sf-step--wide { grid-column: 1 / -1; }
+.sf-step-l { font-size: .6rem; letter-spacing: .1em; text-transform: uppercase; color: #8a6a2f; }
+.sf-step-ctl { display: grid; grid-template-columns: 34px 1fr 34px; align-items: center; border: 1px solid rgba(44,32,19,.4);
+  border-radius: 4px; background: rgba(20,14,9,.85); overflow: hidden; }
+.sf-step-ctl button { border: 0; background: rgba(36,26,18,.8); color: #d7b878; font-size: 1rem; padding: 8px 0; cursor: pointer; }
+.sf-step-ctl button:hover { background: #7a1f18; color: #f3e7cf; }
+.sf-step-v { text-align: center; font-family: var(--ss-font-display, Cinzel), serif; font-size: .82rem; color: #efe4ca; }
+.sf-live { margin: 8px 0 2px; padding: 8px; border-radius: 4px; text-align: center; font-size: .66rem; font-style: italic;
+  color: #cbb587; background: rgba(122,31,24,.25); border: 1px solid rgba(122,31,24,.4); }
