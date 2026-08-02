@@ -34,6 +34,22 @@ export const mockOwned = {
     { id: 3, name: 'Rustfang', model: 'Arabian' },
   ],
 }
+export const mockCustom = {
+  name: 'Riverbane',
+  groups: ['Body', 'Legs', 'Head'],
+  attrs: [
+    { key: 'muscle', label: 'Muscle Definition', group: 'Body', kind: 'expr' },
+    { key: 'belly', label: 'Belly Size', group: 'Body', kind: 'expr' },
+    { key: 'girth', label: 'Girth Width', group: 'Body', kind: 'expr' },
+    { key: 'scale', label: 'Overall Size', group: 'Body', kind: 'scale' },
+    { key: 'leg_length', label: 'Leg Length', group: 'Legs', kind: 'expr' },
+    { key: 'leg_width', label: 'Leg Width', group: 'Legs', kind: 'expr' },
+    { key: 'head_size', label: 'Head Size', group: 'Head', kind: 'expr' },
+    { key: 'mane_wild', label: 'Wild Mane', group: 'Head', kind: 'toggle' },
+  ],
+  values: { muscle: 0.4, belly: -0.2, scale: 1.05 },
+}
+
 export const mockTack = {
   categories: [
     { id: 'saddle', slot: 'saddle', label: 'Saddles' },
