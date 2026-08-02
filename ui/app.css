@@ -28,8 +28,12 @@
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { width: 100%; height: 100%; background: transparent; overflow: hidden;
+/* `color-scheme: normal` is load-bearing: `dark` makes RedM CEF paint an opaque
+   black canvas behind the page and blacks the whole game render. Kept here too
+   (unlayered, loads last) so a kit re-sync can't silently reintroduce the bug. */
+html, body { width: 100%; height: 100%; background: transparent; color-scheme: normal; overflow: hidden;
   font-family: var(--f-body); color: var(--parch); -webkit-user-select: none; user-select: none; }
+:root { color-scheme: normal; }
 .hidden { display: none !important; }
 .ic { font-style: normal; }
 

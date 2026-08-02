@@ -1,6 +1,10 @@
 @layer ss-theme {
   :root {
-    color-scheme: dark;
+    /* NOTE: do NOT set `color-scheme: dark` here. In RedM/FiveM CEF it makes the
+       UA paint an OPAQUE black canvas behind the page, which the transparent NUI
+       can't punch through — the whole game render goes black (even at character
+       select). This is independent of asset size. Left `normal` on purpose. */
+    color-scheme: normal;
 
     --ss-leather-950: #100a06;
     --ss-leather-900: #17120e;
