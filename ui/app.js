@@ -720,15 +720,15 @@
     }
     // Wide stat plate (kit's plate_stat_admin): brass medallion left, label+value right.
     function mgStat(icon, label, value) {
-        return '<section class="ss-nine ss-plate-stat-admin mg2-stat">' +
-            '<span class="mg2-medallion">' + mgIcon(icon, 24) + '</span>' +
+        return '<section class="ss-nine ss-card-dark mg2-stat">' +
+            '<span class="mg2-medallion">' + mgIcon(icon, 26) + '</span>' +
             '<span class="mg2-stat-txt"><small>' + mgEsc(label) + '</small><strong>' + value + '</strong></span>' +
             '</section>';
     }
     // One phase line: coloured seal, name + note, count, and a matching progress bar.
     function mgPhase(seal, color, title, note, count, unit, pct) {
         return '<div class="mg2-phase">' +
-            '<span class="mg2-phase-seal">' + mgSeal(seal, 44) + '</span>' +
+            '<span class="mg2-phase-seal">' + mgSeal(seal, 50) + '</span>' +
             '<span class="mg2-phase-main"><strong>' + mgEsc(title) + '</strong><small>' + mgEsc(note) + '</small></span>' +
             '<span class="mg2-phase-count"><b>' + count + '</b> ' + mgEsc(unit) + '</span>' +
             '<span class="ss-progress mg2-phase-bar" style="--ss-progress:' + Math.max(4, Math.min(100, pct)) + '%;--ss-progress-color:' + color + '"><span></span></span>' +
