@@ -115,7 +115,7 @@ export default function Storefront({ initial }) {
         <span className="sf-who">{header.charName}{header.job ? ` — ${header.job}` : ''}</span>
         <span className="sf-wallet"><Icon name="coin" size={18} /><b>{money(wallet.cash)}</b></span>
         <span className="sf-wallet"><Icon name="gold" size={18} /><b>{wallet.gold || 0}</b> Gold</span>
-        <button className="ss-nine ss-btn-secondary ss-button sf-exit" onClick={() => post('requestClose', {})}>Exit</button>
+        <button className="ss-nine ss-btn-secondary ss-button sf-exit" onClick={() => post('close', {})}>Exit</button>
       </header>
 
       <nav className="sf-rail">

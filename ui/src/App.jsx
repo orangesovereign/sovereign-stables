@@ -25,13 +25,14 @@ export default function App() {
   useEffect(() => {
     const onKey = (e) => {
       if (e.key !== 'Escape') return
-      if (custom) setCustom(null)
+      if (custom) { setCustom(null); fetchNui('morphClose') }
       else if (book) closeBook()
+      else if (store) { setStore(null); fetchNui('close') }   // releases NUI focus
     }
     window.addEventListener('keyup', onKey)
     return () => window.removeEventListener('keyup', onKey)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [book, custom])
+  }, [book, custom, store])
 
   // The customizer is a side panel (world stays visible), so it can overlay
   // whatever else is open — render them together.
