@@ -99,12 +99,17 @@ local function overview(stableId, role, biz)
     local ledger = Db.awaitQuery(
         'SELECT description, category, amount_cash, created_at FROM sovereign_stable_ledger WHERE stable_id = ? ORDER BY id DESC LIMIT 6', { stableId }) or {}
 
+    -- Client Pickup Queue: horses that finished training and await collection.
+    local pickup = Db.awaitQuery(
+        "SELECT id, horse_name, model, breed, client_name FROM sovereign_client_horses WHERE stable_id = ? AND phase = 'ready' ORDER BY ready_at LIMIT 6", { stableId }) or {}
+
     local view = {
         section  = 'overview',
         staff    = staff,
         onDuty   = onDuty,
         staffCount = #staff,
         ledger   = ledger,
+        pickup   = pickup,
         -- Client-horse training (real once server/training.lua is loaded).
         clientHorses = (Training and Training.counts and Training.counts(stableId))
                         or { total = 0, raising = 0, training = 0, ready = 0, pending = true },
@@ -140,12 +145,16 @@ function Management.push(src, stableId)
     if not role then return end
     local biz = businessRow(stableId)
     local ch = Bridge.getCharacter(src)
+    local cash, gold = Bridge.getBalance(src)
+    local scfg = Config.Stables[stableId] or {}
     local payload = {
         stableId = stableId,
-        stableName = (biz and biz.name) or (Config.Stables[stableId].label) or 'Stable',
+        stableName = (biz and biz.name) or scfg.label or 'Stable',
+        county = scfg.county or scfg.region or scfg.town or nil,
         role = role,
         roleLabel = ({ admin = 'Server Administrator', owner = 'Owner', trainer = 'Trainer', stablehand = 'Stablehand' })[role] or role,
         playerName = (ch and (ch.firstname and (ch.firstname .. ' ' .. (ch.lastname or '')))) or GetPlayerName(src),
+        wallet = { cash = tonumber(cash) or 0, gold = tonumber(gold) or 0 },
         nav = navFor(role),
         overview = overview(stableId, role, biz),
     }

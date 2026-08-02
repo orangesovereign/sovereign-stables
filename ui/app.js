@@ -705,78 +705,181 @@
     var MG_ICON = { overview: 'horseshoe', trainer: 'horse-head', staff: 'people', breeding: 'fleur', ledger: 'ledger', settings: 'gear', admin: 'star' };
     var MG_TITLES = { overview: 'Operations Overview', trainer: 'Trainer Panel', staff: 'Staff & Roles',
         breeding: 'Breeding Register', ledger: 'Society Ledger', settings: 'Stable Settings', admin: 'System Administration' };
+    var MG_MONTHS = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
     function mgIcon(name, size) { return '<span class="ss-icon ss-icon--' + name + '"' + (size ? ' style="--ss-icon-size:' + size + 'px"' : '') + '></span>'; }
-    function mgStat(icon, value, label) {
-        return '<section class="ss-nine ss-plate-stat mg-stat">' + mgIcon(icon, 24) +
-            '<strong>' + value + '</strong><small>' + mgEsc(label) + '</small></section>';
+    function mgSeal(variant, size) { return '<span class="ss-seal' + (variant ? ' ss-seal--' + variant : '') + '" style="--ss-seal-size:' + (size || 46) + 'px"></span>'; }
+    function mgDate(s) {
+        if (!s) return '';
+        var d = new Date(String(s).replace(' ', 'T'));
+        if (isNaN(d.getTime())) return String(s).slice(5, 10);
+        return MG_MONTHS[d.getMonth()] + ' ' + d.getDate();
     }
-    function mgOverview(o) {
-        var stats = '';
-        if (o.funds) stats += mgStat('coin', mgMoney(o.funds.cash), 'Society Funds');
-        stats += mgStat('people', (o.onDuty || 0) + ' / ' + (o.staffCount || 0), 'Employees on Duty');
-        stats += mgStat('horse-head', o.clientHorses ? o.clientHorses.total : 0, 'Client Horses');
-        stats += mgStat('wagon', o.clientHorses ? o.clientHorses.ready : 0, 'Ready for Pickup');
-
-        var staffRows = (o.staff || []).map(function (e) {
-            var on = Number(e.on_duty) === 1;
-            return '<section class="ss-nine ss-card-dark mg-row">' +
-                '<span class="mg-ini">' + mgEsc((e.name || '?').slice(0, 2).toUpperCase()) + '</span>' +
-                '<span class="mg-rt"><strong>' + mgEsc(e.name || 'Employee') + '</strong><small>' + mgEsc((e.role || '') + ' · Grade ' + (e.grade || 1)) + '</small></span>' +
-                '<span class="ss-status-chip ' + (on ? 'ss-status-chip--good' : '') + '">' + (on ? 'On Duty' : 'Off Duty') + '</span></section>';
-        }).join('') || '<div class="mg-empty">No employees yet.</div>';
-
-        var ledgerHtml = '';
-        if (o.funds) {
-            var ledRows = (o.ledger || []).map(function (l) {
-                var amt = Number(l.amount_cash) || 0;
-                return '<div class="mg-lrow"><span>' + mgEsc(l.description) + '</span>' +
-                    '<span class="ss-status-chip">' + mgEsc(l.category) + '</span>' +
-                    '<b class="' + (amt < 0 ? 'mg-neg' : 'mg-pos') + '">' + (amt < 0 ? '-' : '+') + mgMoney(Math.abs(amt)) + '</b></div>';
-            }).join('') || '<div class="mg-empty">No activity yet.</div>';
-            ledgerHtml = '<h2 class="ss-section-rule"><span>Recent Ledger</span></h2><div class="ss-stack">' + ledRows + '</div>';
-        }
-
-        return '<div class="ss-grid ss-grid--2 mg-stats">' + stats + '</div>' +
-            '<h2 class="ss-section-rule"><span>Staff on Duty</span></h2><div class="ss-stack">' + staffRows + '</div>' +
-            ledgerHtml;
+    // A running-header block: centred display title + small caps sub-line.
+    function mgHead(title, sub) {
+        return '<div class="mg2-head"><h2>' + mgEsc(title) + '</h2>' + (sub ? '<small>' + mgEsc(sub) + '</small>' : '') + '</div>';
     }
-    function mgSectionBody() {
-        var p = mgPanel; if (!p) return '';
-        if (mgSection === 'overview') return mgOverview(p.overview || {});
-        return '<div class="mg-empty mg-soon">' + mgEsc(MG_TITLES[mgSection] || 'Section') +
-            ' — its screen is next; the backend data is already live.</div>';
+    // Wide stat plate (kit's plate_stat_admin): brass medallion left, label+value right.
+    function mgStat(icon, label, value) {
+        return '<section class="ss-nine ss-plate-stat-admin mg2-stat">' +
+            '<span class="mg2-medallion">' + mgIcon(icon, 24) + '</span>' +
+            '<span class="mg2-stat-txt"><small>' + mgEsc(label) + '</small><strong>' + value + '</strong></span>' +
+            '</section>';
     }
+    // One phase line: coloured seal, name + note, count, and a matching progress bar.
+    function mgPhase(seal, color, title, note, count, unit, pct) {
+        return '<div class="mg2-phase">' +
+            '<span class="mg2-phase-seal">' + mgSeal(seal, 44) + '</span>' +
+            '<span class="mg2-phase-main"><strong>' + mgEsc(title) + '</strong><small>' + mgEsc(note) + '</small></span>' +
+            '<span class="mg2-phase-count"><b>' + count + '</b> ' + mgEsc(unit) + '</span>' +
+            '<span class="ss-progress mg2-phase-bar" style="--ss-progress:' + Math.max(4, Math.min(100, pct)) + '%;--ss-progress-color:' + color + '"><span></span></span>' +
+            '</div>';
+    }
+    function mgPickupCard(h) {
+        return '<div class="ss-nine ss-card-dark mg2-pickup">' +
+            '<span class="mg2-pickup-portrait"></span>' +
+            '<span class="mg2-pickup-id"><strong>' + mgEsc(h.horse_name || 'Horse') + '</strong><small>' + mgEsc(h.client_name || '') + '</small></span>' +
+            '<button class="mg2-pickup-btn" data-mg-act="returnHorse" data-id="' + (h.id || '') + '">Ready for Pickup</button>' +
+            '<span class="mg2-pickup-note">Notified</span>' +
+            '</div>';
+    }
+    function mgStaffCard(e) {
+        var role = String(e.role || 'staff');
+        var label = role.charAt(0).toUpperCase() + role.slice(1);
+        return '<div class="ss-nine ss-card-dark mg2-staff">' +
+            '<span class="mg2-staff-badge">' + mgEsc(label) + '</span>' +
+            '<span class="mg2-staff-portrait">' + mgIcon('person', 30) + '</span>' +
+            '<strong>' + mgEsc(e.name || 'Employee') + '</strong>' +
+            '<small>' + mgEsc(e.grade ? ('Grade ' + e.grade) : 'On shift') + '</small>' +
+            '</div>';
+    }
+
+    // ---- Overview: a proper two-page spread ({left, right}) ----
+    function mgOverviewPages(o) {
+        var ch = o.clientHorses || {}, funds = o.funds || {};
+        var total = Number(ch.total) || 0, breed = (o.breeding && Number(o.breeding.active)) || 0;
+        var pctOf = function (n) { return total ? (n / total) * 100 : (n ? 100 : 0); };
+
+        // LEFT PAGE ------------------------------------------------------
+        var stL = '<div class="ss-grid ss-grid--2 mg2-stats">' +
+            mgStat('coin', 'Society Funds', mgMoney(funds.cash)) +
+            mgStat('people', 'Employees on Duty', (o.onDuty || 0) + ' / ' + (o.staffCount || 0)) +
+            '</div>';
+
+        var phases = '<div class="mg2-panel">' +
+            mgPhase('', 'var(--ss-oxblood-500)', 'Raising', 'Growth and care period', Number(ch.raising) || 0, 'horses', pctOf(Number(ch.raising) || 0)) +
+            mgPhase('', 'var(--ss-oxblood-500)', 'Training', 'Active trainer assignments', Number(ch.training) || 0, 'horses', pctOf(Number(ch.training) || 0)) +
+            mgPhase('green', 'var(--ss-green-500)', 'Ready for Pickup', 'Client collection pending', Number(ch.ready) || 0, 'horses', pctOf(Number(ch.ready) || 0)) +
+            mgPhase('gold', 'var(--ss-warning)', 'Active Breedings', 'Stud pairings in progress', breed, 'pairings', breed ? Math.min(100, breed * 25) : 0) +
+            '</div>';
+
+        var pickup = (o.pickup || []).map(mgPickupCard).join('');
+        var pickupBlock = mgHead('Client Pickup Queue', pickup ? 'Trained horses ready to return to their owners.' : '') +
+            (pickup ? '<div class="ss-stack mg2-pickups">' + pickup + '</div>' : '<div class="mg-empty">No horses awaiting pickup.</div>');
+
+        var left = '<header class="mg2-page-title"><span class="mg2-flourish"></span>' +
+            '<h1>Operations Overview</h1><span class="mg2-flourish mg2-flourish--r"></span></header>' +
+            stL +
+            mgHead("Today's Stable Operations", 'All client work by phase') + phases +
+            pickupBlock;
+
+        // RIGHT PAGE -----------------------------------------------------
+        var stR = '<div class="ss-grid ss-grid--2 mg2-stats">' +
+            mgStat('horse-head', 'Client Horses', total) +
+            mgStat('wagon', 'Ready for Pickup', Number(ch.ready) || 0) +
+            '</div>';
+
+        var onDuty = (o.staff || []).filter(function (e) { return Number(e.on_duty) === 1; });
+        var staffCards = onDuty.length ? '<div class="ss-grid mg2-staffgrid">' + onDuty.slice(0, 3).map(mgStaffCard).join('') + '</div>'
+            : '<div class="mg-empty">No one is on duty right now.</div>';
+
+        var notes = o.notes || (funds.cash != null
+            ? ((Number(ch.ready) || 0) + ' client pickup(s) pending · ' + breed + ' breeding(s) in progress.')
+            : '');
+        var notesBlock = '<section class="ss-nine ss-card-dark mg2-notes"><div class="mg2-notes-txt">' +
+            '<strong>Current Shift Notes</strong><p>' + mgEsc(notes || 'No notes recorded for this shift.') + '</p></div>' +
+            '<span class="ss-seal ss-seal--sc mg2-notes-seal" style="--ss-seal-size:60px"></span></section>';
+
+        var ledRows = (o.ledger || []).map(function (l) {
+            var amt = Number(l.amount_cash) || 0;
+            return '<div class="mg2-led-row"><span class="mg2-led-date">' + mgEsc(mgDate(l.created_at)) + '</span>' +
+                '<span class="mg2-led-desc">' + mgEsc(l.description) + '</span>' +
+                '<span class="mg2-led-amt ' + (amt < 0 ? 'mg-neg' : 'mg-pos') + '">' + (amt < 0 ? '-' : '+') + mgMoney(Math.abs(amt)) + '</span></div>';
+        }).join('') || '<div class="mg-empty">No activity yet.</div>';
+        var ledgerBlock = (funds.cash != null)
+            ? (mgHead('Recent Ledger', 'Latest business activity') + '<div class="mg2-ledger">' + ledRows + '</div>')
+            : '';
+
+        var right = stR +
+            mgHead('Staff on Duty', 'Current shift') + staffCards +
+            notesBlock +
+            ledgerBlock;
+
+        return { left: left, right: right };
+    }
+
+    // Returns { left, right } for the two-page spread. Non-overview sections
+    // render an honest "being drawn up" note across the right page for now.
+    function mgSectionPages() {
+        var p = mgPanel; if (!p) return { left: '', right: '' };
+        if (mgSection === 'overview') return mgOverviewPages(p.overview || {});
+        return {
+            left: '<header class="mg2-page-title"><span class="mg2-flourish"></span><h1>' + mgEsc(MG_TITLES[mgSection] || 'Section') +
+                '</h1><span class="mg2-flourish mg2-flourish--r"></span></header>' +
+                '<div class="mg-empty mg-soon">This page of the ledger is being drawn up.<br>The records behind it are already kept.</div>',
+            right: '<div class="mg2-page-blank"></div>'
+        };
+    }
+
+    // Right-edge bookmark tabs (decorative sub-views, Operations active).
+    var MG_RIGHT_TABS = [
+        { key: 'operations', label: 'Operations', icon: 'horseshoe' },
+        { key: 'clients', label: 'Clients', icon: 'horse-head' },
+        { key: 'breedings', label: 'Breedings', icon: 'rosette' },
+        { key: 'finances', label: 'Finances', icon: 'coin' }
+    ];
 
     function mgRender() {
         var p = mgPanel; if (!p) return;
         var el = document.getElementById('manage');
+        var wallet = p.wallet || {};
+
         var rail = (p.nav || []).map(function (n) {
-            return '<button class="ss-nine ss-tab-rail ss-tab-button' + (n.key === mgSection ? ' is-active' : '') +
-                '" data-mg="' + n.key + '" aria-label="' + mgEsc(n.label) + '" title="' + mgEsc(n.label) + '">' + mgIcon(MG_ICON[n.key] || 'diamond') + '</button>';
+            var on = n.key === mgSection;
+            return '<button class="mg2-rail-btn' + (on ? ' is-active' : '') + '" data-mg="' + n.key + '" title="' + mgEsc(n.label) + '">' +
+                '<span class="ss-nine ss-tab-rail' + (on ? ' is-active' : '') + ' mg2-rail-ico">' + mgIcon(MG_ICON[n.key] || 'diamond') + '</span>' +
+                '<em>' + mgEsc(n.label) + '</em></button>';
         }).join('');
+
+        var rtabs = MG_RIGHT_TABS.map(function (t, i) {
+            return '<button class="ss-nine ss-tab-book mg2-rtab' + (i === 0 ? ' is-active' : '') + '" title="' + mgEsc(t.label) + '">' +
+                mgIcon(t.icon, 22) + '<em>' + mgEsc(t.label) + '</em></button>';
+        }).join('');
+
+        var pages = mgSectionPages();
+
         el.innerHTML =
             '<main class="ss-ui">' +
               '<section class="ss-book">' +
                 '<i class="ss-book-corner ss-book-corner--tl"></i><i class="ss-book-corner ss-book-corner--tr"></i>' +
                 '<i class="ss-book-corner ss-book-corner--br"></i><i class="ss-book-corner ss-book-corner--bl"></i>' +
                 '<header class="mg-hd">' +
-                  '<span class="ss-icon ss-icon--sc-logo" style="--ss-icon-size:34px"></span>' +
+                  '<span class="ss-icon ss-icon--sc-logo mg-hd-seal" style="--ss-icon-size:44px"></span>' +
                   '<span class="mg-brand"><b>Sovereign Stables</b><em>Stables &amp; Carriage Co.</em></span>' +
-                  '<div class="ss-nine ss-cartouche mg-loc">' + mgEsc(p.stableName) + '</div>' +
+                  '<div class="ss-nine ss-cartouche mg-loc">' + mgEsc(p.stableName) + (p.county ? ' &middot; ' + mgEsc(p.county) : '') + '</div>' +
                   '<span class="mg-who">' + mgEsc((p.playerName || '') + ' — ' + (p.roleLabel || '')) + '</span>' +
+                  '<span class="mg2-wallet">' + mgIcon('coin', 20) + '<b>' + mgMoney(wallet.cash) + '</b></span>' +
+                  '<span class="mg2-wallet">' + mgIcon('gold', 20) + '<b>' + (wallet.gold || 0) + '</b> Gold</span>' +
                   '<button class="ss-nine ss-btn-secondary ss-button mg-exit" data-mg="__close">Exit</button>' +
                 '</header>' +
                 '<nav class="ss-left-rail" aria-label="Stable sections">' + rail + '<span class="ss-left-rail__fleur"></span></nav>' +
                 '<div class="ss-pages">' +
-                  '<article class="ss-page">' +
-                    '<header class="ss-page-header"><span class="ss-kicker">Stable Management</span>' +
-                      '<h1 class="ss-page-title">' + mgEsc(MG_TITLES[mgSection] || 'Overview') + '</h1></header>' +
-                    '<div class="mg-content">' + mgSectionBody() + '</div>' +
-                  '</article>' +
+                  '<article class="ss-page mg2-page mg2-page--l">' + pages.left + '</article>' +
+                  '<article class="ss-page mg2-page mg2-page--r">' + pages.right + '</article>' +
+                  '<nav class="ss-right-tabs" aria-label="Views">' + rtabs + '</nav>' +
                 '</div>' +
-                // (Nameplate / ribbon / clasp furniture belongs to the kit's
-                //  two-page spread; on our single running page they float loose,
-                //  so they're intentionally omitted. Corner frames stay.)
+                '<span class="ss-ribbon-bookmark"></span>' +
+                '<span class="ss-nameplate"></span>' +
+                '<span class="ss-book-clasp"></span>' +
               '</section>' +
             '</main>';
     }
