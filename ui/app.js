@@ -896,34 +896,6 @@
     });
     document.addEventListener('keyup', function (e) { if (e.key === 'Escape') requestClose(); });
 
-    // ── DEV PREVIEW ─────────────────────────────────────────────────────
-    // Standalone in a normal browser only — auto-show the panel with sample data
-    // so the design can be eyeballed without the game. Detect the game by its CEF
-    // user-agent (CitizenFX): in-game this is FALSE, so it NEVER opens on load
-    // in RedM (GetParentResourceName is unreliable there and caused a screen-dim).
-    if (!/CitizenFX|Cfx|Chrome\/\d+\.\d+ RedM/i.test(navigator.userAgent || '') && typeof GetParentResourceName !== 'function' && window.location.protocol !== 'nui:') {
-        mgOpen({
-            stableName: 'Loveland Stables', playerName: 'Tate Love', roleLabel: 'Owner · Grade 3', role: 'owner',
-            nav: [ { key: 'overview', label: 'Overview' }, { key: 'trainer', label: 'Trainer Panel' },
-                   { key: 'staff', label: 'Staff & Roles' }, { key: 'breeding', label: 'Breeding' },
-                   { key: 'ledger', label: 'Ledger' }, { key: 'settings', label: 'Settings' },
-                   { key: 'admin', label: 'Admin Panel' } ],
-            overview: {
-                funds: { cash: 12450, gold: 6 }, taxDue: 625, onDuty: 3, staffCount: 5,
-                clientHorses: { total: 9, raising: 4, training: 5, ready: 2, pending: false },
-                breeding: { active: 2, pending: false },
-                staff: [
-                    { name: 'Tate Love', role: 'owner', grade: 3, on_duty: 1 },
-                    { name: 'Bebe Jewels', role: 'trainer', grade: 2, on_duty: 1 },
-                    { name: 'Jesse Ricketts', role: 'trainer', grade: 2, on_duty: 1 },
-                    { name: 'Elias Mercer', role: 'stablehand', grade: 1, on_duty: 0 }
-                ],
-                ledger: [
-                    { description: 'Training payment · Riverbane', category: 'service', amount_cash: 240 },
-                    { description: 'Feed and medicine', category: 'supplies', amount_cash: -145 },
-                    { description: 'Society deposit', category: 'deposit', amount_cash: 500 }
-                ]
-            }
-        });
-    }
+    // (Dev-preview auto-open removed — it could fire in-game and dim the screen.
+    //  The management panel opens ONLY on the server's manage:open message.)
 })();
