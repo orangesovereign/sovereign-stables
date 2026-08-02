@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNuiEvent, fetchNui, isBrowser } from './nui.js'
-import ManagementBook from './components/ManagementBook.jsx'
+import BookApp from './redesign/BookApp.jsx'
 import Storefront from './components/Storefront.jsx'
 import Customizer from './components/Customizer.jsx'
 import { mockPanel } from './mock.js'
@@ -38,7 +38,7 @@ export default function App() {
   // whatever else is open — render them together.
   return (
     <>
-      {book ? <ManagementBook panel={book} onClose={closeBook} /> : null}
+      {book ? <BookApp panel={book} onClose={closeBook} /> : null}
       {store ? <Storefront initial={store} /> : null}
       {custom ? <Customizer data={custom} onClose={() => setCustom(null)} /> : null}
     </>
