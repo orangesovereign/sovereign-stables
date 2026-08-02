@@ -106,46 +106,27 @@ use**; swapping is a one-line token change. Bundle the woff2 subsets (latin) onl
 
 ---
 
-## 4. Icon set
+## 4. Icon / emblem set
 
-### 4a. From Lucide (install `lucide-react`; do NOT redraw these)
-Map (design → lucide):
+**Not thin-line SVG.** The mockup icons are **detailed engraved emblems** (bank-note /
+saloon-signage style). They are generated as **detailed monochrome-ivory raster PNGs
+on transparent bg** (crests/ornaments in antique gold), then downscaled small and
+optimized (per the CEF weight lesson). Monochrome emblems tint per medallion colour
+via CSS `mask-image` + `background-color`. See `CHATGPT-PROMPT.md` for the generation
+set and master style block. Full id list (kebab-case = filenames):
 
-- map-pin→`MapPin` · chevron→`ChevronDown` · user→`User`/`UserRound` · cash→`CircleDollarSign` · gold→`Coins` · exit→`LogOut`
-- settings→`Settings` · help→`CircleHelp` · directory→`Users` · stable→`Home`/`Warehouse` · activity-log→`ScrollText` · employee-audit→`UserSearch` · ledger→`NotebookText`/`BookOpen`
-- scales→`Scale` · flag→`Flag` · calendar→`Calendar` · shield-star→`BadgeCheck`/`ShieldCheck` · archive→`Archive` · list→`List` · person-check→`UserCheck` · alert→`TriangleAlert`
-- check→`Check` · x→`X` · lock→`Lock` · star→`Star` · search→`Search` · edit→`Pencil` · mail→`Mail` · phone→`Phone` · copy→`Copy` · export→`Download` · external→`ExternalLink` · plus→`Plus` · minus→`Minus`
-- bell→`Bell` · tag→`Tag` · wrench→`Wrench` · clock→`Clock` · info→`Info` · lighting→`Sun` · rotate-left→`RotateCcw` · rotate-right→`RotateCw` · reset→`RefreshCw` · ellipsis→`MoreHorizontal` · capacity→`Package`/`Box` · seat→`Armchair` · note→`FileText`
-- male→`Mars` · female→`Venus` · age→`Hourglass` · height→`Ruler` · cart→`ShoppingCart` · trophy→`Award` · gear-col→`Settings2`
+- **Nav/header:** `store` `horse-head` `horse-run` `saddle` `wagon` `wagon-wheel` `horseshoe` `ledger-book` `settings-gear`
+- **Stat-card medallion glyphs:** `coin-dollar` `scales` `flag` `calendar` `people` `shield-badge` `archive-box` `alert` `person-detective` `cart` `training-crop` `breeding-mark`
+- **Tack categories:** `bridle` `stirrup` `saddlebag` `blanket` `horn`
+- **Crests/seals (gold):** `crest-diamond` `crest-laurel` `seal-1896`
+- **Ornaments (gold):** `corner-filigree` (top-left; CSS-rotated for 4 corners) · `divider-title` (rule + diamond/arrow, right of page titles) · `divider-eyebrow` (`—◆—`, wraps papers eyebrow labels)
 
-Progress donut (Training) & horizontal stat bars are **CSS/SVG components**, not icons.
+**Tiny functional controls stay inline (not emblems):** dropdown chevron, search
+magnifier, close ×, pager arrows, checkbox tick, +/− steppers, `···` menu, status
+dots — rendered from CSS/tokens; the mockups draw these minimally too, so they read
+as controls, not "line-art icons."
 
-### 4b. Custom SVG marks — **ChatGPT authors these** (county style)
-| # | name | viewBox | fill? | used |
-|---|---|---|---|---|
-| 1 | `crest-diamond` | 0 0 64 64 | solid | storefront header crest (SC + crown in diamond) |
-| 2 | `crest-laurel` | 0 0 64 64 | solid | admin/book header crest (SC + crown in laurel) |
-| 3 | `seal-1896` | 0 0 96 96 | solid | book rail bottom seal (1896 · Sovereign County, laurel) |
-| 4 | `horseshoe` | 0 0 24 24 | line | recurring motif: nav, bullets, breeding, stat medallion |
-| 5 | `horse-head` | 0 0 24 24 | line | header eyebrow, My Horses nav, stat medallions |
-| 6 | `horse-run` | 0 0 24 24 | line | Training nav (galloping variant) |
-| 7 | `saddle` | 0 0 24 24 | line | Tack & Care nav + saddle eyebrow/category |
-| 8 | `bridle` | 0 0 24 24 | line | tack category |
-| 9 | `stirrup` | 0 0 24 24 | line | tack category |
-| 10 | `saddlebag` | 0 0 24 24 | line | tack category |
-| 11 | `blanket` | 0 0 24 24 | line | tack category |
-| 12 | `horn` | 0 0 24 24 | line | tack category |
-| 13 | `wagon` | 0 0 24 24 | line | wagon eyebrow / stat |
-| 14 | `wagon-wheel` | 0 0 24 24 | line | Wagons nav |
-| 15 | `breeding-mark` | 0 0 24 24 | line | breeding stat (two horseshoes/gender interlocked) |
-| 16 | `store` | 0 0 24 24 | line | Storefront nav (shopfront) |
-
-### 4c. Ornaments — **ChatGPT authors** (SVG)
-| name | viewBox | notes |
-|---|---|---|
-| `corner-filigree` | 0 0 48 48 | one top-left corner; CSS rotates for the other 3. Thin gold flourish. |
-| `divider-title` | 0 0 240 12 | long hairline rule ending in a small diamond/arrow — sits right of page titles ("STABLE DIRECTORY ——◆—→"). |
-| `divider-eyebrow` | 0 0 120 12 | short centered flourish `·—◆—·` — wraps papers eyebrow labels ("· STOCK HORSE ·"). |
+Progress donut (Training) and horizontal stat bars are **CSS components**, not assets.
 
 ### 4d. Texture — **ChatGPT (raster)**
 | name | size | notes |
@@ -176,24 +157,20 @@ Each is data-driven (props only). They bind to the existing NUI payloads
 
 ## 6. Delivery format (how assets must arrive)
 
-**SVG marks & ornaments** — one file each, or one code block each in a batch reply:
-- `viewBox` set, **no `width`/`height`**, no `id`/`class`, no inline `style`, no
-  `<title>`, no comments.
-- Line icons: `fill="none"`, `stroke="currentColor"`, `stroke-width="1.75"`,
-  `stroke-linecap="round"`, `stroke-linejoin="round"`. Solid marks (crests/seals):
-  `fill="currentColor"` (multi-tone crests may use 2–3 flat `fill` values — list them).
-- Optically consistent weight across the whole set; drawn on a 24-unit grid with
-  ~2u padding (icons), 64/96 for crests.
-- **Naming:** kebab-case exactly as the tables above (`horse-head.svg`, etc.).
-- Deliver as: (1) individual `.svg` files in a zip **and** (2) a single combined
-  message with each SVG in its own fenced ```svg block labeled with its name — so I
-  can paste straight into an icon module.
+**Emblems / crests / ornaments** — detailed **transparent PNGs**:
+- Emblems & medallion glyphs: **monochrome ivory (#efe6cf)** on transparent, centered,
+  even margin, ~1024² originals (I downscale to ~128px + compress). Monochrome so I can
+  tint per medallion via CSS mask.
+- Crests & ornaments: **antique gold (#c19a3a)** on transparent, ~1024² (crests) / wide
+  aspect for the divider rules.
+- Consistent engraving weight & framing across the whole set (same hand).
+- **Naming:** kebab-case exactly as §4 (`horse-head.png`, `crest-laurel.png`, …).
 
-**Texture** — `parchment-tile.png`, 512×512, verified seamless (no visible seam when
-tiled), transparent-agnostic (it's a flat cream tile), < 200 KB.
+**Texture** — `parchment-tile.png`, 512×512, verified seamless, flat cream, < 200 KB.
 
-I convert the SVGs into a single React icon component set (`<Icon name=…/>`,
-currentColor) and wire tokens — no other processing needed on your end.
+On my end: downscale + `pngquant`/PIL optimize (keep the whole set to single-digit MB —
+the [[redm-cef-heavy-borderimages-black]] lesson), build the `<Icon name=…/>` set
+(mask-tinted), and wire tokens. Nothing else needed from you.
 
 ---
 
