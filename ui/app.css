@@ -409,3 +409,39 @@ html, body { width: 100%; height: 100%; background: transparent; overflow: hidde
 .mg__empty { padding: 18px; color: #8a7550; font-style: italic; font-size: .85rem; }
 .mg__soon { text-align: center; padding: 44px 20px; border: 1px dashed rgba(120,90,45,.5); border-radius: 10px; }
 @media (max-width: 900px) { .mg__grid { grid-template-columns: 1fr; } }
+
+/* ═══ Management BOOK — layout/type glue on the kit surfaces (no invented art) ═══ */
+#manage.mg { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center;
+  background: radial-gradient(ellipse at center, rgba(10,6,3,.14), rgba(8,5,2,.5)); }
+#manage.hidden { display: none; }
+#manage .ss-ui { width: min(1300px, 96vw); height: min(90vh, 880px); }
+/* give the book a header row above the rail|pages grid */
+#manage .ss-book { grid-template-rows: auto minmax(0, 1fr); }
+.mg-hd { grid-column: 1 / -1; display: flex; align-items: center; gap: 16px; padding: 12px 24px 6px;
+  color: #e7dbc2; }
+.mg-brand { display: flex; flex-direction: column; line-height: 1.12; }
+.mg-brand b { font-family: var(--ss-font-display, Cinzel), Georgia, serif; font-size: 1.15rem; letter-spacing: .05em; color: #e7dbc2; }
+.mg-brand em { font-style: normal; font-size: .68rem; color: #b0894e; letter-spacing: .05em; }
+.mg-loc { min-width: 260px; padding: 8px 26px; display: grid; place-items: center; text-align: center;
+  font-family: var(--ss-font-display, Cinzel), Georgia, serif; letter-spacing: .12em; text-transform: uppercase; font-size: .82rem; color: #d7b878; }
+.mg-who { margin-left: auto; font-family: var(--ss-font-display, Cinzel), Georgia, serif; font-size: .78rem;
+  letter-spacing: .06em; text-transform: uppercase; color: #e7dbc2; }
+.mg-exit { padding: 8px 18px; }
+.mg-content { display: flex; flex-direction: column; gap: 6px; }
+.ss-grid.mg-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom: 6px; }
+.mg-stat { min-height: 96px; display: grid; place-items: center; text-align: center; gap: 3px; padding: 14px; }
+.mg-stat strong { display: block; font-family: var(--ss-font-display, Cinzel), Georgia, serif; font-size: 1.7rem;
+  color: #efe4ca; font-variant-numeric: tabular-nums; }
+.mg-stat small { display: block; font-size: .64rem; letter-spacing: .1em; text-transform: uppercase; color: #b0894e; }
+.mg-row { display: grid; grid-template-columns: 40px 1fr auto; gap: 12px; align-items: center; min-height: 54px; padding: 8px 14px; }
+.mg-ini { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 5px; background: rgba(176,137,78,.18);
+  border: 1px solid #6b5327; color: #d7b878; font-size: .74rem; font-weight: 700; }
+.mg-rt { display: flex; flex-direction: column; min-width: 0; }
+.mg-rt strong { font-size: .9rem; color: #e7dbc2; }
+.mg-rt small { font-size: .72rem; color: #b0894e; }
+.mg-lrow { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; align-items: center; padding: 9px 14px;
+  border-bottom: 1px solid rgba(120,90,45,.28); }
+.mg-lrow > span:first-child { color: #2c2013; font-size: .86rem; }
+.mg-pos { color: #4a6b28; } .mg-neg { color: #a5432a; } .mg-lrow b { font-variant-numeric: tabular-nums; }
+.mg-empty { padding: 22px; text-align: center; font-style: italic; color: #7a5f34; }
+.mg-soon { border: 1px dashed rgba(120,90,45,.5); border-radius: 8px; margin-top: 6px; }

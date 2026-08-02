@@ -1,0 +1,195 @@
+@layer ss-components {
+  .ss-button,
+  .ss-input,
+  .ss-tab-button {
+    appearance: none;
+    font: inherit;
+    color: inherit;
+  }
+
+  .ss-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--ss-space-2);
+    min-block-size: 48px;
+    padding: 0 var(--ss-space-4);
+    cursor: pointer;
+    font-family: var(--ss-font-display);
+    font-size: var(--ss-text-sm);
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    text-shadow: 0 1px 0 var(--ss-leather-950);
+    transition: filter var(--ss-transition), transform var(--ss-transition-fast);
+  }
+
+  .ss-button:hover { filter: brightness(1.09) saturate(1.04); }
+  .ss-button:active { transform: translateY(1px); filter: brightness(0.94); }
+  .ss-button:focus-visible,
+  .ss-tab-button:focus-visible,
+  .ss-input:focus-visible {
+    outline: 2px solid var(--ss-brass-300);
+    outline-offset: 2px;
+    box-shadow: var(--ss-focus-ring);
+  }
+  .ss-button[disabled] { opacity: 0.46; cursor: not-allowed; filter: grayscale(0.55); }
+
+  .ss-input {
+    inline-size: 100%;
+    min-block-size: 44px;
+    border: 0;
+    padding: 0 var(--ss-space-3);
+    background: transparent;
+    color: var(--ss-parchment-100);
+    font-family: var(--ss-font-body);
+    font-size: var(--ss-text-sm);
+    caret-color: var(--ss-brass-300);
+  }
+
+  .ss-input::placeholder { color: rgba(226, 211, 176, 0.52); }
+
+  .ss-icon {
+    --ss-icon-image: none;
+    display: inline-block;
+    flex: 0 0 auto;
+    inline-size: var(--ss-icon-size, 1.55rem);
+    block-size: var(--ss-icon-size, 1.55rem);
+    background: var(--ss-icon-image) center / contain no-repeat;
+  }
+
+  .ss-icon--horseshoe { --ss-icon-image: url("../assets/icons/ico_horseshoe.png"); }
+  .ss-icon--horse-head { --ss-icon-image: url("../assets/icons/ico_horse_head.png"); }
+  .ss-icon--person { --ss-icon-image: url("../assets/icons/ico_person.png"); }
+  .ss-icon--people { --ss-icon-image: url("../assets/icons/ico_people.png"); }
+  .ss-icon--fleur { --ss-icon-image: url("../assets/icons/ico_fleur.png"); }
+  .ss-icon--ledger { --ss-icon-image: url("../assets/icons/ico_ledger.png"); }
+  .ss-icon--gear { --ss-icon-image: url("../assets/icons/ico_gear.png"); }
+  .ss-icon--star { --ss-icon-image: url("../assets/icons/ico_star.png"); }
+  .ss-icon--barn { --ss-icon-image: url("../assets/icons/ico_barn.png"); }
+  .ss-icon--wagon-wheel { --ss-icon-image: url("../assets/icons/ico_wagon_wheel.png"); }
+  .ss-icon--wagon { --ss-icon-image: url("../assets/icons/ico_wagon.png"); }
+  .ss-icon--coin { --ss-icon-image: url("../assets/icons/ico_coin.png"); }
+  .ss-icon--gold { --ss-icon-image: url("../assets/icons/ico_gold.png"); }
+  .ss-icon--income { --ss-icon-image: url("../assets/icons/ico_income.png"); }
+  .ss-icon--expense { --ss-icon-image: url("../assets/icons/ico_expense.png"); }
+  .ss-icon--check { --ss-icon-image: url("../assets/icons/ico_check.png"); }
+  .ss-icon--alert { --ss-icon-image: url("../assets/icons/ico_alert.png"); }
+  .ss-icon--diamond { --ss-icon-image: url("../assets/icons/ico_diamond.png"); }
+  .ss-icon--envelope { --ss-icon-image: url("../assets/icons/ico_envelope.png"); }
+  .ss-icon--crown { --ss-icon-image: url("../assets/icons/ico_crown.png"); }
+  .ss-icon--hand { --ss-icon-image: url("../assets/icons/ico_hand.png"); }
+  .ss-icon--target { --ss-icon-image: url("../assets/icons/ico_target.png"); }
+  .ss-icon--eye { --ss-icon-image: url("../assets/icons/ico_eye.png"); }
+  .ss-icon--clock { --ss-icon-image: url("../assets/icons/ico_clock.png"); }
+  .ss-icon--magnifier { --ss-icon-image: url("../assets/icons/ico_magnifier.png"); }
+  .ss-icon--caret { --ss-icon-image: url("../assets/icons/ico_caret.png"); }
+  .ss-icon--arrow-right { --ss-icon-image: url("../assets/icons/ico_arrow_right.png"); }
+  .ss-icon--arrow-left { --ss-icon-image: url("../assets/icons/ico_arrow_left.png"); }
+  .ss-icon--rosette { --ss-icon-image: url("../assets/icons/ico_rosette.png"); }
+  .ss-icon--sc-logo { --ss-icon-image: url("../assets/icons/ico_sc_logo.png"); }
+
+  .ss-toggle {
+    appearance: none;
+    display: inline-block;
+    inline-size: 74px;
+    block-size: 28px;
+    border: 0;
+    background: url("../assets/containers/toggle_off.png") center / contain no-repeat;
+    cursor: pointer;
+  }
+
+  .ss-toggle:checked,
+  .ss-toggle[aria-checked="true"] { background-image: url("../assets/containers/toggle_on.png"); }
+
+  .ss-slider {
+    appearance: none;
+    inline-size: 100%;
+    block-size: 26px;
+    background: linear-gradient(var(--ss-brass-700), var(--ss-brass-700)) center / 100% 2px no-repeat;
+  }
+
+  .ss-slider::-webkit-slider-thumb {
+    appearance: none;
+    inline-size: 28px;
+    block-size: 28px;
+    border: 0;
+    background: url("../assets/containers/slider_knob.png") center / contain no-repeat;
+    cursor: grab;
+  }
+
+  .ss-seal {
+    --ss-seal-image: url("../assets/seals/seal_oxblood_horseshoe.png");
+    display: block;
+    inline-size: var(--ss-seal-size, 76px);
+    aspect-ratio: 1;
+    background: var(--ss-seal-image) center / contain no-repeat;
+  }
+
+  .ss-seal--horse { --ss-seal-image: url("../assets/seals/seal_oxblood_horsehead.png"); }
+  .ss-seal--sc { --ss-seal-image: url("../assets/seals/seal_oxblood_sc.png"); }
+  .ss-seal--gold { --ss-seal-image: url("../assets/seals/seal_gold_horsehead.png"); }
+  .ss-seal--green { --ss-seal-image: url("../assets/seals/seal_green_horseshoe.png"); }
+
+  .ss-stamp-red,
+  .ss-stamp-green {
+    display: grid;
+    place-items: center;
+    color: currentColor;
+    font-family: var(--ss-font-display);
+    font-size: var(--ss-text-sm);
+    letter-spacing: 0.08em;
+    text-align: center;
+    text-transform: uppercase;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: contain;
+  }
+
+  .ss-stamp-red {
+    inline-size: var(--ss-stamp-size, 150px);
+    aspect-ratio: 1;
+    color: var(--ss-danger);
+    background-image: url("../assets/seals/stamp_red_ring.png");
+  }
+
+  .ss-stamp-green {
+    inline-size: var(--ss-stamp-width, 190px);
+    aspect-ratio: 1.75;
+    color: var(--ss-green-700);
+    background-image: url("../assets/seals/stamp_green_oval.png");
+  }
+
+  .ss-status-chip {
+    --ss-chip-color: var(--ss-brass-700);
+    display: inline-flex;
+    align-items: center;
+    min-block-size: 24px;
+    padding: 0 0.65em;
+    border: 1px solid color-mix(in srgb, var(--ss-chip-color) 65%, transparent);
+    border-radius: 999px;
+    color: color-mix(in srgb, var(--ss-chip-color) 78%, var(--ss-ink));
+    background: color-mix(in srgb, var(--ss-chip-color) 12%, transparent);
+    font-family: var(--ss-font-body);
+    font-size: var(--ss-text-xs);
+    letter-spacing: 0.055em;
+    text-transform: uppercase;
+  }
+
+  .ss-status-chip--good { --ss-chip-color: var(--ss-success); }
+  .ss-status-chip--warn { --ss-chip-color: var(--ss-warning); }
+  .ss-status-chip--bad { --ss-chip-color: var(--ss-danger); }
+
+  .ss-progress {
+    overflow: hidden;
+    block-size: 5px;
+    border: 1px solid rgba(44, 32, 19, 0.42);
+    background: rgba(44, 32, 19, 0.18);
+  }
+
+  .ss-progress > span {
+    display: block;
+    inline-size: var(--ss-progress, 0%);
+    block-size: 100%;
+    background: var(--ss-progress-color, var(--ss-oxblood-500));
+  }
+}

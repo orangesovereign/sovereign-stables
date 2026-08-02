@@ -1,0 +1,143 @@
+@layer ss-components {
+  .ss-leather-surface {
+    color: var(--ss-parchment-100);
+    background-color: var(--ss-leather-900);
+    background-image: var(--ss-tex-leather);
+    background-repeat: repeat;
+    background-size: 512px 512px;
+  }
+
+  .ss-parchment-surface {
+    color: var(--ss-ink);
+    background-color: var(--ss-parchment-100);
+    background-image: var(--ss-tex-parchment);
+    background-repeat: repeat;
+    background-size: 512px 512px;
+  }
+
+  .ss-nine {
+    --ss-skin: none;
+    --ss-slice: 18% fill;
+    --ss-border: clamp(14px, 1.4vw, 28px);
+    box-sizing: border-box;
+    position: relative;
+    border: var(--ss-border) solid transparent;
+    border-image-source: var(--ss-skin);
+    border-image-slice: var(--ss-slice);
+    border-image-width: 1;
+    border-image-outset: 0;
+    border-image-repeat: stretch;
+    background: transparent;
+  }
+
+  .ss-nine > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .ss-plate-stat {
+    --ss-skin: url("../assets/containers/plate_stat.png");
+    --ss-slice: 36% 8% 12% 8% fill;
+    --ss-border: clamp(30px, 4.2vw, 74px);
+    min-block-size: clamp(150px, 20vw, 310px);
+    padding: var(--ss-space-3);
+  }
+
+  .ss-plate-stat-admin {
+    --ss-skin: url("../assets/containers/plate_stat_admin.png");
+    --ss-slice: 20% 8% 20% 25% fill;
+    --ss-border: clamp(24px, 3vw, 50px);
+    min-block-size: clamp(76px, 8vw, 124px);
+    padding-inline-start: clamp(56px, 8vw, 122px);
+  }
+
+  .ss-btn-primary,
+  .ss-btn-secondary,
+  .ss-field,
+  .ss-banner,
+  .ss-cartouche {
+    inline-size: 100%;
+    min-block-size: 44px;
+  }
+
+  .ss-btn-primary {
+    --ss-skin: url("../assets/containers/btn_primary.png");
+    --ss-slice: 24% 8% fill;
+    --ss-border: clamp(12px, 1.25vw, 22px);
+  }
+
+  .ss-btn-secondary {
+    --ss-skin: url("../assets/containers/btn_secondary.png");
+    --ss-slice: 24% 8% fill;
+    --ss-border: clamp(12px, 1.25vw, 22px);
+  }
+
+  .ss-field {
+    --ss-skin: url("../assets/containers/field_input.png");
+    --ss-slice: 28% 6% fill;
+    --ss-border: clamp(9px, 0.95vw, 17px);
+  }
+
+  .ss-card-dark {
+    --ss-skin: url("../assets/containers/card_dark.png");
+    --ss-slice: 12% 5% fill;
+    --ss-border: clamp(12px, 1.2vw, 22px);
+  }
+
+  .ss-card-horse {
+    --ss-skin: url("../assets/containers/card_horse.png");
+    --ss-slice: 8% 10% fill;
+    --ss-border: clamp(14px, 1.5vw, 26px);
+  }
+
+  .ss-card-horse[aria-selected="true"],
+  .ss-card-horse.is-active {
+    --ss-skin: url("../assets/containers/card_horse_active.png");
+  }
+
+  .ss-tab-rail {
+    --ss-skin: url("../assets/containers/tab_rail.png");
+    --ss-slice: 18% fill;
+    --ss-border: clamp(9px, 0.9vw, 16px);
+    aspect-ratio: 1;
+  }
+
+  .ss-tab-rail[aria-selected="true"],
+  .ss-tab-rail.is-active {
+    --ss-skin: url("../assets/containers/tab_rail_active.png");
+  }
+
+  .ss-tab-book {
+    --ss-skin: url("../assets/containers/tab_book.png");
+    --ss-slice: 8% 18% 8% 14% fill;
+    --ss-border: clamp(10px, 1vw, 18px);
+  }
+
+  .ss-tab-book[aria-selected="true"],
+  .ss-tab-book.is-active {
+    --ss-skin: url("../assets/containers/tab_book_active.png");
+  }
+
+  .ss-tab-top {
+    --ss-skin: url("../assets/containers/tab_top.png");
+    --ss-slice: 24% 8% 5% fill;
+    --ss-border: clamp(10px, 1vw, 18px);
+  }
+
+  .ss-tab-top[aria-selected="true"],
+  .ss-tab-top.is-active {
+    --ss-skin: url("../assets/containers/tab_top_active.png");
+  }
+
+  .ss-banner {
+    --ss-skin: url("../assets/cards/banner_ribbon.png");
+    --ss-slice: 28% 11% fill;
+    --ss-border: clamp(12px, 1.3vw, 24px);
+  }
+
+  .ss-cartouche {
+    --ss-skin: url("../assets/book_furniture/cartouche.png");
+    --ss-slice: 26% 13% fill;
+    --ss-border: clamp(11px, 1.2vw, 22px);
+  }
+}

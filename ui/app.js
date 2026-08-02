@@ -702,82 +702,81 @@
         return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
     function mgMoney(n) { return '$' + (Number(n) || 0).toLocaleString(); }
 
-    function mgStat(label, value, sub) {
-        return '<div class="mg__stat"><div class="mg__stat-l">' + mgEsc(label) + '</div>' +
-            '<div class="mg__stat-v">' + value + '</div>' +
-            '<div class="mg__stat-s">' + mgEsc(sub || '') + '</div></div>';
+    var MG_ICON = { overview: 'horseshoe', trainer: 'horse-head', staff: 'people', breeding: 'fleur', ledger: 'ledger', settings: 'gear', admin: 'star' };
+    var MG_TITLES = { overview: 'Operations Overview', trainer: 'Trainer Panel', staff: 'Staff & Roles',
+        breeding: 'Breeding Register', ledger: 'Society Ledger', settings: 'Stable Settings', admin: 'System Administration' };
+    function mgIcon(name, size) { return '<span class="ss-icon ss-icon--' + name + '"' + (size ? ' style="--ss-icon-size:' + size + 'px"' : '') + '></span>'; }
+    function mgStat(icon, value, label) {
+        return '<section class="ss-nine ss-plate-stat mg-stat">' + mgIcon(icon, 24) +
+            '<strong>' + value + '</strong><small>' + mgEsc(label) + '</small></section>';
     }
-    function mgPanelBox(title, sub, body) {
-        return '<section class="mg__box"><div class="mg__box-h"><b>' + mgEsc(title) + '</b>' +
-            (sub ? '<span>' + mgEsc(sub) + '</span>' : '') + '</div>' + body + '</section>';
-    }
-
-    function mgOverview(o, role) {
+    function mgOverview(o) {
         var stats = '';
-        if (o.funds) stats += mgStat('Society Funds', mgMoney(o.funds.cash), 'Available balance');
-        stats += mgStat('Employees on Duty', o.onDuty + ' / ' + o.staffCount, 'Current shift');
-        stats += mgStat('Client Horses', o.clientHorses.total, o.clientHorses.pending ? 'Coming soon' : 'Raising & training');
-        stats += mgStat('Ready for Pickup', o.clientHorses.ready, 'Owners notified');
+        if (o.funds) stats += mgStat('coin', mgMoney(o.funds.cash), 'Society Funds');
+        stats += mgStat('people', (o.onDuty || 0) + ' / ' + (o.staffCount || 0), 'Employees on Duty');
+        stats += mgStat('horse-head', o.clientHorses ? o.clientHorses.total : 0, 'Client Horses');
+        stats += mgStat('wagon', o.clientHorses ? o.clientHorses.ready : 0, 'Ready for Pickup');
 
-        // Staff on duty
         var staffRows = (o.staff || []).map(function (e) {
-            return '<div class="mg__row"><span class="mg__ini">' + mgEsc((e.name || '?').slice(0, 2).toUpperCase()) + '</span>' +
-                '<div class="mg__row-t"><b>' + mgEsc(e.name || 'Employee') + '</b><span>' + mgEsc((e.role || '') + ' · Grade ' + (e.grade || 1)) + '</span></div>' +
-                '<span class="mg__tag ' + (Number(e.on_duty) === 1 ? 'mg__tag--ok' : '') + '">' + (Number(e.on_duty) === 1 ? 'On Duty' : 'Off Duty') + '</span></div>';
-        }).join('') || '<div class="mg__empty">No employees yet.</div>';
+            var on = Number(e.on_duty) === 1;
+            return '<section class="ss-nine ss-card-dark mg-row">' +
+                '<span class="mg-ini">' + mgEsc((e.name || '?').slice(0, 2).toUpperCase()) + '</span>' +
+                '<span class="mg-rt"><strong>' + mgEsc(e.name || 'Employee') + '</strong><small>' + mgEsc((e.role || '') + ' · Grade ' + (e.grade || 1)) + '</small></span>' +
+                '<span class="ss-status-chip ' + (on ? 'ss-status-chip--good' : '') + '">' + (on ? 'On Duty' : 'Off Duty') + '</span></section>';
+        }).join('') || '<div class="mg-empty">No employees yet.</div>';
 
-        // Recent ledger (owner/admin only — funds present)
-        var ledgerBox = '';
+        var ledgerHtml = '';
         if (o.funds) {
             var ledRows = (o.ledger || []).map(function (l) {
                 var amt = Number(l.amount_cash) || 0;
-                return '<div class="mg__lrow"><span>' + mgEsc(l.description) + '</span>' +
-                    '<span class="mg__tag">' + mgEsc(l.category) + '</span>' +
-                    '<b class="' + (amt < 0 ? 'mg__neg' : 'mg__pos') + '">' + (amt < 0 ? '-' : '+') + mgMoney(Math.abs(amt)) + '</b></div>';
-            }).join('') || '<div class="mg__empty">No activity yet.</div>';
-            ledgerBox = mgPanelBox('Recent Ledger', 'Latest business activity', '<div class="mg__ltable">' + ledRows + '</div>');
+                return '<div class="mg-lrow"><span>' + mgEsc(l.description) + '</span>' +
+                    '<span class="ss-status-chip">' + mgEsc(l.category) + '</span>' +
+                    '<b class="' + (amt < 0 ? 'mg-neg' : 'mg-pos') + '">' + (amt < 0 ? '-' : '+') + mgMoney(Math.abs(amt)) + '</b></div>';
+            }).join('') || '<div class="mg-empty">No activity yet.</div>';
+            ledgerHtml = '<h2 class="ss-section-rule"><span>Recent Ledger</span></h2><div class="ss-stack">' + ledRows + '</div>';
         }
 
-        var ops = mgPanelBox("Today's Stable Operations", 'All client work by phase',
-            '<div class="mg__empty">Client-horse training & raising is coming next — this fills in once that subsystem is built.</div>');
-        var staffBox = mgPanelBox('Staff on Duty', 'Current shift', '<div class="mg__list">' + staffRows + '</div>');
-
-        return '<div class="mg__stats">' + stats + '</div>' +
-            '<div class="mg__grid">' + ops + '<div class="mg__col">' + staffBox + ledgerBox + '</div></div>';
+        return '<div class="ss-grid ss-grid--2 mg-stats">' + stats + '</div>' +
+            '<h2 class="ss-section-rule"><span>Staff on Duty</span></h2><div class="ss-stack">' + staffRows + '</div>' +
+            ledgerHtml;
     }
-
     function mgSectionBody() {
         var p = mgPanel; if (!p) return '';
-        if (mgSection === 'overview') return mgOverview(p.overview || {}, p.role);
-        var titles = { trainer: 'Trainer Panel', staff: 'Staff & Roles', breeding: 'Breeding Register',
-            ledger: 'Society Ledger', settings: 'Stable Settings', admin: 'Admin Panel' };
-        return '<div class="mg__empty mg__soon">' + mgEsc(titles[mgSection] || 'Section') +
-            ' is designed and coming next. The shell + Overview are live first.</div>';
+        if (mgSection === 'overview') return mgOverview(p.overview || {});
+        return '<div class="mg-empty mg-soon">' + mgEsc(MG_TITLES[mgSection] || 'Section') +
+            ' — its screen is next; the backend data is already live.</div>';
     }
-    var MG_TITLES = { overview: 'Operations Overview', trainer: 'Trainer Panel', staff: 'Staff & Roles',
-        breeding: 'Breeding Register', ledger: 'Society Ledger', settings: 'Stable Settings', admin: 'System Administration' };
 
     function mgRender() {
         var p = mgPanel; if (!p) return;
         var el = document.getElementById('manage');
-        var tabs = (p.nav || []).map(function (n) {
-            return '<button class="mg__tab' + (n.key === mgSection ? ' is-active' : '') +
-                '" data-mg="' + n.key + '">' + mgEsc(n.label) + '</button>';
+        var rail = (p.nav || []).map(function (n) {
+            return '<button class="ss-nine ss-tab-rail ss-tab-button' + (n.key === mgSection ? ' is-active' : '') +
+                '" data-mg="' + n.key + '" aria-label="' + mgEsc(n.label) + '" title="' + mgEsc(n.label) + '">' + mgIcon(MG_ICON[n.key] || 'diamond') + '</button>';
         }).join('');
         el.innerHTML =
-            '<div class="mg__board">' +
-              '<span class="mg__clip"></span>' +
-              '<nav class="mg__tabs">' + tabs + '</nav>' +
-              '<div class="mg__paper">' +
-                '<header class="mg__paperhd"><div class="mg__seal">SC</div>' +
-                  '<div class="mg__ph-t"><h1>' + mgEsc(p.stableName) + '</h1>' +
-                    '<p>' + mgEsc((p.playerName || '') + ' — ' + (p.roleLabel || '')) + '</p></div>' +
-                  '<button class="mg__exit" data-mg="__close" title="Close">&#10005;</button></header>' +
-                '<div class="mg__eyebrow">Stable Management</div>' +
-                '<h2 class="mg__title">' + mgEsc(MG_TITLES[mgSection] || 'Overview') + '</h2>' +
-                '<div class="mg__content">' + mgSectionBody() + '</div>' +
-              '</div>' +
-            '</div>';
+            '<main class="ss-ui">' +
+              '<section class="ss-book">' +
+                '<i class="ss-book-corner ss-book-corner--tl"></i><i class="ss-book-corner ss-book-corner--tr"></i>' +
+                '<i class="ss-book-corner ss-book-corner--br"></i><i class="ss-book-corner ss-book-corner--bl"></i>' +
+                '<header class="mg-hd">' +
+                  '<span class="ss-icon ss-icon--sc-logo" style="--ss-icon-size:34px"></span>' +
+                  '<span class="mg-brand"><b>Sovereign Stables</b><em>Stables &amp; Carriage Co.</em></span>' +
+                  '<div class="ss-nine ss-cartouche mg-loc">' + mgEsc(p.stableName) + '</div>' +
+                  '<span class="mg-who">' + mgEsc((p.playerName || '') + ' — ' + (p.roleLabel || '')) + '</span>' +
+                  '<button class="ss-nine ss-btn-secondary ss-button mg-exit" data-mg="__close">Exit</button>' +
+                '</header>' +
+                '<nav class="ss-left-rail" aria-label="Stable sections">' + rail + '<span class="ss-left-rail__fleur"></span></nav>' +
+                '<div class="ss-pages">' +
+                  '<article class="ss-page">' +
+                    '<header class="ss-page-header"><span class="ss-kicker">Stable Management</span>' +
+                      '<h1 class="ss-page-title">' + mgEsc(MG_TITLES[mgSection] || 'Overview') + '</h1></header>' +
+                    '<div class="mg-content">' + mgSectionBody() + '</div>' +
+                  '</article>' +
+                '</div>' +
+                '<span class="ss-ribbon-bookmark"></span><span class="ss-nameplate"></span><span class="ss-book-clasp"></span>' +
+              '</section>' +
+            '</main>';
     }
     function mgOpen(panel) {
         mgPanel = panel; mgSection = 'overview';

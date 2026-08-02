@@ -78,6 +78,16 @@ files {
     'ui/index.html',
     'ui/app.css',
     'ui/app.js',
+    -- Book-UI asset kit (leather/parchment/brass surfaces, seals, icons) + its CSS
+    'ui/css/*.css',
+    'ui/config/*.json',
+    'ui/fonts/*.woff2',
+    'ui/assets/textures/*.png',
+    'ui/assets/book_furniture/*.png',
+    'ui/assets/seals/*.png',
+    'ui/assets/cards/*.png',
+    'ui/assets/containers/*.png',
+    'ui/assets/icons/*.png',
 }
 
 -- Resources this script talks to (all reached through shared/bridge.lua).
