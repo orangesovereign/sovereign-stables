@@ -897,10 +897,11 @@
     document.addEventListener('keyup', function (e) { if (e.key === 'Escape') requestClose(); });
 
     // ── DEV PREVIEW ─────────────────────────────────────────────────────
-    // Opened standalone in a browser (not in-game, so GetParentResourceName is
-    // undefined): auto-show the management clipboard with sample data, so the
-    // design can be eyeballed without booting the server. No effect in-game.
-    if (typeof GetParentResourceName !== 'function') {
+    // Standalone in a normal browser only — auto-show the panel with sample data
+    // so the design can be eyeballed without the game. Detect the game by its CEF
+    // user-agent (CitizenFX): in-game this is FALSE, so it NEVER opens on load
+    // in RedM (GetParentResourceName is unreliable there and caused a screen-dim).
+    if (!/CitizenFX|Cfx|Chrome\/\d+\.\d+ RedM/i.test(navigator.userAgent || '') && typeof GetParentResourceName !== 'function' && window.location.protocol !== 'nui:') {
         mgOpen({
             stableName: 'Loveland Stables', playerName: 'Tate Love', roleLabel: 'Owner · Grade 3', role: 'owner',
             nav: [ { key: 'overview', label: 'Overview' }, { key: 'trainer', label: 'Trainer Panel' },
