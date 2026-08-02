@@ -774,7 +774,9 @@
                     '<div class="mg-content">' + mgSectionBody() + '</div>' +
                   '</article>' +
                 '</div>' +
-                '<span class="ss-ribbon-bookmark"></span><span class="ss-nameplate"></span><span class="ss-book-clasp"></span>' +
+                // (Nameplate / ribbon / clasp furniture belongs to the kit's
+                //  two-page spread; on our single running page they float loose,
+                //  so they're intentionally omitted. Corner frames stay.)
               '</section>' +
             '</main>';
     }

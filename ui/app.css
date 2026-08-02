@@ -421,6 +421,11 @@ html, body { width: 100%; height: 100%; background: transparent; color-scheme: n
 #manage .ss-ui { width: min(1300px, 96vw); height: min(90vh, 880px); }
 /* give the book a header row above the rail|pages grid */
 #manage .ss-book { grid-template-rows: auto minmax(0, 1fr); }
+/* The kit's .ss-pages is a TWO-PAGE spread (2 columns). We render one running
+   management page, so collapse it to a single full-width page — otherwise the
+   right half is bare leather and content crams into the left half. */
+#manage .ss-pages { grid-template-columns: minmax(0, 1fr); }
+#manage .ss-page { border-radius: 10px; box-shadow: inset 0 0 46px -34px rgba(20,12,7,.9); }
 .mg-hd { grid-column: 1 / -1; display: flex; align-items: center; gap: 16px; padding: 12px 24px 6px;
   color: #e7dbc2; }
 .mg-brand { display: flex; flex-direction: column; line-height: 1.12; }
@@ -432,7 +437,10 @@ html, body { width: 100%; height: 100%; background: transparent; color-scheme: n
   letter-spacing: .06em; text-transform: uppercase; color: #e7dbc2; }
 .mg-exit { padding: 8px 18px; }
 .mg-content { display: flex; flex-direction: column; gap: 6px; }
-.ss-grid.mg-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom: 6px; }
+.ss-grid.mg-stats { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin-bottom: 6px; }
+/* The kit's plate art is very tall (clamp 150-310px); at 4-up that overflows.
+   Rein it in so four plates sit in one tidy row. */
+#manage .ss-plate-stat.mg-stat { min-block-size: clamp(118px, 12vw, 168px); }
 .mg-stat { min-height: 96px; display: grid; place-items: center; text-align: center; gap: 3px; padding: 14px; }
 .mg-stat strong { display: block; font-family: var(--ss-font-display, Cinzel), Georgia, serif; font-size: 1.7rem;
   color: #efe4ca; font-variant-numeric: tabular-nums; }
