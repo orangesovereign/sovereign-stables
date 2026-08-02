@@ -54,12 +54,16 @@ html,body { margin:0; width:100%; height:100%; background:transparent; color-sch
 
 /* ───────── framed parchment page ───────── */
 .sc-content { padding:16px; min-height:0; overflow:hidden; }
-.sc-page { position:relative; height:100%; overflow:auto; padding:26px 30px 30px; color:var(--sc-ink);
+/* Fixed frame (holds corners, never scrolls) + inner scroll area. Padding is
+   larger than the corner's outer extent (14+26=40px) so the header/action button
+   never collide with the corner filigree. */
+.sc-page { position:relative; height:100%; overflow:hidden; color:var(--sc-ink);
   background:var(--sc-parchment) url("../assets/emblems/parchment-tile.png") repeat; background-size:512px;
   border:1px solid var(--sc-frame); box-shadow:inset 0 0 0 1px var(--sc-frame-soft); border-radius:3px; }
-.sc-corner { position:absolute; width:38px; height:38px; background-color:var(--sc-gold); opacity:.85; pointer-events:none;
+.sc-page-scroll { height:100%; overflow:auto; padding:34px 48px 44px; }
+.sc-corner { position:absolute; width:26px; height:26px; z-index:2; background-color:var(--sc-gold); opacity:.8; pointer-events:none;
   -webkit-mask:url("../assets/emblems/corner-filigree.png") no-repeat center/contain; mask:url("../assets/emblems/corner-filigree.png") no-repeat center/contain; }
-.sc-corner--tl{top:8px;left:8px} .sc-corner--tr{top:8px;right:8px;transform:scaleX(-1)} .sc-corner--bl{bottom:8px;left:8px;transform:scaleY(-1)} .sc-corner--br{bottom:8px;right:8px;transform:scale(-1)}
+.sc-corner--tl{top:14px;left:14px} .sc-corner--tr{top:14px;right:14px;transform:scaleX(-1)} .sc-corner--bl{bottom:14px;left:14px;transform:scaleY(-1)} .sc-corner--br{bottom:14px;right:14px;transform:scale(-1)}
 
 .sc-phead { display:flex; align-items:flex-start; gap:16px; margin-bottom:20px; }
 .sc-ptitle h1 { margin:0; font-family:var(--sc-font-caps); font-weight:700; font-size:clamp(1.7rem,1.2rem+1.1vw,2.4rem); letter-spacing:.03em; text-transform:uppercase; color:var(--sc-ink); }

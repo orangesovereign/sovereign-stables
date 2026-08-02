@@ -59,7 +59,7 @@ export function FramedPage({ children }) {
     <div className="sc-page">
       <span className="sc-corner sc-corner--tl" /><span className="sc-corner sc-corner--tr" />
       <span className="sc-corner sc-corner--bl" /><span className="sc-corner sc-corner--br" />
-      {children}
+      <div className="sc-page-scroll">{children}</div>
     </div>
   )
 }
