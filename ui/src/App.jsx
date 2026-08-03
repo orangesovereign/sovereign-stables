@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNuiEvent, fetchNui, isBrowser } from './nui.js'
 import BookApp from './redesign/BookApp.jsx'
-import Storefront from './components/Storefront.jsx'
+import Storefront from './redesign/StorefrontScreen.jsx'
 import Customizer from './components/Customizer.jsx'
 import { mockPanel } from './mock.js'
 import { mockStore, mockCustom } from './components/store/mockStore.js'
