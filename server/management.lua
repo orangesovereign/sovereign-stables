@@ -169,6 +169,40 @@ Management.canManage    = function(src, stableId, charid)   -- owner or admin
     return isAdmin(src) or roleAt(src, stableId, charid) == 'owner'
 end
 
+--------------------------------------------------------------------------------
+-- Section data (redesign book fetches each section lazily on nav).
+--------------------------------------------------------------------------------
+-- Role-scoped data for one book section. Backends already hold the data; this
+-- just gathers it per section. Sections not yet built return { pending = true }.
+function Management.sectionData(stableId, section, role, charid)
+    if section == 'trainer' or section == 'training' then
+        local trainerView = (role == 'trainer' or role == 'stablehand')
+        return {
+            roster   = Training.roster(stableId, role, charid),
+            counts   = Training.counts(stableId, trainerView and charid or nil),
+            trainers = (not trainerView) and Training.trainerSummary(stableId) or nil,
+            tiers    = (Config.Training and Config.Training.tiers) or {},
+            role     = role,
+        }
+    end
+    return { pending = true }
+end
+
+RegisterNetEvent(Events.RequestManageSection, function(stableId, section)
+    local src = source
+    CreateThread(function()
+        if not (stableId and Config.Stables[stableId] and section) then return end
+        local charid = Bridge.getCharId(src); if not charid then return end
+        local role = isAdmin(src) and 'admin' or roleAt(src, stableId, charid)
+        if not role then return end
+        TriggerClientEvent(Events.ManageSectionData, src, {
+            section = section,
+            role    = role,
+            data    = Management.sectionData(stableId, section, role, charid),
+        })
+    end)
+end)
+
 RegisterNetEvent(Events.RequestManagement, function(clientStable)
     local src = source
     CreateThread(function()

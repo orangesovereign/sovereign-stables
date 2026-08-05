@@ -9,14 +9,44 @@
 
 Management = Management or {}
 
+local currentStable = nil   -- the stable this panel is bound to (for action/section requests)
+
 RegisterNetEvent(Events.ManagementData, function(payload)
     if type(payload) ~= 'table' then return end
+    currentStable = payload.stableId
     SetNuiFocus(true, true)
     SendNUIMessage({ action = 'manage:open', panel = payload })
 end)
 
+-- One book section's data (Training/Staff/Breeding/...) — pushed on nav.
+RegisterNetEvent(Events.ManageSectionData, function(payload)
+    if type(payload) ~= 'table' then return end
+    SendNUIMessage({ action = 'manage:section', section = payload.section, role = payload.role, data = payload.data })
+end)
+
+-- Outcome of a management action (toast + the NUI refreshes the section).
+RegisterNetEvent(Events.ManageActionResult, function(res)
+    SendNUIMessage({ action = 'manage:result', result = res or {} })
+end)
+
 RegisterNUICallback('manageClose', function(_, cb)
     SetNuiFocus(false, false)
+    cb('ok')
+end)
+
+-- The book asks for a section's data as the user navigates to it.
+RegisterNUICallback('requestSection', function(data, cb)
+    if currentStable and data and data.section then
+        TriggerServerEvent(Events.RequestManageSection, currentStable, data.section)
+    end
+    cb('ok')
+end)
+
+-- A book action (hire/fire/duty, setPhase/markReady/return, funds, settings, ...).
+RegisterNUICallback('manageAction', function(data, cb)
+    if currentStable and data and data.action then
+        TriggerServerEvent(Events.RequestManageAction, currentStable, data.action, data.payload or {})
+    end
     cb('ok')
 end)
 

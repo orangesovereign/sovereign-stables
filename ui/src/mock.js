@@ -1,5 +1,24 @@
 // Sample payload so the book renders in a plain browser (Vite dev/preview).
 // Mirrors the server's Management.push shape. Never used inside RedM.
+// Per-section dev data (browser preview only; in-game this arrives via manage:section).
+export const mockSections = {
+  training: {
+    role: 'owner',
+    counts: { raising: 4, training: 5, ready: 2, returned: 1, total: 11 },
+    tiers: [{ id: 'basic', label: 'Basic Training' }, { id: 'advanced', label: 'Advanced Training' }, { id: 'raise', label: 'Colt Raising' }],
+    trainers: [
+      { charid: 1, name: 'Bebe Jewels', assigned: 4, training: 3, raising: 1 },
+      { charid: 2, name: 'Jesse Ricketts', assigned: 3, training: 2, raising: 1 },
+    ],
+    roster: [
+      { id: 1, horse: 'Riverbane', breed: 'Kentucky Saddler', client: 'Evelyn Shaw', tier: 'advanced', phase: 'training', trainer: 'Bebe Jewels', progress: 60, readyAt: Math.floor(Date.now() / 1000) + 172800 },
+      { id: 2, horse: 'Copperwash', breed: 'Tennessee Walker', client: 'Silas Reed', tier: 'raise', phase: 'raising', trainer: 'Bebe Jewels', progress: 35, readyAt: Math.floor(Date.now() / 1000) + 600000 },
+      { id: 3, horse: 'Rustfang', breed: 'Morgan', client: 'Mae Carter', tier: 'advanced', phase: 'ready', trainer: 'Jesse Ricketts', progress: 100, readyAt: Math.floor(Date.now() / 1000) },
+      { id: 4, horse: 'Deadwater', breed: 'Turkoman', client: 'Nora Bell', tier: 'advanced', phase: 'training', trainer: 'Jesse Ricketts', progress: 25, readyAt: Math.floor(Date.now() / 1000) + 700000 },
+    ],
+  },
+}
+
 export const mockPanel = {
   stableId: 'loveland',
   stableName: 'Loveland Stables',

@@ -66,6 +66,8 @@ Events.RequestManageAction = e('requestManageAction') -- a management action (hi
 Events.ManageActionResult  = e('manageActionResult')  -- client-bound: action outcome (panel then refreshes)
 Events.RequestTrainingData = e('requestTrainingData') -- open the Trainer Panel (client-horse roster)
 Events.TrainingData        = e('trainingData')        -- client-bound: role-scoped training roster + counts
+Events.RequestManageSection = e('requestManageSection') -- fetch one book section's data [redesign]
+Events.ManageSectionData    = e('manageSectionData')    -- client-bound: one section's role-scoped data
 Events.RequestBreedingData = e('requestBreedingData') -- open the Breeding Register
 Events.BreedingData        = e('breedingData')        -- client-bound: pairings + stats + perms
 -- horse creator [admin] — author a horse into a stable's catalog

@@ -87,6 +87,9 @@ local function trainerSummary(stableId)
     return out
 end
 
+-- Exposed so the management book's section endpoint can reuse it.
+Training.trainerSummary = trainerSummary
+
 --------------------------------------------------------------------------------
 -- Data endpoint (the future Trainer Panel binds to this)
 --------------------------------------------------------------------------------
