@@ -74,6 +74,9 @@ end
 -- The list of wagon cards a stable offers. Empty vendor list = the whole catalog.
 function Catalog.wagonsFor(stableId)
     local stable = Config.Stables[stableId]
+    -- Per-stable wagon disable (e.g. the lawmen-only Government Stables): no wagons
+    -- sold and none pulled here.
+    if stable and stable.options and stable.options.wagonsEnabled == false then return {} end
     local wanted = stable and stable.catalog and stable.catalog.wagons or {}
     local out = {}
 

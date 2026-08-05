@@ -472,22 +472,23 @@ Config.Stables = {
         prompt = { coords = { -763.116, -1223.286, 43.468 }, distance = 1.5 },
         preview = {
             horsePos = { -768.26, -1223.188, 43.468, 72.95 },   -- Preview Horse Coord
-            -- ⚠️ ESTIMATE — owner did not capture a showroom WAGON spot. Nearby clear
-            -- ground guessed so the Wagons tab still works; capture the real one and
-            -- run /stables_diag. (Or set catalog.wagons if this stable sells no wagons.)
-            wagonPos = { -775.0, -1223.5, 43.468, 90.0 },
+            -- No wagons at this stable (lawmen only, horses only) — wagonPos unused.
+            wagonPos = nil,
         },
-        -- ⚠️ ESTIMATE — capture the real OUTSIDE wagon spawn / put-away spot.
         retrieve = {
-            wagonPos = { -775.0, -1217.0, 43.468, 90.0 },
+            wagonPos = nil,   -- no wagon pull/put-away here
         },
-        jobs = { restricted = false, allowed = {} },   -- open to all; set restricted=true + allowed for a gov-only stable
+        -- ⭐ LAWMEN ONLY. ⚠️ Set `allowed` to YOUR real law job id(s) — this is a
+        -- placeholder. With the wrong id NOBODY can use this stable.
+        jobs = { restricted = true, allowed = { 'law' } },
         faction = { enabled = false, job = nil },
+        -- Horses only — no wagons sold and no wagons pulled here (owner ruling).
         catalog = { horses = {}, wagons = {} },
         options = {
             storedHorsesGetDirty = true,
             breedingEnabled      = true,
             wildSalesEnabled     = false,
+            wagonsEnabled        = false,   -- hides the Wagons tab; blocks buying + pulling wagons
         },
     },
     -- NOTE: no Annesburg stable — Annesburg is served by Van Horn (owner 2026-07-30).

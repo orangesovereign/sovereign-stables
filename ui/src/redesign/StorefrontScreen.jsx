@@ -102,7 +102,7 @@ export default function StorefrontScreen({ initial }) {
       crest="crest-diamond" wordmark="Sovereign Stables" brandSub="Stables & Carriage Co."
       location={header.stableLabel || '—'} user={header.charName ? `${header.charName}${header.job ? ` · ${header.job}` : ''}` : null}
       wallet={wallet} onExit={() => post('close', {})}
-      nav={NAV} active={view} onNav={goView}
+      nav={header.wagonsEnabled === false ? NAV.filter((n) => n.key !== 'wagons') : NAV} active={view} onNav={goView}
     >
       <div className="sc-store">
         <Stage onOrbit={onOrbit} onZoom={onZoom} onPrev={() => cycle(-1)} onNext={() => cycle(1)} showCycle={view === 'shop'} />

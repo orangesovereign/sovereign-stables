@@ -155,6 +155,8 @@ RegisterNetEvent(Events.HeaderData, function(header)
             permTier    = header.permTier or '',
             cash        = header.cash or 0,
             gold        = header.gold or 0,
+            -- Per-stable: hide the Wagons tab where wagons are disabled (lawmen stable).
+            wagonsEnabled = not (stable and stable.options and stable.options.wagonsEnabled == false),
         },
     })
     -- The header arrives AFTER the shop opens, so the first detail panel was
