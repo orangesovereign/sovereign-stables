@@ -15,26 +15,37 @@ local busy = {}   -- [src] = true while a purchase is in flight (anti-spam/dupe)
 --------------------------------------------------------------------------------
 local HCOLS = 'id, name, sex, model, is_default, stable_origin, xp, age'
 
--- FACTION POOLS [S16]. A stable with faction.enabled shows ONE shared inventory
--- (e.g. the government/lawmen pool) instead of the player's personal horses.
--- The horse row's `faction` column holds the pool key; personal horses are NULL.
-function Horses.factionKeyFor(stableId)
+-- FACTION POOLS [S16]. A stable with faction.enabled shows a SHARED inventory
+-- (e.g. the government pool) instead of the player's personal horses. The horse
+-- row's `faction` column holds the pool key; personal horses are NULL.
+--
+-- Per-department pools: `faction.pools = { job = poolKey }` lets ONE stable serve
+-- several branches with SEPARATE inventories (e.g. sheriff/marshal share 'gov_law',
+-- doctor uses 'gov_medical'). A legacy single `faction.key` still works (one pool
+-- shared by everyone in jobs.allowed). Point several jobs at the same key to share.
+function Horses.factionKeyFor(stableId, job)
     local s = Config.Stables[stableId]
     local f = s and s.faction
-    if f and f.enabled and f.key then return f.key end
-    return nil
+    if not (f and f.enabled) then return nil end
+    if f.pools then return (job and f.pools[job]) or nil end
+    return f.key
 end
 
--- Pool keys this player may access: any faction stable whose jobs.allowed lists
--- their VORP job. (A sheriff/marshal → { government = true }.)
+-- Pool keys this player may access, by their VORP job (a doctor → { gov_medical },
+-- a sheriff → { gov_law }). Used by the summon path to authorize pool horses.
 function Horses.playerFactions(src)
     local job = Bridge.getJob(src)
     local out = {}
+    if not job then return out end
     for _, s in pairs(Config.Stables or {}) do
         local f = s.faction
-        if f and f.enabled and f.key and s.jobs then
-            for _, j in ipairs(s.jobs.allowed or {}) do
-                if j == job then out[f.key] = true break end
+        if f and f.enabled then
+            if f.pools then
+                if f.pools[job] then out[f.pools[job]] = true end
+            elseif f.key and s.jobs then
+                for _, j in ipairs(s.jobs.allowed or {}) do
+                    if j == job then out[f.key] = true break end
+                end
             end
         end
     end
@@ -52,8 +63,8 @@ end
 
 -- What to show at a given stable: the faction pool if it's a faction stable,
 -- else the player's personal horses.
-function Horses.listOwnedAt(charid, stableId)
-    local fk = Horses.factionKeyFor(stableId)
+function Horses.listOwnedAt(charid, stableId, job)
+    local fk = Horses.factionKeyFor(stableId, job)
     if fk then
         return Db.awaitQuery('SELECT ' .. HCOLS .. ' FROM sovereign_horses WHERE faction = ? ORDER BY id', { fk }) or {}
     end
@@ -132,12 +143,12 @@ function Horses.buy(src, stableId, model, wanted)
 
     -- Ownership cap. A faction stable buys INTO its shared pool (pool cap); a
     -- normal stable buys into the player's personal stable (personal cap).
-    local fk = Horses.factionKeyFor(stableId)
+    local fk = Horses.factionKeyFor(stableId, job)
     local cap, owned
     if fk then
         cap   = (Config.Stables[stableId].faction and Config.Stables[stableId].faction.cap) or 30
         owned = Horses.countInPool(fk)
-        if owned >= cap then return false, ('The government stable is full (%d horses).'):format(cap) end
+        if owned >= cap then return false, ('This pool is full (%d horses).'):format(cap) end
     else
         cap   = Perms.maxHorses(job, grade)
         owned = Horses.countOwned(charid)
@@ -183,15 +194,16 @@ end
 -- Push the horse list for the stable being browsed: the faction pool at a
 -- faction stable, else the player's personal horses.
 local function pushOwned(src, charid, stableId)
-    local fk = Horses.factionKeyFor(stableId)
+    local job, grade = Bridge.getJob(src)
+    local fk = Horses.factionKeyFor(stableId, job)
     local cap
     if fk then
         cap = (Config.Stables[stableId].faction and Config.Stables[stableId].faction.cap) or 30
     else
-        cap = Perms.maxHorses(Bridge.getJob(src))
+        cap = Perms.maxHorses(job, grade)
     end
     TriggerClientEvent(Events.OwnedData, src, {
-        owned   = Horses.listOwnedAt(charid, stableId),
+        owned   = Horses.listOwnedAt(charid, stableId, job),
         cap     = cap,
         faction = fk or nil,   -- lets the NUI label the shared pool if it wants
     })
@@ -227,7 +239,7 @@ RegisterNetEvent(Events.RequestSetDefault, function(horseId, stableId)
     CreateThread(function()
         local charid = Bridge.getCharId(src)
         if not charid then return end
-        local fk = Horses.factionKeyFor(stableId)
+        local fk = Horses.factionKeyFor(stableId, Bridge.getJob(src))
         if fk and Horses.playerFactions(src)[fk] then
             -- Faction pool: scope the default to the pool (any member may set it).
             Db.execute('UPDATE sovereign_horses SET is_default = 0 WHERE faction = ?', { fk })

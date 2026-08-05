@@ -101,10 +101,14 @@ end
 local dutyMount = {}   -- [charid] = pool horseId chosen this shift
 
 local function isOnDuty(src, charid)
+    -- On duty if EITHER department says so: law is charid-based, medical is src-based.
     local ok, res = pcall(function() return exports.sovereign_lawandorder:isOnDuty(charid) end)
-    if ok and res ~= nil then return res == true end
-    local p = Player(src)                        -- fallback: the duty statebag
-    return p and p.state and p.state.lawOnDuty == true
+    if ok and res == true then return true end
+    local ok2, res2 = pcall(function() return exports.sovereign_medical:isOnDuty(src) end)
+    if ok2 and res2 == true then return true end
+    local p = Player(src)                        -- fallback: the duty statebags
+    if p and p.state and (p.state.lawOnDuty == true or p.state.medOnDuty == true) then return true end
+    return false
 end
 
 -- Lawman clocked off → drop their temporary pool mount (whistle reverts to personal).

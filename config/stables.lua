@@ -478,12 +478,14 @@ Config.Stables = {
         retrieve = {
             wagonPos = nil,   -- no wagon pull/put-away here
         },
-        -- ⭐ LAWMEN ONLY — the county's two law jobs (owner 2026-08-02).
-        jobs = { restricted = true, allowed = { 'sheriff', 'marshal' } },
-        -- SHARED GOVERNMENT HORSE POOL [S16]. Sheriff + marshal see and use ONE
-        -- shared inventory here (not their personal horses). `key` names the pool;
-        -- membership = this stable's jobs.allowed. `cap` = pool size.
-        faction = { enabled = true, key = 'government', cap = 30 },
+        -- ⭐ GOVERNMENT PERSONNEL — law (sheriff + marshal) and medical (doctor).
+        jobs = { restricted = true, allowed = { 'sheriff', 'marshal', 'doctor' } },
+        -- GOVERNMENT HORSE POOLS [S16]. Each branch sees & uses its OWN shared
+        -- inventory here (not personal horses): law shares 'gov_law', medical uses
+        -- 'gov_medical'. `cap` = size per pool. To make it ONE shared pool for
+        -- everyone instead, point every job at the same key.
+        faction = { enabled = true, cap = 30,
+            pools = { sheriff = 'gov_law', marshal = 'gov_law', doctor = 'gov_medical' } },
         -- Horses only — no wagons sold and no wagons pulled here (owner ruling).
         catalog = { horses = {}, wagons = {} },
         options = {
