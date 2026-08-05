@@ -448,6 +448,48 @@ Config.Stables = {
             wildSalesEnabled     = false,
         },
     },
+    ['government'] = {
+        label       = 'Government Stables',
+        -- ✅ REAL COORDS (ped / groomed horse / preview horse) captured by owner 2026-08-02.
+        -- ⚠️ NO MAP BLIP — owner request ("No Blip").
+        blip = {
+            enabled = false,                              -- hidden: no marker on the map
+            sprite  = 1938782895,
+            coords  = { -763.116, -1223.286, 43.468 },
+        },
+        ped = {
+            enabled  = true,
+            model    = 'u_m_m_bwmstablehand_01',
+            coords   = { -763.116, -1223.286, 43.468, 267.55 },   -- Ped Coords
+            scenario = 'WORLD_HUMAN_WAITING_IMPATIENT',
+            grooming = {
+                enabled  = true,
+                horsePos = { -762.41, -1222.819, 43.468, 356.49 },   -- Horse Ped Coord
+                breeds   = nil,
+            },
+        },
+        -- On the stablehand — matches ped.coords, so the prompt opens the stable.
+        prompt = { coords = { -763.116, -1223.286, 43.468 }, distance = 1.5 },
+        preview = {
+            horsePos = { -768.26, -1223.188, 43.468, 72.95 },   -- Preview Horse Coord
+            -- ⚠️ ESTIMATE — owner did not capture a showroom WAGON spot. Nearby clear
+            -- ground guessed so the Wagons tab still works; capture the real one and
+            -- run /stables_diag. (Or set catalog.wagons if this stable sells no wagons.)
+            wagonPos = { -775.0, -1223.5, 43.468, 90.0 },
+        },
+        -- ⚠️ ESTIMATE — capture the real OUTSIDE wagon spawn / put-away spot.
+        retrieve = {
+            wagonPos = { -775.0, -1217.0, 43.468, 90.0 },
+        },
+        jobs = { restricted = false, allowed = {} },   -- open to all; set restricted=true + allowed for a gov-only stable
+        faction = { enabled = false, job = nil },
+        catalog = { horses = {}, wagons = {} },
+        options = {
+            storedHorsesGetDirty = true,
+            breedingEnabled      = true,
+            wildSalesEnabled     = false,
+        },
+    },
     -- NOTE: no Annesburg stable — Annesburg is served by Van Horn (owner 2026-07-30).
     --==========================================================================
     -- ADDING A STABLE — copy a block above, then change ALL SIX POSITIONS
