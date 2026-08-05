@@ -94,6 +94,27 @@ local function authorize(src, row, requireWhistle)
 end
 
 --------------------------------------------------------------------------------
+-- DUTY MOUNT [S16 · sovereign_lawandorder]. While a lawman is ON DUTY, the pool
+-- horse they bring out becomes their TEMPORARY default — the whistle summons it.
+-- Clocking off clears it, so the whistle reverts to their personal default horse.
+--------------------------------------------------------------------------------
+local dutyMount = {}   -- [charid] = pool horseId chosen this shift
+
+local function isOnDuty(src, charid)
+    local ok, res = pcall(function() return exports.sovereign_lawandorder:isOnDuty(charid) end)
+    if ok and res ~= nil then return res == true end
+    local p = Player(src)                        -- fallback: the duty statebag
+    return p and p.state and p.state.lawOnDuty == true
+end
+
+-- Lawman clocked off → drop their temporary pool mount (whistle reverts to personal).
+AddEventHandler('sov_lawman:onDuty', function(data)
+    if type(data) == 'table' and data.onDuty == false and data.charId then
+        dutyMount[data.charId] = nil
+    end
+end)
+
+--------------------------------------------------------------------------------
 -- Net events
 --------------------------------------------------------------------------------
 RegisterNetEvent(Events.RequestSummon, function()
@@ -105,7 +126,12 @@ RegisterNetEvent(Events.RequestSummon, function()
             TriggerClientEvent(Events.SummonResult, src, { ok = false, message = 'No active character.' })
             return
         end
-        local row = defaultHorse(charid)
+        -- On duty: the pool horse chosen this shift. Off duty / not chosen: personal default.
+        local row
+        if isOnDuty(src, charid) and dutyMount[charid] then
+            row = ownedHorse(src, charid, dutyMount[charid])   -- re-validate it's still accessible
+        end
+        if not row then row = defaultHorse(charid) end
         Util.log(('whistle: default horse lookup -> %s'):format(row and ('#' .. tostring(row.id)) or 'NONE'))
         local ok, res = authorize(src, row, true)
         TriggerClientEvent(Events.SummonResult, src,
@@ -119,7 +145,12 @@ RegisterNetEvent(Events.RequestBringOut, function(horseId)
         local charid = Bridge.getCharId(src)
         if not charid then return end
         -- Collected in person at a stable: no whistle rule applies.
-        local ok, res = authorize(src, ownedHorse(src, charid, horseId), false)
+        local row = ownedHorse(src, charid, horseId)
+        -- On duty, choosing a POOL horse makes it this shift's default (whistle target).
+        if row and row.faction and row.faction ~= '' and isOnDuty(src, charid) then
+            dutyMount[charid] = row.id
+        end
+        local ok, res = authorize(src, row, false)
         TriggerClientEvent(Events.SummonResult, src,
             ok and { ok = true, horse = res } or { ok = false, message = res })
     end)
