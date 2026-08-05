@@ -450,6 +450,7 @@ Config.Stables = {
     },
     ['government'] = {
         label       = 'Government Stables',
+        -- 📍 Blackwater — attached to the Sheriff's Office.
         -- ✅ REAL COORDS (ped / groomed horse / preview horse) captured by owner 2026-08-02.
         -- ⚠️ NO MAP BLIP — owner request ("No Blip").
         blip = {
