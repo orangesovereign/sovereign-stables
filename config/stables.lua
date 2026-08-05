@@ -480,7 +480,10 @@ Config.Stables = {
         },
         -- ⭐ LAWMEN ONLY — the county's two law jobs (owner 2026-08-02).
         jobs = { restricted = true, allowed = { 'sheriff', 'marshal' } },
-        faction = { enabled = false, job = nil },
+        -- SHARED GOVERNMENT HORSE POOL [S16]. Sheriff + marshal see and use ONE
+        -- shared inventory here (not their personal horses). `key` names the pool;
+        -- membership = this stable's jobs.allowed. `cap` = pool size.
+        faction = { enabled = true, key = 'government', cap = 30 },
         -- Horses only — no wagons sold and no wagons pulled here (owner ruling).
         catalog = { horses = {}, wagons = {} },
         options = {

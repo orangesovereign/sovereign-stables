@@ -13,14 +13,54 @@ local busy = {}   -- [src] = true while a purchase is in flight (anti-spam/dupe)
 --------------------------------------------------------------------------------
 -- Queries
 --------------------------------------------------------------------------------
-function Horses.listOwned(charid)
-    return Db.awaitQuery(
-        'SELECT id, name, sex, model, is_default, stable_origin, xp, age FROM sovereign_horses WHERE charid = ? ORDER BY id',
-        { charid }) or {}
+local HCOLS = 'id, name, sex, model, is_default, stable_origin, xp, age'
+
+-- FACTION POOLS [S16]. A stable with faction.enabled shows ONE shared inventory
+-- (e.g. the government/lawmen pool) instead of the player's personal horses.
+-- The horse row's `faction` column holds the pool key; personal horses are NULL.
+function Horses.factionKeyFor(stableId)
+    local s = Config.Stables[stableId]
+    local f = s and s.faction
+    if f and f.enabled and f.key then return f.key end
+    return nil
 end
 
+-- Pool keys this player may access: any faction stable whose jobs.allowed lists
+-- their VORP job. (A sheriff/marshal → { government = true }.)
+function Horses.playerFactions(src)
+    local job = Bridge.getJob(src)
+    local out = {}
+    for _, s in pairs(Config.Stables or {}) do
+        local f = s.faction
+        if f and f.enabled and f.key and s.jobs then
+            for _, j in ipairs(s.jobs.allowed or {}) do
+                if j == job then out[f.key] = true break end
+            end
+        end
+    end
+    return out
+end
+
+-- Personal horses only (faction pool horses never leak into personal lists/caps).
+function Horses.listOwned(charid)
+    return Db.awaitQuery('SELECT ' .. HCOLS .. ' FROM sovereign_horses WHERE charid = ? AND faction IS NULL ORDER BY id', { charid }) or {}
+end
 function Horses.countOwned(charid)
-    local rows = Db.awaitQuery('SELECT COUNT(*) AS n FROM sovereign_horses WHERE charid = ?', { charid })
+    local rows = Db.awaitQuery('SELECT COUNT(*) AS n FROM sovereign_horses WHERE charid = ? AND faction IS NULL', { charid })
+    return (rows and rows[1] and rows[1].n) or 0
+end
+
+-- What to show at a given stable: the faction pool if it's a faction stable,
+-- else the player's personal horses.
+function Horses.listOwnedAt(charid, stableId)
+    local fk = Horses.factionKeyFor(stableId)
+    if fk then
+        return Db.awaitQuery('SELECT ' .. HCOLS .. ' FROM sovereign_horses WHERE faction = ? ORDER BY id', { fk }) or {}
+    end
+    return Horses.listOwned(charid)
+end
+function Horses.countInPool(fk)
+    local rows = Db.awaitQuery('SELECT COUNT(*) AS n FROM sovereign_horses WHERE faction = ?', { fk })
     return (rows and rows[1] and rows[1].n) or 0
 end
 
@@ -90,11 +130,18 @@ function Horses.buy(src, stableId, model, wanted)
             :format(card.name or card.label or 'That horse')
     end
 
-    -- Ownership cap (global cap vs job cap, whichever is stricter)
-    local cap   = Perms.maxHorses(job, grade)
-    local owned = Horses.countOwned(charid)
-    if owned >= cap then
-        return false, ('You already keep %d horse(s) — your limit.'):format(cap)
+    -- Ownership cap. A faction stable buys INTO its shared pool (pool cap); a
+    -- normal stable buys into the player's personal stable (personal cap).
+    local fk = Horses.factionKeyFor(stableId)
+    local cap, owned
+    if fk then
+        cap   = (Config.Stables[stableId].faction and Config.Stables[stableId].faction.cap) or 30
+        owned = Horses.countInPool(fk)
+        if owned >= cap then return false, ('The government stable is full (%d horses).'):format(cap) end
+    else
+        cap   = Perms.maxHorses(job, grade)
+        owned = Horses.countOwned(charid)
+        if owned >= cap then return false, ('You already keep %d horse(s) — your limit.'):format(cap) end
     end
 
     -- Price + funds (server-side price, never the client's)
@@ -113,11 +160,12 @@ function Horses.buy(src, stableId, model, wanted)
     local name = sanitizeName(wanted.name, card.name or card.label or model)
     local sex  = sanitizeSex(wanted.sex, card.sex)
 
-    -- Record it. First horse becomes the default ride.
+    -- Record it. First horse in the scope becomes the default. `fk` (nil for a
+    -- normal stable) marks a faction-pool horse.
     local isDefault = (owned == 0) and 1 or 0
     local id = Db.awaitInsert(
-        'INSERT INTO sovereign_horses (identifier, charid, name, sex, model, stable_origin, is_default) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        { Bridge.getIdentifier(src), charid, name, sex, model, stableId, isDefault })
+        'INSERT INTO sovereign_horses (identifier, charid, name, sex, model, stable_origin, is_default, faction) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        { Bridge.getIdentifier(src), charid, name, sex, model, stableId, isDefault, fk })
 
     if not id then
         Bridge.pay(src, cash, gold)   -- refund: never take money without a horse
@@ -132,10 +180,20 @@ end
 --------------------------------------------------------------------------------
 -- Net events
 --------------------------------------------------------------------------------
-local function pushOwned(src, charid)
+-- Push the horse list for the stable being browsed: the faction pool at a
+-- faction stable, else the player's personal horses.
+local function pushOwned(src, charid, stableId)
+    local fk = Horses.factionKeyFor(stableId)
+    local cap
+    if fk then
+        cap = (Config.Stables[stableId].faction and Config.Stables[stableId].faction.cap) or 30
+    else
+        cap = Perms.maxHorses(Bridge.getJob(src))
+    end
     TriggerClientEvent(Events.OwnedData, src, {
-        owned = Horses.listOwned(charid),
-        cap   = Perms.maxHorses(Bridge.getJob(src)),
+        owned   = Horses.listOwnedAt(charid, stableId),
+        cap     = cap,
+        faction = fk or nil,   -- lets the NUI label the shared pool if it wants
     })
 end
 
@@ -151,28 +209,35 @@ RegisterNetEvent(Events.RequestPurchase, function(stableId, model, wanted)
         local cash, gold = Bridge.getBalance(src)
         TriggerClientEvent(Events.PurchaseResult, src, { ok = ok, message = msg, cash = cash, gold = gold })
         local charid = Bridge.getCharId(src)
-        if ok and charid then pushOwned(src, charid) end
+        if ok and charid then pushOwned(src, charid, stableId) end
         busy[src] = nil
     end)
 end)
 
-RegisterNetEvent(Events.RequestOwned, function()
+RegisterNetEvent(Events.RequestOwned, function(stableId)
     local src = source
     CreateThread(function()
         local charid = Bridge.getCharId(src)
-        if charid then pushOwned(src, charid) end
+        if charid then pushOwned(src, charid, stableId) end
     end)
 end)
 
-RegisterNetEvent(Events.RequestSetDefault, function(horseId)
+RegisterNetEvent(Events.RequestSetDefault, function(horseId, stableId)
     local src = source
     CreateThread(function()
         local charid = Bridge.getCharId(src)
         if not charid then return end
-        -- Only ever touch rows this character owns.
-        Db.execute('UPDATE sovereign_horses SET is_default = 0 WHERE charid = ?', { charid })
-        Db.execute('UPDATE sovereign_horses SET is_default = 1 WHERE id = ? AND charid = ?', { horseId, charid })
-        pushOwned(src, charid)
+        local fk = Horses.factionKeyFor(stableId)
+        if fk and Horses.playerFactions(src)[fk] then
+            -- Faction pool: scope the default to the pool (any member may set it).
+            Db.execute('UPDATE sovereign_horses SET is_default = 0 WHERE faction = ?', { fk })
+            Db.execute('UPDATE sovereign_horses SET is_default = 1 WHERE id = ? AND faction = ?', { horseId, fk })
+        else
+            -- Personal: only ever touch this character's own (non-faction) rows.
+            Db.execute('UPDATE sovereign_horses SET is_default = 0 WHERE charid = ? AND faction IS NULL', { charid })
+            Db.execute('UPDATE sovereign_horses SET is_default = 1 WHERE id = ? AND charid = ? AND faction IS NULL', { horseId, charid })
+        end
+        pushOwned(src, charid, stableId)
     end)
 end)
 

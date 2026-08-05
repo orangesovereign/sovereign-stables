@@ -125,7 +125,7 @@ function Storefront.open(stableId)
 
     -- Ask the server for the real identity + wallet, and this character's horses.
     TriggerServerEvent(Events.RequestHeader, stableId)
-    TriggerServerEvent(Events.RequestOwned)
+    TriggerServerEvent(Events.RequestOwned, currentStable)
 end
 
 function Storefront.close()
@@ -213,7 +213,7 @@ RegisterNUICallback('selectOwned', function(data, cb)
 end)
 
 RegisterNUICallback('setDefault', function(data, cb)
-    if data and data.id then TriggerServerEvent(Events.RequestSetDefault, data.id) end
+    if data and data.id then TriggerServerEvent(Events.RequestSetDefault, data.id, currentStable) end
     cb({ ok = true })
 end)
 

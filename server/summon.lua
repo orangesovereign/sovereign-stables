@@ -21,17 +21,27 @@ local function cdSet(charid, horseId, seconds)
     cooldowns[charid][horseId] = os.time() + (seconds or 0)
 end
 
--- One owned horse row, scoped to the caller (never trust a client id).
-local function ownedHorse(charid, horseId)
+-- One horse row the caller may bring out: their own personal horse, OR a horse
+-- from a faction pool they belong to (the shared government/lawmen inventory).
+-- Never trust a client id — the caller must be entitled to this exact row.
+local function ownedHorse(src, charid, horseId)
     local rows = Db.awaitQuery(
-        'SELECT id, name, model, is_default, stable_origin, long_term_hp, components FROM sovereign_horses WHERE id = ? AND charid = ?',
-        { horseId, charid })
-    return rows and rows[1]
+        'SELECT id, name, model, is_default, stable_origin, long_term_hp, components, charid, faction FROM sovereign_horses WHERE id = ?',
+        { horseId })
+    local row = rows and rows[1]
+    if not row then return nil end
+    -- Personal horse of this character.
+    if (row.faction == nil or row.faction == '') and tostring(row.charid) == tostring(charid) then return row end
+    -- Faction pool horse this player may access.
+    if row.faction and row.faction ~= '' and Horses.playerFactions(src)[row.faction] then return row end
+    return nil
 end
 
+-- Whistle summons the caller's personal default (faction pool horses are checked
+-- out at the stable, not whistled from the field).
 local function defaultHorse(charid)
     local rows = Db.awaitQuery(
-        'SELECT id, name, model, is_default, stable_origin, long_term_hp, components FROM sovereign_horses WHERE charid = ? ORDER BY is_default DESC, id ASC LIMIT 1',
+        'SELECT id, name, model, is_default, stable_origin, long_term_hp, components FROM sovereign_horses WHERE charid = ? AND faction IS NULL ORDER BY is_default DESC, id ASC LIMIT 1',
         { charid })
     return rows and rows[1]
 end
@@ -109,7 +119,7 @@ RegisterNetEvent(Events.RequestBringOut, function(horseId)
         local charid = Bridge.getCharId(src)
         if not charid then return end
         -- Collected in person at a stable: no whistle rule applies.
-        local ok, res = authorize(src, ownedHorse(charid, horseId), false)
+        local ok, res = authorize(src, ownedHorse(src, charid, horseId), false)
         TriggerClientEvent(Events.SummonResult, src,
             ok and { ok = true, horse = res } or { ok = false, message = res })
     end)
