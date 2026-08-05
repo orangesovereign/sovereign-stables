@@ -478,9 +478,8 @@ Config.Stables = {
         retrieve = {
             wagonPos = nil,   -- no wagon pull/put-away here
         },
-        -- ⭐ LAWMEN ONLY. ⚠️ Set `allowed` to YOUR real law job id(s) — this is a
-        -- placeholder. With the wrong id NOBODY can use this stable.
-        jobs = { restricted = true, allowed = { 'law' } },
+        -- ⭐ LAWMEN ONLY — the county's two law jobs (owner 2026-08-02).
+        jobs = { restricted = true, allowed = { 'sheriff', 'marshal' } },
         faction = { enabled = false, job = nil },
         -- Horses only — no wagons sold and no wagons pulled here (owner ruling).
         catalog = { horses = {}, wagons = {} },
